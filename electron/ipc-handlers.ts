@@ -1,4 +1,4 @@
-import { ipcMain, BrowserWindow, dialog } from 'electron'
+import { ipcMain, BrowserWindow, dialog, shell } from 'electron'
 import { DouyinLiveService } from './services/douyin-live'
 import { DanmuService, DanmuMsg } from './services/danmu'
 import { RecordingManager } from './services/recording-manager'
@@ -280,6 +280,11 @@ export function registerIpcHandlers(): void {
     mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize()
   })
   ipcMain.handle('window:close', () => { mainWindow?.close() })
+
+  // File operations
+  ipcMain.handle('file:open-location', (_e, filePath: string) => {
+    shell.showItemInFolder(filePath)
+  })
 }
 
 export async function cleanup(): Promise<void> {

@@ -59,6 +59,9 @@ const api = {
   tingwuTranscribe: (filePath: string) => ipcRenderer.invoke('tingwu:transcribe', filePath),
   tingwuPoll: (taskId: string) => ipcRenderer.invoke('tingwu:poll', taskId),
   onTingwuStatus: (cb: (data: { stage: string; msg: string }) => void) => ipcRenderer.on('tingwu:status', (_e, data) => cb(data)),
+
+  // File
+  fileOpenLocation: (filePath: string) => ipcRenderer.invoke('file:open-location', filePath),
 }
 
 contextBridge.exposeInMainWorld('electronAPI', api)

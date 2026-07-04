@@ -133,6 +133,9 @@
             <span v-else-if="getTingwu(item.roomId).status === 'completed'" class="tingwu-status completed">
               ✅ 完成
             </span>
+            <n-button size="tiny" quaternary @click="openFileLocation(item.outputPath)" title="打开文件所在位置">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="#6b7080" stroke-width="1.8" fill="none"/></svg>
+            </n-button>
           </template>
         </div>
       </div>
@@ -199,6 +202,10 @@ const totalSize = computed(() => {
 
 function getTingwu(roomId: string) {
   return recordStore.tingwuState[roomId]
+}
+
+function openFileLocation(filePath: string) {
+  (window as any).electronAPI.fileOpenLocation(filePath)
 }
 
 function avatarGradient(roomId: string): string {
