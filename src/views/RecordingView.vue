@@ -177,7 +177,7 @@ const recordStore = useRecordStore()
 const roomList = useRoomListStore()
 
 const availableRooms = computed(() => {
-  const recordingIds = new Set(recordStore.recordingItems.map(i => i.roomId))
+  const recordingIds = new Set(recordStore.recordingItems.filter(i => i.isActive).map(i => i.roomId))
   return roomList.results.filter(r => !r.error && !recordingIds.has(r.enterRoomId))
 })
 
