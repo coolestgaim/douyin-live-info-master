@@ -62,6 +62,7 @@ const api = {
 
   // File
   fileOpenLocation: (filePath: string) => ipcRenderer.invoke('file:open-location', filePath),
+  fileDelete: (filePath: string) => ipcRenderer.invoke('file:delete', filePath),
 }
 
 contextBridge.exposeInMainWorld('electronAPI', api)

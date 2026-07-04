@@ -285,6 +285,19 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('file:open-location', (_e, filePath: string) => {
     shell.showItemInFolder(filePath)
   })
+
+  ipcMain.handle('file:delete', async (_e, filePath: string) => {
+    try {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath)
+        logger.info(LOG_MODULE, `已删除文件: ${filePath}`)
+        return { success: true }
+      }
+      return { success: false, error: '文件不存在' }
+    } catch (ex: any) {
+      return { success: false, error: ex.message }
+    }
+  })
 }
 
 export async function cleanup(): Promise<void> {

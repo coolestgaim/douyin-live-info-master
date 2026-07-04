@@ -82,6 +82,7 @@
       </div>
     </div>
 
+    <!-- Active & completed recordings -->
     <div v-if="recordStore.isDurationVisible" class="recording-list">
       <div
         v-for="item in recordStore.recordingItems"
@@ -113,28 +114,20 @@
           </span>
           <n-button v-if="item.isActive" size="tiny" type="error" quaternary @click="recordStore.stopOne(item.roomId)">停止</n-button>
 
-          <!-- Tingwu: Transcribe button for completed items -->
-          <template v-if="!item.isActive && item.outputPath">
+          <template v-if="!item.isActive">
             <n-button
               v-if="!getTingwu(item.roomId) || getTingwu(item.roomId).status === 'idle' || getTingwu(item.roomId).status === 'error'"
-              size="tiny"
-              type="info"
-              quaternary
+              size="tiny" type="info" quaternary
               @click="recordStore.startTranscribe(item.outputPath, item.roomId, item.nickname)"
-            >
-              转写
-            </n-button>
-            <span v-else-if="getTingwu(item.roomId).status === 'uploading' || getTingwu(item.roomId).status === 'processing'" class="tingwu-status uploading">
-              {{ getTingwu(item.roomId).message }}
-            </span>
-            <span v-else-if="getTingwu(item.roomId).status === 'polling'" class="tingwu-status polling">
-              ⏳ {{ getTingwu(item.roomId).message }}
-            </span>
-            <span v-else-if="getTingwu(item.roomId).status === 'completed'" class="tingwu-status completed">
-              ✅ 完成
-            </span>
-            <n-button size="tiny" quaternary @click="openFileLocation(item.outputPath)" title="打开文件所在位置">
+            >转写</n-button>
+            <span v-else-if="getTingwu(item.roomId).status === 'polling'" class="tingwu-status polling">⏳ 转写中...</span>
+            <span v-else-if="getTingwu(item.roomId).status === 'completed'" class="tingwu-status completed">✅ 完成</span>
+
+            <n-button size="tiny" quaternary @click="openFileLocation(item.outputPath)" title="打开位置">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="#6b7080" stroke-width="1.8" fill="none"/></svg>
+            </n-button>
+            <n-button size="tiny" type="error" quaternary @click="recordStore.deleteRecording(item)" title="删除">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="3 6 5 6 21 6" stroke="#ef4444" stroke-width="1.8"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="#ef4444" stroke-width="1.8"/></svg>
             </n-button>
           </template>
         </div>
@@ -165,6 +158,27 @@
       </div>
       <div class="empty-title">暂无录制任务</div>
       <div class="empty-hint">在「直播间」页面连接直播间后，点击「全部录制」开始</div>
+    </div>
+
+    <!-- History list -->
+    <div v-if="recordStore.recordingHistory.length > 0" class="history-section">
+      <div class="section-title">📼 历史录制</div>
+      <div v-for="h in recordStore.recordingHistory" :key="h.roomId" class="card history-row">
+        <span class="hist-nick">{{ h.nickname }}</span>
+        <span class="hist-detail">{{ h.durationText }} · {{ h.sizeText }}</span>
+        <span class="hist-time">{{ formatTime(h.timestamp) }}</span>
+        <div class="hist-actions">
+          <n-button size="tiny" type="info" quaternary
+            @click="recordStore.startTranscribe(h.outputPath, h.roomId, h.nickname)"
+          >转写</n-button>
+          <n-button size="tiny" quaternary @click="openFileLocation(h.outputPath)" title="打开位置">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="#6b7080" stroke-width="1.8" fill="none"/></svg>
+          </n-button>
+          <n-button size="tiny" type="error" quaternary @click="recordStore.deleteHistoryItem(h.roomId)" title="删除">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="3 6 5 6 21 6" stroke="#ef4444" stroke-width="1.8"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="#ef4444" stroke-width="1.8"/></svg>
+          </n-button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -206,6 +220,12 @@ function getTingwu(roomId: string) {
 
 function openFileLocation(filePath: string) {
   (window as any).electronAPI.fileOpenLocation(filePath)
+}
+
+function formatTime(ts: number): string {
+  const d = new Date(ts)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 function avatarGradient(roomId: string): string {
@@ -340,7 +360,7 @@ function avatarGradient(roomId: string): string {
 
 .status-text { font-size: 11px; color: #4a4e5e; }
 
-.recording-list { display: flex; flex-direction: column; gap: 8px; }
+.recording-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
 
 .rec-item {
   display: flex;
@@ -450,7 +470,6 @@ function avatarGradient(roomId: string): string {
 
 /* Tingwu */
 .tingwu-status { font-size: 11px; font-weight: 500; }
-.tingwu-status.uploading { color: #fbbf24; }
 .tingwu-status.polling { color: #22d3ee; }
 .tingwu-status.completed { color: #10b981; }
 
@@ -475,6 +494,27 @@ function avatarGradient(roomId: string): string {
   overflow-y: auto;
 }
 
+/* History */
+.history-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #1e2028;
+}
+
+.history-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.hist-nick { font-size: 13px; font-weight: 500; color: #e0e2e8; min-width: 80px; }
+.hist-detail { font-size: 11px; color: #4a4e5e; flex: 1; }
+.hist-time { font-size: 11px; color: #3a3d46; }
+.hist-actions { display: flex; gap: 6px; }
+
+/* Misc */
 .ffmpeg-dialog-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
 .ffmpeg-dialog { background: #1a1d26; border: 1px solid #2a2d36; border-radius: 12px; padding: 24px; max-width: 400px; width: 90%; }
 .ffmpeg-dialog-title { font-size: 16px; font-weight: 700; color: #e0e2e8; margin-bottom: 8px; }

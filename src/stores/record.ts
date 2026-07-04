@@ -7,6 +7,30 @@ import { useDashboardStore } from './dashboard'
 
 const api = () => (window as any).electronAPI
 
+interface HistoryItem {
+  roomId: string
+  nickname: string
+  outputPath: string
+  durationText: string
+  sizeText: string
+  timestamp: number
+}
+
+const HISTORY_KEY = 'recording_history_v1'
+
+function loadHistory(): HistoryItem[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch { return [] }
+}
+
+function saveHistory(items: HistoryItem[]) {
+  // Keep max 50 items, newest first
+  const trimmed = items.slice(0, 50)
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(trimmed))
+}
+
 export const useRecordStore = defineStore('record', () => {
   const recordingItems = ref<RecordingItem[]>([])
   const recordingCount = ref(0)
@@ -16,6 +40,9 @@ export const useRecordStore = defineStore('record', () => {
   const ffmpegProgress = ref(0)
   const ffmpegProgressMsg = ref('')
   const ffmpegInstalling = ref(false)
+
+  // Recording history (persistent)
+  const recordingHistory = ref<HistoryItem[]>(loadHistory())
 
   // Tingwu state per room
   const tingwuState = ref<Record<string, {
@@ -98,7 +125,21 @@ export const useRecordStore = defineStore('record', () => {
   }
 
   async function stopAll() {
+    // Add completed items to history before clearing
+    for (const item of recordingItems.value) {
+      if (item.isActive && item.outputPath) {
+        addToHistory(item)
+      }
+    }
     const state = await api().recordStopAll()
+    // Add any newly completed items
+    if (state?.items) {
+      for (const item of state.items) {
+        if (!item.isActive && item.outputPath) {
+          addToHistory(item)
+        }
+      }
+    }
     if (state) recordingItems.value = state.items || []
     recordingCount.value = 0
     isDurationVisible.value = recordingItems.value.length > 0
@@ -111,8 +152,15 @@ export const useRecordStore = defineStore('record', () => {
   }
 
   async function stopOne(roomId: string) {
+    // Find current item for history
+    const currentItem = recordingItems.value.find(i => i.roomId === roomId)
     const state = await api().recordStopOne(roomId)
     if (state) {
+      // Add completed item to history
+      const completedItem = state.items?.find((i: any) => i.roomId === roomId)
+      if (completedItem && completedItem.outputPath) {
+        addToHistory(completedItem)
+      }
       recordingItems.value = state.items || []
       recordingCount.value = state.count || 0
     }
@@ -148,6 +196,53 @@ export const useRecordStore = defineStore('record', () => {
     }
   }
 
+  // ===== History =====
+  function addToHistory(item: { roomId: string; nickname: string; outputPath: string; durationText?: string; sizeText?: string }) {
+    if (!item.outputPath) return
+    // Remove existing entry for same roomId
+    recordingHistory.value = recordingHistory.value.filter(h => h.roomId !== item.roomId)
+    // Add to front
+    recordingHistory.value.unshift({
+      roomId: item.roomId,
+      nickname: item.nickname,
+      outputPath: item.outputPath,
+      durationText: item.durationText || '',
+      sizeText: item.sizeText || '',
+      timestamp: Date.now()
+    })
+    saveHistory(recordingHistory.value)
+  }
+
+  function removeFromHistory(roomId: string) {
+    recordingHistory.value = recordingHistory.value.filter(h => h.roomId !== roomId)
+    saveHistory(recordingHistory.value)
+  }
+
+  // ===== Delete =====
+  async function deleteRecording(item: { roomId: string; outputPath: string }) {
+    // Delete file from disk
+    if (item.outputPath) {
+      await api().fileDelete(item.outputPath)
+    }
+    // Remove from current list
+    recordingItems.value = recordingItems.value.filter(i => i.roomId !== item.roomId)
+    if (recordingItems.value.length === 0) {
+      isDurationVisible.value = false
+    }
+    // Remove from history
+    removeFromHistory(item.roomId)
+    // Clean up tingwu state
+    delete tingwuState.value[item.roomId]
+  }
+
+  async function deleteHistoryItem(roomId: string) {
+    const historyItem = recordingHistory.value.find(h => h.roomId === roomId)
+    if (historyItem?.outputPath) {
+      await api().fileDelete(historyItem.outputPath)
+    }
+    removeFromHistory(roomId)
+  }
+
   // ===== Tingwu =====
   function getTingwuRoom(roomId: string) {
     if (!tingwuState.value[roomId]) {
@@ -180,7 +275,6 @@ export const useRecordStore = defineStore('record', () => {
       state.status = 'polling'
       state.message = 'AI 正在转写中...'
 
-      // Poll every 5 seconds
       const poll = setInterval(async () => {
         if (state.status !== 'polling') {
           clearInterval(poll)
@@ -235,8 +329,8 @@ export const useRecordStore = defineStore('record', () => {
   return {
     recordingItems, recordingCount, danmuStatus, isDurationVisible,
     ffmpegMissing, ffmpegProgress, ffmpegProgressMsg, ffmpegInstalling,
-    tingwuState,
+    tingwuState, recordingHistory,
     setupListeners, removeListeners, recordAll, stopAll, startRecording, stopOne,
-    installFfmpeg, startTranscribe
+    installFfmpeg, startTranscribe, deleteRecording, deleteHistoryItem
   }
 })
