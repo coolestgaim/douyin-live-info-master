@@ -5,6 +5,7 @@ import { RecordingManager } from './services/recording-manager'
 import { getPullUrl } from './services/live-stream'
 import * as db from './services/database'
 import * as config from './services/record-config'
+import * as floatingDanmu from './services/floating-danmu'
 import * as logger from './services/logger'
 import * as fs from 'fs'
 
@@ -12,18 +13,23 @@ const LOG_MODULE = 'IPC'
 
 const douyinLive = new DouyinLiveService()
 export const danmuConnections = new Map<string, DanmuService>()
+const roomNicknames = new Map<string, string>()
 const recordingManager = new RecordingManager()
 
 let mainWindow: BrowserWindow | null = null
 
 export function setMainWindow(win: BrowserWindow): void {
   mainWindow = win
+  floatingDanmu.setMainWindow(win)
   recordingManager.onUpdate = () => {
     mainWindow?.webContents.send('record:on-update', recordingManager.getState())
   }
 }
 
 export function registerIpcHandlers(): void {
+
+  // Register floating danmu IPC (close/opacity from floating window)
+  floatingDanmu.registerFloatingIPC()
 
   // ===== Room =====
   ipcMain.handle('room:fetch', async (_e, urls: string[]) => {
@@ -52,6 +58,10 @@ export function registerIpcHandlers(): void {
 
     service.onMessage = (msg: DanmuMsg) => {
       mainWindow?.webContents.send('danmu:on-message', { roomId, msg })
+      if (msg.type !== 'Stats') {
+        const nick = roomNicknames.get(roomId) || ''
+        floatingDanmu.sendDanmuToFloating({ ...msg, roomId, roomNickname: nick })
+      }
     }
     service.onStatusChanged = (status: string) => {
       mainWindow?.webContents.send('danmu:on-status', { roomId, status })
@@ -62,6 +72,8 @@ export function registerIpcHandlers(): void {
     }
 
     await service.connect(roomId, douyinLive.cookie, nickname)
+    roomNicknames.set(roomId, nickname)
+    floatingDanmu.sendRoomList(roomNicknames)
     return true
   })
 
@@ -71,6 +83,8 @@ export function registerIpcHandlers(): void {
       service.disconnect()
       danmuConnections.delete(roomId)
     }
+    roomNicknames.delete(roomId)
+    floatingDanmu.sendRoomList(roomNicknames)
   })
 
   ipcMain.handle('danmu:disconnect-all', async () => {
@@ -79,6 +93,8 @@ export function registerIpcHandlers(): void {
       mainWindow?.webContents.send('danmu:on-disconnect', { roomId, reason: '主动断开' })
     }
     danmuConnections.clear()
+    roomNicknames.clear()
+    floatingDanmu.sendRoomList(roomNicknames)
   })
 
   // ===== Record =====
@@ -161,6 +177,19 @@ export function registerIpcHandlers(): void {
 
   // ===== Window Controls =====
   ipcMain.handle('window:minimize', () => { mainWindow?.minimize() })
+
+  // ===== Floating Danmu =====
+  ipcMain.handle('floating:open', () => {
+    floatingDanmu.createFloatingDanmu()
+    floatingDanmu.sendRoomList(roomNicknames)
+    return true
+  })
+  ipcMain.handle('floating:close', () => {
+    floatingDanmu.closeFloatingDanmu()
+  })
+  ipcMain.on('floating:close', () => {
+    floatingDanmu.closeFloatingDanmu()
+  })
   ipcMain.handle('window:maximize', () => {
     if (!mainWindow) return
     mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize()
@@ -172,5 +201,6 @@ export async function cleanup(): Promise<void> {
   for (const [, service] of danmuConnections) service.disconnect()
   danmuConnections.clear()
   recordingManager.stopAll()
+  floatingDanmu.closeFloatingDanmu()
   await db.flushDb()
 }

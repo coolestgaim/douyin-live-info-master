@@ -7,7 +7,6 @@
 
     <div class="qr-grid-single" v-if="store.instances.length > 0">
       <div v-for="inst in store.instances" :key="inst.id" class="card qr-card-full" :class="{ 'qr-card-expanded': inst.expanded }">
-        <!-- Header -->
         <div class="qr-card-header">
           <input v-model="inst.name" class="qr-name-input" placeholder="实例名称" />
           <div class="qr-url-row">
@@ -18,10 +17,12 @@
             <button v-if="inst.status === 'running'" class="qr-btn qr-btn-expand" @click="inst.expanded = !inst.expanded" :title="inst.expanded ? '收起' : '全屏预览'">
               {{ inst.expanded ? '收起' : '全屏' }}
             </button>
+            <button v-if="inst.status === 'running'" class="qr-btn qr-btn-pause" @click="togglePause(inst)">
+              {{ pauseMap[inst.id] ? '恢复' : '暂停' }}
+            </button>
           </div>
         </div>
 
-        <!-- Main: webview | sidebar -->
         <div class="qr-main" v-if="inst.status === 'running'" :class="{ 'qr-main-expanded': inst.expanded }">
           <div class="qr-browser-wrap" :class="{ 'qr-browser-full': inst.expanded }">
             <webview
@@ -35,16 +36,7 @@
           </div>
 
           <div class="qr-sidebar" v-show="!inst.expanded">
-            <div class="qr-section-label">弹幕监视 <span class="qr-hint">最新</span></div>
-            <div class="qr-danmu-box">
-              <div v-if="inst.lastDanmu.length === 0" class="qr-empty">暂无弹幕</div>
-              <div v-for="(msg, i) in inst.lastDanmu.slice(0, 8)" :key="i" class="qr-danmu-row">
-                <span class="qr-danmu-user">{{ msg.userName }}</span>
-                <span class="qr-danmu-msg">{{ msg.content || msg.type }}</span>
-              </div>
-            </div>
 
-            <!-- Groups -->
             <div class="qr-section-label">快捷回复 <button class="qr-add-group-btn" @click="store.addGroup(inst.id)">+ 分组</button></div>
             <div class="qr-groups">
               <div v-for="(group, gIdx) in inst.quickReplyGroups" :key="gIdx" class="qr-group">
@@ -63,14 +55,14 @@
               </div>
             </div>
 
-            <!-- Chips -->
             <div class="qr-quick-btns">
               <template v-for="group in inst.quickReplyGroups" :key="'chip-' + group.name">
-                <button v-for="(qr, qi) in group.items.filter((t: string) => t.trim())" :key="'chip-' + qi" class="qr-chip" @click="quickSend(inst.id, qr)">{{ qr }}</button>
+                <template v-if="group.expanded">
+                  <button v-for="(qr, qi) in group.items.filter((t: string) => t.trim())" :key="'chip-' + qi" class="qr-chip" @click="quickSend(inst.id, qr)">{{ qr }}</button>
+                </template>
               </template>
             </div>
 
-            <!-- Send -->
             <div class="qr-send-row">
               <input v-model="inst.sendInput" class="qr-send-input" placeholder="手动输入..." @keyup.enter="manualSend(inst.id)" />
               <button class="qr-btn qr-btn-fill" @click="manualSend(inst.id)" :disabled="!inst.sendInput.trim()">发送</button>
@@ -83,14 +75,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref } from 'vue'
 import { useQuickReplyStore } from '../stores/quick-reply'
+
+defineOptions({ name: 'QuickReplyView' })
 
 const store = useQuickReplyStore()
 const webviewRefs = ref<Record<number, HTMLWebViewElement>>({})
+const pauseMap = ref<Record<number, boolean>>({})
 
 function setWebviewRef(id: number, el: HTMLWebViewElement | null) {
   if (el) webviewRefs.value[id] = el
+}
+
+function togglePause(inst: any) {
+  const paused = !pauseMap.value[inst.id]
+  pauseMap.value[inst.id] = paused
+  const webview = webviewRefs.value[inst.id]
+  if (webview) {
+    try {
+      webview.executeJavaScript(paused
+        ? `(function(){var v=document.querySelector('video');if(v)v.pause();return !!v})()`
+        : `(function(){var v=document.querySelector('video');if(v)v.play();return !!v})()`)
+    } catch (e) {}
+  }
 }
 
 function resolveUrl(raw: string): string {
@@ -102,7 +110,6 @@ function loadWebview(inst: any) {
   if (!inst.roomUrl) return
   inst.status = 'running'
   inst.expanded = false
-  store.startPolling()
 }
 
 function closeWebview(inst: any) {
@@ -110,7 +117,6 @@ function closeWebview(inst: any) {
   inst.lastDanmu = []
   inst.expanded = false
   delete webviewRefs.value[inst.id]
-  if (!store.instances.some((i: any) => i.status === 'running')) store.stopPolling()
 }
 
 function onWebviewReady(id: number) {
@@ -156,9 +162,6 @@ async function manualSend(id: number) {
   inst.sendInput = ''
   await quickSend(id, text)
 }
-
-onMounted(() => store.startPolling())
-onUnmounted(() => store.stopPolling())
 </script>
 
 <style scoped>
@@ -197,12 +200,8 @@ onUnmounted(() => store.stopPolling())
 .qr-sidebar { width: 250px; flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
 
 .qr-section-label { font-size: 11px; color: #5a5e6e; font-weight: 600; display: flex; align-items: center; gap: 6px; }
-.qr-hint { font-weight: 400; color: #4a4e5e; }
-.qr-danmu-box { background: #111318; border: 1px solid #1e2028; border-radius: 6px; padding: 6px; max-height: 90px; overflow-y: auto; flex-shrink: 0; }
-.qr-danmu-row { display: flex; gap: 6px; padding: 2px 0; font-size: 11px; }
-.qr-danmu-user { color: #f97316; flex-shrink: 0; white-space: nowrap; }
-.qr-danmu-msg { color: #a0a4b0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.qr-empty { text-align: center; color: #4a4e5e; padding: 8px; font-size: 11px; }
+.qr-btn-effect { background: rgba(234,179,8,0.1); color: #eab308; border: 1px solid rgba(234,179,8,0.3); }
+.qr-btn-effect:hover { background: rgba(234,179,8,0.2); }
 
 .qr-add-group-btn { background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.3); color: #fb923c; font-size: 11px; padding: 2px 10px; border-radius: 4px; cursor: pointer; font-family: inherit; margin-left: auto; }
 .qr-add-group-btn:hover { background: rgba(249,115,22,0.18); }

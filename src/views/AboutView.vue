@@ -17,50 +17,7 @@
         </div>
       </div>
 
-      <div class="section-divider"></div>
-
-      <div class="section-header">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="#f97316" stroke-width="1.8"/>
-          <polyline points="22,6 12,13 2,6" stroke="#f97316" stroke-width="1.8" fill="none"/>
-        </svg>
-        <h3 class="section-title">联系方式</h3>
-      </div>
-
-      <div class="contact-row">
-        <span class="contact-label">邮箱</span>
-        <span class="contact-value">564118922@qq.com</span>
-      </div>
-
-      <div class="section-divider"></div>
-
-      <div class="section-header">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <rect x="3" y="3" width="18" height="18" rx="3" stroke="#f97316" stroke-width="1.8"/>
-          <circle cx="12" cy="12" r="4" stroke="#f97316" stroke-width="1.8"/>
-          <rect x="11" y="4" width="2" height="2" fill="#f97316" rx="1"/>
-        </svg>
-        <h3 class="section-title">扫码关注</h3>
-      </div>
-
-      <div class="qr-grid">
-        <div class="qr-item">
-          <img src="/qq.jpg" alt="QQ二维码" class="qr-img" />
-          <span class="qr-label">QQ</span>
-        </div>
-        <div class="qr-item">
-          <img src="/wechat.jpg" alt="微信二维码" class="qr-img" />
-          <span class="qr-label">微信</span>
-        </div>
-        <div class="qr-item">
-          <img src="/douyin.jpg" alt="抖音二维码" class="qr-img" />
-          <span class="qr-label">抖音</span>
-        </div>
-        <div class="qr-item">
-          <img src="/reward.jpg" alt="赞赏码" class="qr-img" />
-          <span class="qr-label">赞赏码</span>
-        </div>
-      </div>
+      <!-- 联系方式和扫码关注已隐藏，后续自定义 -->
 
       <div class="section-divider"></div>
 

@@ -6,6 +6,7 @@
         <div class="danmu-room">{{ danmuStore.danmuRoom }}</div>
       </div>
       <div class="danmu-status-area">
+        <button class="float-btn" @click="toggleFloating" :title="floatingOpen ? '关闭弹幕浮窗' : '打开弹幕浮窗'">{{ floatingOpen ? '关闭浮窗' : '弹幕浮窗' }}</button>
         <span class="danmu-count">{{ danmuStore.danmuCountText }}</span>
         <span :class="['status-dot', { green: danmuStore.connectedRoomCount > 0, red: danmuStore.danmuStatus.includes('失败') }]"></span>
         <span class="danmu-status-text">{{ danmuStore.danmuStatus }}</span>
@@ -121,9 +122,21 @@ const historyMessages = ref<any[]>([])
 const exporting = ref(false)
 
 const api = () => (window as any).electronAPI
+const floatingOpen = ref(false)
+
+function toggleFloating() {
+  if (floatingOpen.value) {
+    api().floatingClose()
+    floatingOpen.value = false
+  } else {
+    api().floatingOpen()
+    floatingOpen.value = true
+  }
+}
 
 onMounted(() => {
   if (danmuStore.selectedTab === 'history') danmuStore.loadHistory()
+  api().onFloatingClosed(() => { floatingOpen.value = false })
 })
 
 watch(() => danmuStore.selectedTab, (val) => {
@@ -190,6 +203,8 @@ async function exportData(format: 'csv' | 'json') {
 .danmu-room { font-size: 11px; color: #3a3d46; margin-top: 2px; }
 
 .danmu-status-area { display: flex; align-items: center; gap: 8px; }
+.float-btn { background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.3); color: #fb923c; font-size: 11px; padding: 2px 10px; border-radius: 4px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.float-btn:hover { background: rgba(249,115,22,0.18); }
 .danmu-count { font-size: 11px; color: #4a4e5e; }
 .danmu-status-text { font-size: 12px; color: #6b7080; }
 

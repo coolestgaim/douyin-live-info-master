@@ -42,6 +42,11 @@ const api = {
   windowMinimize: () => ipcRenderer.invoke('window:minimize'),
   windowMaximize: () => ipcRenderer.invoke('window:maximize'),
   windowClose: () => ipcRenderer.invoke('window:close'),
+
+  // Floating danmu
+  floatingOpen: () => ipcRenderer.invoke('floating:open'),
+  floatingClose: () => ipcRenderer.invoke('floating:close'),
+  onFloatingClosed: (cb: () => void) => ipcRenderer.on('floating:on-closed', cb),
 }
 
 contextBridge.exposeInMainWorld('electronAPI', api)
