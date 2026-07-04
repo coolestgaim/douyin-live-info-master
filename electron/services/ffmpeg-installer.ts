@@ -2,12 +2,19 @@ import { app } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
 import * as https from 'https'
+import * as http from 'http'
 import { spawnSync } from 'child_process'
 import { extract, findEntry } from './zip-extract'
 import * as logger from './logger'
 
 const LOG_MODULE = 'FfmpegInstaller'
-const FFMPEG_URL = 'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip'
+
+// Multiple download sources — tried in order until one succeeds
+const FFMPEG_URLS = [
+  'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip',
+  'https://ghproxy.com/https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip',
+  'https://mirror.ghproxy.com/https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip',
+]
 
 let ffmpegDir: string
 
@@ -53,11 +60,28 @@ export async function downloadAndInstall(onProgress: (pct: number, msg: string) 
     if (r.status === 0) return true
   }
 
-  onProgress(0, '正在下载 ffmpeg...')
-
-  await downloadFile(FFMPEG_URL, zipPath, (pct, downloaded, total) => {
-    onProgress(Math.floor(pct * 0.9), `下载中 ${formatSize(downloaded)}/${formatSize(total)}`)
-  })
+  // Try each URL until one succeeds
+  let lastErr = ''
+  for (let i = 0; i < FFMPEG_URLS.length; i++) {
+    onProgress(0, `正在下载 ffmpeg... (源 ${i + 1}/${FFMPEG_URLS.length})`)
+    try {
+      await downloadFile(FFMPEG_URLS[i], zipPath, (pct, downloaded, total) => {
+        onProgress(Math.floor(pct * 0.9), `下载中 ${formatSize(downloaded)}/${formatSize(total)}`)
+      })
+      lastErr = ''
+      break
+    } catch (err: any) {
+      logger.warn(LOG_MODULE, `源 ${i + 1} 下载失败: ${err.message}`)
+      lastErr = err.message
+      try { fs.unlinkSync(zipPath) } catch {}
+      if (i < FFMPEG_URLS.length - 1) {
+        onProgress(0, `切换备用源 ${i + 2}...`)
+      }
+    }
+  }
+  if (lastErr) {
+    throw new Error(`所有下载源均失败: ${lastErr}`)
+  }
 
   onProgress(90, '正在解压...')
 
@@ -88,8 +112,9 @@ export async function downloadAndInstall(onProgress: (pct: number, msg: string) 
 
 function downloadFile(url: string, dest: string, onProgress: (pct: number, downloaded: number, total: number) => void): Promise<void> {
   return new Promise((resolve, reject) => {
+    const proto = url.startsWith('https') ? https : http
     const file = fs.createWriteStream(dest)
-    https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }, (res) => {
+    proto.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }, (res) => {
       if (res.statusCode === 302 || res.statusCode === 301) {
         file.close()
         try { fs.unlinkSync(dest) } catch {}
