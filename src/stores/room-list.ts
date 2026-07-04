@@ -1,9 +1,38 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import type { LiveRoomInfo } from '../types'
 import { DanmuConnectionState } from '../types'
 
 const api = () => (window as any).electronAPI
+const HISTORY_KEY = 'douyin-room-history-v1'
+
+interface RoomHistory { url: string; nickname: string }
+
+function loadHistory(): RoomHistory[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch { return [] }
+}
+
+function saveHistory(rooms: LiveRoomInfo[]) {
+  try {
+    const existing = loadHistory()
+    const urls = new Set(existing.map(h => h.url))
+    for (const r of rooms) {
+      if (!r.error && r.url && !urls.has(r.url)) {
+        existing.unshift({ url: r.url, nickname: r.nickname || '' })
+        urls.add(r.url)
+      }
+    }
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(existing.slice(0, 20)))
+  } catch {}
+}
+
+function removeHistory(url: string) {
+  const h = loadHistory().filter(r => r.url !== url)
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(h))
+}
 
 export const useRoomListStore = defineStore('room-list', () => {
   const results = ref<(LiveRoomInfo & { connectionState: DanmuConnectionState })[]>([])
@@ -11,9 +40,17 @@ export const useRoomListStore = defineStore('room-list', () => {
   const statusMessage = ref('')
   const isLoading = ref(false)
   const urlText = ref('')
+  const roomHistory = ref<RoomHistory[]>(loadHistory())
 
   function selectRoom(room: (LiveRoomInfo & { connectionState: DanmuConnectionState }) | null) {
     selectedRoom.value = room
+  }
+
+  function fillFromHistory(h: RoomHistory) {
+    const lines = urlText.value.split(/[\r\n]/).filter(l => l.trim())
+    if (!lines.includes(h.url)) {
+      urlText.value = urlText.value ? urlText.value + '\n' + h.url : h.url
+    }
   }
 
   async function fetchRooms() {
@@ -33,9 +70,9 @@ export const useRoomListStore = defineStore('room-list', () => {
     try {
       const fetched = await api().roomFetch(lines)
       let addedSuccess = 0
+      const newRooms: LiveRoomInfo[] = []
 
       for (const info of fetched) {
-        // Deduplicate
         if (!info.error && info.enterRoomId && results.value.some(r => r.enterRoomId === info.enterRoomId)) continue
 
         const room: LiveRoomInfo & { connectionState: DanmuConnectionState } = {
@@ -44,10 +81,12 @@ export const useRoomListStore = defineStore('room-list', () => {
           connectionState: DanmuConnectionState.None
         }
         results.value.push(room)
-        if (!info.error) addedSuccess++
+        if (!info.error) { addedSuccess++; newRooms.push(info as LiveRoomInfo) }
       }
 
       statusMessage.value = `完成！本次成功 ${addedSuccess}/${lines.length}，共 ${results.value.length} 个直播间`
+      saveHistory(newRooms)
+      roomHistory.value = loadHistory()
     } catch (ex: any) {
       statusMessage.value = `获取失败: ${ex.message}`
     } finally {
@@ -63,6 +102,11 @@ export const useRoomListStore = defineStore('room-list', () => {
     selectedRoom.value = null
   }
 
+  function deleteHistory(url: string) {
+    removeHistory(url)
+    roomHistory.value = loadHistory()
+  }
+
   function clear() {
     results.value = []
     selectedRoom.value = null
@@ -75,7 +119,7 @@ export const useRoomListStore = defineStore('room-list', () => {
   }
 
   return {
-    results, selectedRoom, statusMessage, isLoading, urlText,
-    selectRoom, fetchRooms, deleteSelected, clear
+    results, selectedRoom, statusMessage, isLoading, urlText, roomHistory,
+    selectRoom, fetchRooms, fillFromHistory, deleteSelected, deleteHistory, clear
   }
 })
