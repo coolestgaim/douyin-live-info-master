@@ -126,7 +126,7 @@
             <n-button size="tiny" quaternary @click="openFileLocation(item.outputPath)" title="打开位置">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="#6b7080" stroke-width="1.8" fill="none"/></svg>
             </n-button>
-            <n-button size="tiny" type="error" quaternary @click="recordStore.deleteRecording(item)" title="删除">
+            <n-button size="tiny" type="error" quaternary @click="confirmDelete(item)" title="删除">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="3 6 5 6 21 6" stroke="#ef4444" stroke-width="1.8"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="#ef4444" stroke-width="1.8"/></svg>
             </n-button>
           </template>
@@ -174,7 +174,7 @@
           <n-button size="tiny" quaternary @click="openFileLocation(h.outputPath)" title="打开位置">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="#6b7080" stroke-width="1.8" fill="none"/></svg>
           </n-button>
-          <n-button size="tiny" type="error" quaternary @click="recordStore.deleteHistoryItem(h.roomId)" title="删除">
+          <n-button size="tiny" type="error" quaternary @click="confirmDeleteHistory(h.roomId)" title="删除">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="3 6 5 6 21 6" stroke="#ef4444" stroke-width="1.8"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="#ef4444" stroke-width="1.8"/></svg>
           </n-button>
         </div>
@@ -185,7 +185,31 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { NButton } from 'naive-ui'
+import { NButton, useDialog } from 'naive-ui'
+
+const dialog = useDialog()
+
+function confirmDelete(item: { roomId: string; nickname: string; outputPath: string }) {
+  dialog.warning({
+    title: '确认删除',
+    content: `将删除「${item.nickname}」的录制记录及本地文件，此操作不可撤销。`,
+    positiveText: '确认删除',
+    negativeText: '取消',
+    onPositiveClick: () => recordStore.deleteRecording(item)
+  })
+}
+
+function confirmDeleteHistory(roomId: string) {
+  const item = recordStore.recordingHistory.find(h => h.roomId === roomId)
+  if (!item) return
+  dialog.warning({
+    title: '确认删除',
+    content: `将删除「${item.nickname}」的录制文件及历史记录，此操作不可撤销。`,
+    positiveText: '确认删除',
+    negativeText: '取消',
+    onPositiveClick: () => recordStore.deleteHistoryItem(roomId)
+  })
+}
 import { useRecordStore } from '../stores/record'
 import { useRoomListStore } from '../stores/room-list'
 import { formatFileSize } from '../utils/format'
