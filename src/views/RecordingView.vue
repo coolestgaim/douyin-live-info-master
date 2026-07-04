@@ -67,7 +67,22 @@
       </div>
     </div>
 
-    <div v-if="recordStore.isDurationVisible" class="recording-list">"
+    <div v-if="recordStore.ffmpegMissing" class="ffmpeg-dialog-overlay">
+      <div class="ffmpeg-dialog">
+        <div class="ffmpeg-dialog-title">未检测到 ffmpeg</div>
+        <div class="ffmpeg-dialog-body">录制功能需要 ffmpeg，是否自动下载安装？（约 50MB）</div>
+        <div class="ffmpeg-dialog-actions">
+          <n-button size="small" @click="recordStore.ffmpegMissing = false">取消</n-button>
+          <n-button size="small" type="primary" :loading="recordStore.ffmpegInstalling" @click="recordStore.installFfmpeg()">下载安装</n-button>
+        </div>
+        <div v-if="recordStore.ffmpegInstalling" class="ffmpeg-progress">
+          <div class="ffmpeg-progress-bar"><div class="ffmpeg-progress-fill" :style="{ width: recordStore.ffmpegProgress + '%' }"></div></div>
+          <div class="ffmpeg-progress-text">{{ recordStore.ffmpegProgressMsg }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="recordStore.isDurationVisible" class="recording-list">
       <div
         v-for="item in recordStore.recordingItems"
         :key="item.roomId"
@@ -399,6 +414,16 @@ function avatarGradient(roomId: string): string {
 
 .empty-title { font-size: 14px; color: #4a4e5e; font-weight: 500; }
 .empty-hint { font-size: 12px; color: #3a3d46; margin-top: 4px; }
+
+.ffmpeg-dialog-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.ffmpeg-dialog { background: #1a1d26; border: 1px solid #2a2d36; border-radius: 12px; padding: 24px; max-width: 400px; width: 90%; }
+.ffmpeg-dialog-title { font-size: 16px; font-weight: 700; color: #e0e2e8; margin-bottom: 8px; }
+.ffmpeg-dialog-body { font-size: 13px; color: #8b8fa3; margin-bottom: 16px; line-height: 1.5; }
+.ffmpeg-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.ffmpeg-progress { margin-top: 12px; }
+.ffmpeg-progress-bar { height: 4px; background: #2a2d36; border-radius: 2px; overflow: hidden; }
+.ffmpeg-progress-fill { height: 100%; background: #f97316; transition: width 0.3s; }
+.ffmpeg-progress-text { font-size: 11px; color: #6b7080; margin-top: 4px; }
 
 .available-section { padding: 12px 18px; margin-bottom: 12px; }
 .section-title { font-size: 12px; font-weight: 600; color: #6b7080; margin-bottom: 8px; }

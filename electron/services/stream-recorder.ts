@@ -115,6 +115,11 @@ export class StreamRecorder {
 }
 
 function resolveFfmpegPath(): string {
+  // 0. User-installed (via ffmpeg-installer)
+  const { getFfmpegUserPath } = require('./ffmpeg-installer')
+  const userPath = getFfmpegUserPath()
+  if (fs.existsSync(userPath)) return userPath
+
   // 1. Next to the compiled main.js (dist-electron)
   const localMain = path.join(__dirname, 'ffmpeg.exe')
   if (fs.existsSync(localMain)) return localMain

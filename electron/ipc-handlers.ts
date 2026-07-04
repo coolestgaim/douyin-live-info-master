@@ -6,6 +6,7 @@ import { getPullUrl } from './services/live-stream'
 import * as db from './services/database'
 import * as config from './services/record-config'
 import * as floatingDanmu from './services/floating-danmu'
+import * as ffmpegInstaller from './services/ffmpeg-installer'
 import * as logger from './services/logger'
 import * as fs from 'fs'
 
@@ -204,6 +205,23 @@ export function registerIpcHandlers(): void {
   })
   ipcMain.on('floating:close', () => {
     floatingDanmu.closeFloatingDanmu()
+  })
+
+  // ===== FFmpeg =====
+  ipcMain.handle('ffmpeg:check', () => {
+    return { available: ffmpegInstaller.isFfmpegAvailable() }
+  })
+
+  ipcMain.handle('ffmpeg:install', async () => {
+    try {
+      const ok = await ffmpegInstaller.downloadAndInstall((pct, msg) => {
+        mainWindow?.webContents.send('ffmpeg:progress', { pct, msg })
+      })
+      return { success: ok }
+    } catch (ex: any) {
+      logger.error(LOG_MODULE, 'ffmpeg install failed', ex)
+      return { success: false, error: ex.message }
+    }
   })
   ipcMain.handle('window:maximize', () => {
     if (!mainWindow) return

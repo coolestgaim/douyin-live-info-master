@@ -12,6 +12,10 @@ export const useRecordStore = defineStore('record', () => {
   const recordingCount = ref(0)
   const danmuStatus = ref('')
   const isDurationVisible = ref(false)
+  const ffmpegMissing = ref(false)
+  const ffmpegProgress = ref(0)
+  const ffmpegProgressMsg = ref('')
+  const ffmpegInstalling = ref(false)
 
   let refreshTimer: ReturnType<typeof setInterval> | null = null
   let listenersSetup = false
@@ -58,6 +62,7 @@ export const useRecordStore = defineStore('record', () => {
   }
 
   async function startRecording(room: any) {
+    if (!await checkFfmpeg()) return
     danmuStatus.value = `正在获取 ${room.nickname} 的直播流...`
     const state = await api().recordStartOne({
       enterRoomId: room.enterRoomId,
@@ -65,6 +70,13 @@ export const useRecordStore = defineStore('record', () => {
     })
     applyState(state)
     danmuStatus.value = state?.count ? `${room.nickname} 开始录制` : '录制失败'
+  }
+
+  async function checkFfmpeg(): Promise<boolean> {
+    const result = await api().ffmpegCheck()
+    if (result.available) return true
+    ffmpegMissing.value = true
+    return false
   }
 
   function applyState(state: any) {
@@ -127,8 +139,34 @@ export const useRecordStore = defineStore('record', () => {
     }
   }
 
+  async function installFfmpeg() {
+    ffmpegInstalling.value = true
+    ffmpegMissing.value = false
+    ffmpegProgress.value = 0
+
+    api().onFfmpegProgress(({ pct, msg }: { pct: number; msg: string }) => {
+      ffmpegProgress.value = pct
+      ffmpegProgressMsg.value = msg
+    })
+
+    try {
+      const result = await api().ffmpegInstall()
+      if (result.success) {
+        danmuStatus.value = 'ffmpeg 安装成功，可以开始录制'
+      } else {
+        danmuStatus.value = '安装失败: ' + (result.error || '未知错误')
+      }
+    } catch (ex: any) {
+      danmuStatus.value = '安装异常: ' + (ex.message || '')
+    } finally {
+      ffmpegInstalling.value = false
+    }
+  }
+
   return {
     recordingItems, recordingCount, danmuStatus, isDurationVisible,
-    setupListeners, removeListeners, recordAll, stopAll, startRecording, stopOne
+    ffmpegMissing, ffmpegProgress, ffmpegProgressMsg, ffmpegInstalling,
+    setupListeners, removeListeners, recordAll, stopAll, startRecording, stopOne,
+    installFfmpeg
   }
 })

@@ -49,6 +49,11 @@ const api = {
   floatingOpen: () => ipcRenderer.invoke('floating:open'),
   floatingClose: () => ipcRenderer.invoke('floating:close'),
   onFloatingClosed: (cb: () => void) => ipcRenderer.on('floating:on-closed', cb),
+
+  // FFmpeg
+  ffmpegCheck: () => ipcRenderer.invoke('ffmpeg:check'),
+  ffmpegInstall: () => ipcRenderer.invoke('ffmpeg:install'),
+  onFfmpegProgress: (cb: (data: { pct: number; msg: string }) => void) => ipcRenderer.on('ffmpeg:progress', (_e, data) => cb(data)),
 }
 
 contextBridge.exposeInMainWorld('electronAPI', api)
