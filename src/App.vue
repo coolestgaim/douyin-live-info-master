@@ -1,5 +1,6 @@
 <template>
   <n-config-provider :theme="darkTheme" :theme-overrides="themeOverrides">
+    <n-dialog-provider>
     <n-message-provider>
       <div class="app-frame">
         <AppTitlebar />
@@ -15,13 +16,14 @@
         </div>
       </div>
     </n-message-provider>
+    </n-dialog-provider>
   </n-config-provider>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { darkTheme, NConfigProvider, NMessageProvider, type GlobalThemeOverrides } from 'naive-ui'
+import { darkTheme, NConfigProvider, NDialogProvider, NMessageProvider, type GlobalThemeOverrides } from 'naive-ui'
 import AppTitlebar from './components/AppTitlebar.vue'
 import AppSidebar from './components/AppSidebar.vue'
 
