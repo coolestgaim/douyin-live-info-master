@@ -11,6 +11,16 @@
         :disabled="roomList.isLoading"
         placeholder="https://live.douyin.com/123456"
       />
+      <div v-if="roomList.roomHistory.length > 0" class="history-chips">
+        <span class="chips-label">历史:</span>
+        <span
+          v-for="h in roomList.roomHistory"
+          :key="h.url"
+          class="history-chip"
+          @click="roomList.fillFromHistory(h)"
+          :title="h.url"
+        >{{ h.nickname || h.url.split('/').pop() }}<button class="chip-del" @click.stop="roomList.deleteHistory(h.url)">×</button></span>
+      </div>
       <div class="input-actions">
         <n-button size="small" @click="importLinks">导入链接</n-button>
         <n-button size="small" @click="exportLinks" :disabled="roomList.results.length === 0">导出链接</n-button>
@@ -89,6 +99,13 @@ const columns: DataTableColumns<any> = [
     render: (row) => h('span', {
       style: 'color: #22d3ee; font-weight: 600; font-size: 11px'
     }, row.connectionState === 'Connected' ? '已连接' : row.connectionState === 'Connecting' ? '连接中' : '')
+  },
+  {
+    title: '', key: 'connect', width: 50, align: 'center',
+    render: (row) => h('button', {
+      style: 'background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);color:#f97316;font-size:10px;padding:2px 8px;border-radius:4px;cursor:pointer;font-family:inherit',
+      onClick: (e: Event) => { e.stopPropagation(); danmuStore.connectRoom(row.enterRoomId, row.nickname) }
+    }, row.connectionState === 'Connected' ? '' : '连接')
   }
 ]
 
@@ -191,6 +208,13 @@ function exportLinks() {
   color: #3a3d46;
   margin-left: auto;
 }
+
+.history-chips { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.chips-label { font-size: 10px; color: #4a4e5e; flex-shrink: 0; }
+.history-chip { font-size: 11px; color: #8b8fa3; background: #1a1d26; border: 1px solid #2a2d36; padding: 2px 6px 2px 8px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 3px; transition: all .15s; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-chip:hover { border-color: #f97316; color: #e0e2e8; }
+.chip-del { font-size: 10px; color: #4a4e5e; background: none; border: none; cursor: pointer; padding: 0 2px; line-height: 1; flex-shrink: 0; }
+.chip-del:hover { color: #ef4444; }
 
 .empty-state {
   padding: 40px 0;

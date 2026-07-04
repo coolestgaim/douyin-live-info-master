@@ -1,54 +1,56 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import type { LiveRoomInfo } from '../types'
 import { DanmuConnectionState } from '../types'
 
 const api = () => (window as any).electronAPI
-const STORAGE_KEY = 'douyin-live-rooms-v1'
+const HISTORY_KEY = 'douyin-room-history-v1'
 
-function loadRooms(): (LiveRoomInfo & { connectionState: DanmuConnectionState })[] {
+interface RoomHistory { url: string; nickname: string }
+
+function loadHistory(): RoomHistory[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) {
-      const data = JSON.parse(raw)
-      if (Array.isArray(data)) {
-        return data.map((r: any, i: number) => ({
-          ...r,
-          index: i + 1,
-          connectionState: DanmuConnectionState.None
-        }))
-      }
-    }
-  } catch {}
-  return []
+    const raw = localStorage.getItem(HISTORY_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch { return [] }
 }
 
-function saveRooms(rooms: (LiveRoomInfo & { connectionState: DanmuConnectionState })[]) {
+function saveHistory(rooms: LiveRoomInfo[]) {
   try {
-    const plain = rooms.map(r => ({
-      url: r.url,
-      enterRoomId: r.enterRoomId,
-      nickname: r.nickname,
-      title: r.title,
-      roomStatus: r.roomStatus,
-      likeCount: r.likeCount,
-      viewCount: r.viewCount,
-      error: r.error,
-      index: r.index
-    }))
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(plain))
+    const existing = loadHistory()
+    const urls = new Set(existing.map(h => h.url))
+    for (const r of rooms) {
+      if (!r.error && r.url && !urls.has(r.url)) {
+        existing.unshift({ url: r.url, nickname: r.nickname || '' })
+        urls.add(r.url)
+      }
+    }
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(existing.slice(0, 20)))
   } catch {}
+}
+
+function removeHistory(url: string) {
+  const h = loadHistory().filter(r => r.url !== url)
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(h))
 }
 
 export const useRoomListStore = defineStore('room-list', () => {
-  const results = ref<(LiveRoomInfo & { connectionState: DanmuConnectionState })[]>(loadRooms())
+  const results = ref<(LiveRoomInfo & { connectionState: DanmuConnectionState })[]>([])
   const selectedRoom = ref<(LiveRoomInfo & { connectionState: DanmuConnectionState }) | null>(null)
   const statusMessage = ref('')
   const isLoading = ref(false)
   const urlText = ref('')
+  const roomHistory = ref<RoomHistory[]>(loadHistory())
 
   function selectRoom(room: (LiveRoomInfo & { connectionState: DanmuConnectionState }) | null) {
     selectedRoom.value = room
+  }
+
+  function fillFromHistory(h: RoomHistory) {
+    const lines = urlText.value.split(/[\r\n]/).filter(l => l.trim())
+    if (!lines.includes(h.url)) {
+      urlText.value = urlText.value ? urlText.value + '\n' + h.url : h.url
+    }
   }
 
   async function fetchRooms() {
@@ -68,9 +70,9 @@ export const useRoomListStore = defineStore('room-list', () => {
     try {
       const fetched = await api().roomFetch(lines)
       let addedSuccess = 0
+      const newRooms: LiveRoomInfo[] = []
 
       for (const info of fetched) {
-        // Deduplicate
         if (!info.error && info.enterRoomId && results.value.some(r => r.enterRoomId === info.enterRoomId)) continue
 
         const room: LiveRoomInfo & { connectionState: DanmuConnectionState } = {
@@ -79,11 +81,12 @@ export const useRoomListStore = defineStore('room-list', () => {
           connectionState: DanmuConnectionState.None
         }
         results.value.push(room)
-        if (!info.error) addedSuccess++
+        if (!info.error) { addedSuccess++; newRooms.push(info as LiveRoomInfo) }
       }
 
       statusMessage.value = `完成！本次成功 ${addedSuccess}/${lines.length}，共 ${results.value.length} 个直播间`
-      saveRooms(results.value)
+      saveHistory(newRooms)
+      roomHistory.value = loadHistory()
     } catch (ex: any) {
       statusMessage.value = `获取失败: ${ex.message}`
     } finally {
@@ -97,7 +100,11 @@ export const useRoomListStore = defineStore('room-list', () => {
     if (idx >= 0) results.value.splice(idx, 1)
     reindex()
     selectedRoom.value = null
-    saveRooms(results.value)
+  }
+
+  function deleteHistory(url: string) {
+    removeHistory(url)
+    roomHistory.value = loadHistory()
   }
 
   function clear() {
@@ -105,7 +112,6 @@ export const useRoomListStore = defineStore('room-list', () => {
     selectedRoom.value = null
     statusMessage.value = ''
     urlText.value = ''
-    saveRooms(results.value)
   }
 
   function reindex() {
@@ -113,7 +119,7 @@ export const useRoomListStore = defineStore('room-list', () => {
   }
 
   return {
-    results, selectedRoom, statusMessage, isLoading, urlText,
-    selectRoom, fetchRooms, deleteSelected, clear
+    results, selectedRoom, statusMessage, isLoading, urlText, roomHistory,
+    selectRoom, fetchRooms, fillFromHistory, deleteSelected, deleteHistory, clear
   }
 })
