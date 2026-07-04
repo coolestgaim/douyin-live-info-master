@@ -76,12 +76,8 @@ export class RecordingManager {
     const recorder = this.recorders.get(roomId)
     if (recorder) {
       recorder.stopRecording()
-      const item = this.items.get(roomId)
-      if (item) {
-        item.statusText = '已停止'
-        item.isActive = false
-      }
       this.recorders.delete(roomId)
+      this.items.delete(roomId)
       logger.info(LOG_MODULE, `停止录制 roomId=${roomId}`)
     }
   }

@@ -57,7 +57,7 @@
       <span class="status-text">{{ recordStore.danmuStatus }}</span>
     </div>
 
-    <div v-if="availableRooms.length > 0 && recordStore.recordingCount === 0" class="card available-section">
+    <div v-if="availableRooms.length > 0" class="card available-section">
       <div class="section-title">可录制直播间</div>
       <div v-for="room in availableRooms" :key="room.enterRoomId" class="avail-row">
         <span class="avail-nick">{{ room.nickname }}</span>
