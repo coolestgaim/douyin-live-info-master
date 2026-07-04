@@ -72,6 +72,20 @@ export class RecordingManager {
     this.recorders.clear()
   }
 
+  stopOne(roomId: string): void {
+    const recorder = this.recorders.get(roomId)
+    if (recorder) {
+      recorder.stopRecording()
+      const item = this.items.get(roomId)
+      if (item) {
+        item.statusText = '已停止'
+        item.isActive = false
+      }
+      this.recorders.delete(roomId)
+      logger.info(LOG_MODULE, `停止录制 roomId=${roomId}`)
+    }
+  }
+
   getState(): { items: any[]; count: number } {
     const items: any[] = []
     for (const [roomId, recorder] of this.recorders) {

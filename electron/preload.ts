@@ -20,7 +20,9 @@ const api = {
 
   // Record
   recordStartAll: (rooms: any[]) => ipcRenderer.invoke('record:start-all', rooms),
+  recordStartOne: (room: any) => ipcRenderer.invoke('record:start-one', room),
   recordStopAll: () => ipcRenderer.invoke('record:stop-all'),
+  recordStopOne: (roomId: string) => ipcRenderer.invoke('record:stop-one', roomId),
   recordGetState: () => ipcRenderer.invoke('record:get-state'),
   onRecordUpdate: (cb: (data: any) => void) => ipcRenderer.on('record:on-update', (_e, data) => cb(data)),
   removeRecordListeners: () => ipcRenderer.removeAllListeners('record:on-update'),

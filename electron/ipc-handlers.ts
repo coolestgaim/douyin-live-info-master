@@ -116,8 +116,23 @@ export function registerIpcHandlers(): void {
     return recordingManager.getState()
   })
 
+  ipcMain.handle('record:start-one', async (_e, room: any) => {
+    const format = config.loadConfig().outputFormat
+    const { success, pullUrl, nickname } = await getPullUrl(room.enterRoomId)
+    if (!success) throw new Error('无法获取直播流')
+
+    const nick = nickname || room.nickname
+    recordingManager.startRecording(room.enterRoomId, pullUrl, nick, format)
+    return recordingManager.getState()
+  })
+
   ipcMain.handle('record:stop-all', async () => {
     recordingManager.stopAll()
+    return recordingManager.getState()
+  })
+
+  ipcMain.handle('record:stop-one', async (_e, roomId: string) => {
+    recordingManager.stopOne(roomId)
     return recordingManager.getState()
   })
 

@@ -53,21 +53,21 @@
           </template>
           停止全部录制
         </n-button>
-        <n-button
-          v-else
-          type="success"
-          @click="recordStore.recordAll()"
-        >
-          <template #icon>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" fill="currentColor"/></svg>
-          </template>
-          全部录制
-        </n-button>
       </div>
       <span class="status-text">{{ recordStore.danmuStatus }}</span>
     </div>
 
-    <div v-if="recordStore.isDurationVisible" class="recording-list">
+    <div v-if="availableRooms.length > 0 && recordStore.recordingCount === 0" class="card available-section">
+      <div class="section-title">可录制直播间</div>
+      <div v-for="room in availableRooms" :key="room.enterRoomId" class="avail-row">
+        <span class="avail-nick">{{ room.nickname }}</span>
+        <span class="avail-id">房间 {{ room.enterRoomId }}</span>
+        <span class="avail-status">{{ room.roomStatus === 2 ? '未开播' : '直播中' }}</span>
+        <n-button size="tiny" type="primary" @click="recordStore.startRecording(room)" :disabled="room.roomStatus === 2">录制</n-button>
+      </div>
+    </div>
+
+    <div v-if="recordStore.isDurationVisible" class="recording-list">"
       <div
         v-for="item in recordStore.recordingItems"
         :key="item.roomId"
@@ -96,6 +96,7 @@
           <span :class="['rec-status-text', { active: item.isActive, error: item.statusText.includes('异常') }]">
             {{ item.statusText }}
           </span>
+          <n-button v-if="item.isActive" size="tiny" type="error" quaternary @click="recordStore.stopOne(item.roomId)">停止</n-button>
         </div>
       </div>
     </div>
@@ -117,9 +118,16 @@
 import { computed } from 'vue'
 import { NButton } from 'naive-ui'
 import { useRecordStore } from '../stores/record'
+import { useRoomListStore } from '../stores/room-list'
 import { formatFileSize } from '../utils/format'
 
 const recordStore = useRecordStore()
+const roomList = useRoomListStore()
+
+const availableRooms = computed(() => {
+  const recordingIds = new Set(recordStore.recordingItems.map(i => i.roomId))
+  return roomList.results.filter(r => !r.error && !recordingIds.has(r.enterRoomId))
+})
 
 const activeCount = computed(() => recordStore.recordingItems.filter(i => i.isActive).length)
 
@@ -391,4 +399,12 @@ function avatarGradient(roomId: string): string {
 
 .empty-title { font-size: 14px; color: #4a4e5e; font-weight: 500; }
 .empty-hint { font-size: 12px; color: #3a3d46; margin-top: 4px; }
+
+.available-section { padding: 12px 18px; margin-bottom: 12px; }
+.section-title { font-size: 12px; font-weight: 600; color: #6b7080; margin-bottom: 8px; }
+.avail-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #1e2028; }
+.avail-row:last-child { border-bottom: none; }
+.avail-nick { font-size: 13px; color: #e0e2e8; font-weight: 500; }
+.avail-id { font-size: 11px; color: #4a4e5e; }
+.avail-status { font-size: 11px; color: #10b981; margin-left: auto; }
 </style>
