@@ -54,6 +54,11 @@ const api = {
   ffmpegCheck: () => ipcRenderer.invoke('ffmpeg:check'),
   ffmpegInstall: () => ipcRenderer.invoke('ffmpeg:install'),
   onFfmpegProgress: (cb: (data: { pct: number; msg: string }) => void) => ipcRenderer.on('ffmpeg:progress', (_e, data) => cb(data)),
+
+  // Tingwu
+  tingwuTranscribe: (filePath: string) => ipcRenderer.invoke('tingwu:transcribe', filePath),
+  tingwuPoll: (taskId: string) => ipcRenderer.invoke('tingwu:poll', taskId),
+  onTingwuStatus: (cb: (data: { stage: string; msg: string }) => void) => ipcRenderer.on('tingwu:status', (_e, data) => cb(data)),
 }
 
 contextBridge.exposeInMainWorld('electronAPI', api)

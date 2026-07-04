@@ -68,6 +68,7 @@ export interface RecordingItem {
   sizeText: string
   isActive: boolean
   statusText: string
+  outputPath: string
 }
 
 export interface RoomInfo {

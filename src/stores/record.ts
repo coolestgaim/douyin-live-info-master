@@ -17,6 +17,15 @@ export const useRecordStore = defineStore('record', () => {
   const ffmpegProgressMsg = ref('')
   const ffmpegInstalling = ref(false)
 
+  // Tingwu state per room
+  const tingwuState = ref<Record<string, {
+    status: 'idle' | 'uploading' | 'processing' | 'polling' | 'completed' | 'error'
+    taskId: string
+    message: string
+    result: any
+    filePath: string
+  }>>({})
+
   let refreshTimer: ReturnType<typeof setInterval> | null = null
   let listenersSetup = false
 
@@ -92,7 +101,7 @@ export const useRecordStore = defineStore('record', () => {
     const state = await api().recordStopAll()
     if (state) recordingItems.value = state.items || []
     recordingCount.value = 0
-    isDurationVisible.value = false
+    isDurationVisible.value = recordingItems.value.length > 0
     danmuStatus.value = '已停止所有录制'
     if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null }
     const dashboard = useDashboardStore()
@@ -108,9 +117,9 @@ export const useRecordStore = defineStore('record', () => {
       recordingCount.value = state.count || 0
     }
     if (recordingCount.value === 0) {
-      isDurationVisible.value = false
       if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null }
     }
+    isDurationVisible.value = recordingItems.value.length > 0
   }
 
   function startRefresh() {
@@ -132,10 +141,70 @@ export const useRecordStore = defineStore('record', () => {
     for (const item of recordingItems.value) {
       dashboard.updateRecordingState(
         item.roomId,
-        true,
+        item.isActive,
         item.durationText || '',
         item.sizeText || ''
       )
+    }
+  }
+
+  // ===== Tingwu =====
+  function getTingwuRoom(roomId: string) {
+    if (!tingwuState.value[roomId]) {
+      tingwuState.value[roomId] = {
+        status: 'idle',
+        taskId: '',
+        message: '',
+        result: null,
+        filePath: ''
+      }
+    }
+    return tingwuState.value[roomId]
+  }
+
+  async function startTranscribe(filePath: string, roomId: string, nickname: string) {
+    const state = getTingwuRoom(roomId)
+    state.status = 'uploading'
+    state.message = '正在上传到 OSS...'
+    state.filePath = filePath
+
+    try {
+      const res = await api().tingwuTranscribe(filePath)
+      if (!res.success) {
+        state.status = 'error'
+        state.message = res.error || '上传失败'
+        return
+      }
+
+      state.taskId = res.taskId
+      state.status = 'polling'
+      state.message = 'AI 正在转写中...'
+
+      // Poll every 5 seconds
+      const poll = setInterval(async () => {
+        if (state.status !== 'polling') {
+          clearInterval(poll)
+          return
+        }
+        try {
+          const r = await api().tingwuPoll(state.taskId)
+          if (r.taskStatus === 'COMPLETED') {
+            clearInterval(poll)
+            state.status = 'completed'
+            state.message = `${nickname} 转写完成`
+            state.result = r.result
+          } else if (r.taskStatus === 'FAILED') {
+            clearInterval(poll)
+            state.status = 'error'
+            state.message = '转写任务失败'
+          }
+        } catch {
+          // retry next interval
+        }
+      }, 5000)
+    } catch (ex: any) {
+      state.status = 'error'
+      state.message = ex.message || '未知错误'
     }
   }
 
@@ -166,7 +235,8 @@ export const useRecordStore = defineStore('record', () => {
   return {
     recordingItems, recordingCount, danmuStatus, isDurationVisible,
     ffmpegMissing, ffmpegProgress, ffmpegProgressMsg, ffmpegInstalling,
+    tingwuState,
     setupListeners, removeListeners, recordAll, stopAll, startRecording, stopOne,
-    installFfmpeg
+    installFfmpeg, startTranscribe
   }
 })

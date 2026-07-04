@@ -24,9 +24,62 @@
         </div>
         <div class="form-hint">留空则默认保存到桌面「直播录制」文件夹</div>
       </div>
+    </div>
 
+    <div class="card settings-card" style="margin-top: 16px;">
+      <div class="section-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="#22d3ee" stroke-width="1.8"/>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96" stroke="#22d3ee" stroke-width="1.8"/>
+        </svg>
+        <h3 class="section-title">通义听悟 — OSS 配置</h3>
+        <span class="section-hint">用于上传录制文件</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">AccessKey ID</label>
+        <n-input v-model:value="settings.ossAccessKeyId" placeholder="阿里云 OSS AccessKey ID" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">AccessKey Secret</label>
+        <n-input v-model:value="settings.ossAccessKeySecret" type="password" placeholder="阿里云 OSS AccessKey Secret" show-password-on="click" />
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="flex:2">
+          <label class="form-label">Bucket 名称</label>
+          <n-input v-model:value="settings.ossBucket" placeholder="例如 my-bucket" />
+        </div>
+        <div class="form-group" style="flex:1; margin-left: 12px;">
+          <label class="form-label">地域</label>
+          <n-input v-model:value="settings.ossRegion" placeholder="oss-cn-hangzhou" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card settings-card" style="margin-top: 16px;">
+      <div class="section-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#10b981" stroke-width="1.8"/>
+          <polyline points="14 2 14 8 20 8" stroke="#10b981" stroke-width="1.8"/>
+          <line x1="16" y1="13" x2="8" y2="13" stroke="#10b981" stroke-width="1.8"/>
+          <line x1="16" y1="17" x2="8" y2="17" stroke="#10b981" stroke-width="1.8"/>
+        </svg>
+        <h3 class="section-title">通义听悟 — API 配置</h3>
+        <span class="section-hint">用于语音转文字</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">AccessKey ID</label>
+        <n-input v-model:value="settings.tingwuAccessKeyId" placeholder="通义听悟 AccessKey ID" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">AccessKey Secret</label>
+        <n-input v-model:value="settings.tingwuAccessKeySecret" type="password" placeholder="通义听悟 AccessKey Secret" show-password-on="click" />
+      </div>
+    </div>
+
+    <div class="card settings-card" style="margin-top: 16px;">
       <div class="form-divider"></div>
-
       <div class="form-actions">
         <n-button type="primary" @click="settings.saveConfig()">保存设置</n-button>
         <span v-if="settings.statusMessage" class="success-text">{{ settings.statusMessage }}</span>
@@ -68,6 +121,7 @@ onMounted(() => {
 }
 
 .section-title { font-size: 15px; font-weight: 700; color: #e0e2e8; }
+.section-hint { font-size: 11px; color: #4a4e5e; margin-left: auto; }
 
 .form-group { margin-bottom: 18px; }
 .form-label {
@@ -77,6 +131,8 @@ onMounted(() => {
   margin-bottom: 6px;
   font-weight: 500;
 }
+
+.form-row { display: flex; }
 
 .path-row { display: flex; gap: 8px; }
 .form-hint { font-size: 10px; color: #3a3d46; margin-top: 6px; }

@@ -10,6 +10,7 @@ interface RecordItem {
   sizeText: string
   isActive: boolean
   statusText: string
+  outputPath: string
 }
 
 export class RecordingManager {
@@ -33,6 +34,7 @@ export class RecordingManager {
         if (item) {
           item.statusText = '异常退出'
           item.isActive = false
+          item.outputPath = recorder.outputPath
         }
         this.recorders.delete(roomId)
         this.onUpdate?.()
@@ -52,7 +54,8 @@ export class RecordingManager {
       durationText: '00:00:00',
       sizeText: '0 B',
       isActive: true,
-      statusText: '录制中'
+      statusText: '录制中',
+      outputPath: ''
     })
 
     logger.info(LOG_MODULE, `开始录制 roomId=${roomId} nickname=${nickname} format=${format}`)
@@ -64,8 +67,9 @@ export class RecordingManager {
       recorder.stopRecording()
       const item = this.items.get(roomId)
       if (item) {
-        item.statusText = '已停止'
+        item.statusText = '已完成'
         item.isActive = false
+        item.outputPath = recorder.outputPath
       }
     }
     logger.info(LOG_MODULE, `停止全部录制 count=${this.recorders.size}`)
@@ -77,13 +81,19 @@ export class RecordingManager {
     if (recorder) {
       recorder.stopRecording()
       this.recorders.delete(roomId)
-      this.items.delete(roomId)
+      const item = this.items.get(roomId)
+      if (item) {
+        item.statusText = '已完成'
+        item.isActive = false
+        item.outputPath = recorder.outputPath
+      }
       logger.info(LOG_MODULE, `停止录制 roomId=${roomId}`)
     }
   }
 
   getState(): { items: any[]; count: number } {
     const items: any[] = []
+    // Update active items duration/size
     for (const [roomId, recorder] of this.recorders) {
       const item = this.items.get(roomId)
       if (item && recorder.isRecording) {
@@ -91,6 +101,7 @@ export class RecordingManager {
         item.sizeText = formatFileSize(recorder.currentFileSize)
       }
     }
+    // Return all items (active + completed)
     for (const [roomId, item] of this.items) {
       items.push({ roomId, ...item })
     }

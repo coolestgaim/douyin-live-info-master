@@ -7,8 +7,10 @@ import * as db from './services/database'
 import * as config from './services/record-config'
 import * as floatingDanmu from './services/floating-danmu'
 import * as ffmpegInstaller from './services/ffmpeg-installer'
+import * as tingwu from './services/tingwu-service'
 import * as logger from './services/logger'
 import * as fs from 'fs'
+import * as path from 'path'
 
 const LOG_MODULE = 'IPC'
 
@@ -223,6 +225,56 @@ export function registerIpcHandlers(): void {
       return { success: false, error: ex.message }
     }
   })
+
+  // ===== Tingwu =====
+  ipcMain.handle('tingwu:transcribe', async (_e, filePath: string) => {
+    try {
+      const cfg = config.loadConfig()
+      if (!cfg.ossAccessKeyId || !cfg.ossAccessKeySecret) {
+        return { success: false, error: '请先在设置中配置阿里云 OSS AccessKey' }
+      }
+      if (!cfg.tingwuAccessKeyId || !cfg.tingwuAccessKeySecret) {
+        return { success: false, error: '请先在设置中配置通义听悟 AccessKey' }
+      }
+
+      // Step 1: Upload to OSS
+      mainWindow?.webContents.send('tingwu:status', { stage: 'upload', msg: '正在上传到 OSS...' })
+      const fileUrl = await tingwu.uploadToOss(filePath, {
+        accessKeyId: cfg.ossAccessKeyId,
+        accessKeySecret: cfg.ossAccessKeySecret,
+        bucket: cfg.ossBucket,
+        region: cfg.ossRegion
+      })
+
+      // Step 2: Create Tingwu task
+      mainWindow?.webContents.send('tingwu:status', { stage: 'processing', msg: '正在创建识别任务...' })
+      const taskId = await tingwu.createTranscriptionTask(
+        fileUrl,
+        cfg.tingwuAccessKeyId,
+        cfg.tingwuAccessKeySecret
+      )
+
+      return { success: true, taskId }
+    } catch (ex: any) {
+      logger.error(LOG_MODULE, 'tingwu transcribe failed', ex)
+      return { success: false, error: ex.message }
+    }
+  })
+
+  ipcMain.handle('tingwu:poll', async (_e, taskId: string) => {
+    try {
+      const cfg = config.loadConfig()
+      const result = await tingwu.getTaskResult(
+        taskId,
+        cfg.tingwuAccessKeyId,
+        cfg.tingwuAccessKeySecret
+      )
+      return { success: true, ...result }
+    } catch (ex: any) {
+      return { success: false, error: ex.message }
+    }
+  })
+
   ipcMain.handle('window:maximize', () => {
     if (!mainWindow) return
     mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize()

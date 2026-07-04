@@ -112,6 +112,43 @@
             {{ item.statusText }}
           </span>
           <n-button v-if="item.isActive" size="tiny" type="error" quaternary @click="recordStore.stopOne(item.roomId)">停止</n-button>
+
+          <!-- Tingwu: Transcribe button for completed items -->
+          <template v-if="!item.isActive && item.outputPath">
+            <n-button
+              v-if="!getTingwu(item.roomId) || getTingwu(item.roomId).status === 'idle' || getTingwu(item.roomId).status === 'error'"
+              size="tiny"
+              type="info"
+              quaternary
+              @click="recordStore.startTranscribe(item.outputPath, item.roomId, item.nickname)"
+            >
+              转写
+            </n-button>
+            <span v-else-if="getTingwu(item.roomId).status === 'uploading' || getTingwu(item.roomId).status === 'processing'" class="tingwu-status uploading">
+              {{ getTingwu(item.roomId).message }}
+            </span>
+            <span v-else-if="getTingwu(item.roomId).status === 'polling'" class="tingwu-status polling">
+              ⏳ {{ getTingwu(item.roomId).message }}
+            </span>
+            <span v-else-if="getTingwu(item.roomId).status === 'completed'" class="tingwu-status completed">
+              ✅ 完成
+            </span>
+          </template>
+        </div>
+      </div>
+
+      <!-- Tingwu result panel -->
+      <div v-for="item in recordStore.recordingItems" :key="'tw-'+item.roomId">
+        <div v-if="getTingwu(item.roomId)?.status === 'completed' && getTingwu(item.roomId)?.result" class="card tingwu-result">
+          <div class="tw-title">{{ item.nickname }} — AI 分析结果</div>
+          <div v-if="getTingwu(item.roomId).result?.Transcription" class="tw-section">
+            <div class="tw-section-title">📝 文字稿</div>
+            <div class="tw-content">{{ getTingwu(item.roomId).result.Transcription }}</div>
+          </div>
+          <div v-if="getTingwu(item.roomId).result?.Summarization" class="tw-section">
+            <div class="tw-section-title">📊 摘要</div>
+            <pre class="tw-content">{{ JSON.stringify(getTingwu(item.roomId).result.Summarization, null, 2) }}</pre>
+          </div>
         </div>
       </div>
     </div>
@@ -159,6 +196,10 @@ const totalSize = computed(() => {
   }
   return formatFileSize(bytes)
 })
+
+function getTingwu(roomId: string) {
+  return recordStore.tingwuState[roomId]
+}
 
 function avatarGradient(roomId: string): string {
   const colors = [
@@ -372,14 +413,6 @@ function avatarGradient(roomId: string): string {
   min-width: 85px;
 }
 
-.stat-label {
-  font-size: 9px;
-  color: #4a4e5e;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 500;
-}
-
 .stat-value { font-size: 15px; font-weight: 700; margin-top: 2px; }
 .stat-accent { color: #f97316; }
 .stat-info { color: #22d3ee; }
@@ -408,12 +441,32 @@ function avatarGradient(roomId: string): string {
 .rec-status-text.active { color: #10b981; }
 .rec-status-text.error { color: #ef4444; }
 
-.empty-state { padding: 60px 0; }
+/* Tingwu */
+.tingwu-status { font-size: 11px; font-weight: 500; }
+.tingwu-status.uploading { color: #fbbf24; }
+.tingwu-status.polling { color: #22d3ee; }
+.tingwu-status.completed { color: #10b981; }
 
-.empty-icon { margin-bottom: 8px; }
+.tingwu-result {
+  padding: 16px 18px;
+  margin-top: 4px;
+  border-color: rgba(16, 185, 129, 0.15);
+}
 
-.empty-title { font-size: 14px; color: #4a4e5e; font-weight: 500; }
-.empty-hint { font-size: 12px; color: #3a3d46; margin-top: 4px; }
+.tw-title { font-size: 14px; font-weight: 600; color: #10b981; margin-bottom: 12px; }
+.tw-section { margin-bottom: 12px; }
+.tw-section-title { font-size: 12px; font-weight: 500; color: #6b7080; margin-bottom: 4px; }
+.tw-content {
+  font-size: 12px;
+  color: #e0e2e8;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  background: #111318;
+  border-radius: 8px;
+  padding: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+}
 
 .ffmpeg-dialog-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
 .ffmpeg-dialog { background: #1a1d26; border: 1px solid #2a2d36; border-radius: 12px; padding: 24px; max-width: 400px; width: 90%; }
@@ -432,4 +485,9 @@ function avatarGradient(roomId: string): string {
 .avail-nick { font-size: 13px; color: #e0e2e8; font-weight: 500; }
 .avail-id { font-size: 11px; color: #4a4e5e; }
 .avail-status { font-size: 11px; color: #10b981; margin-left: auto; }
+
+.empty-state { padding: 60px 0; }
+.empty-icon { margin-bottom: 8px; }
+.empty-title { font-size: 14px; color: #4a4e5e; font-weight: 500; }
+.empty-hint { font-size: 12px; color: #3a3d46; margin-top: 4px; }
 </style>

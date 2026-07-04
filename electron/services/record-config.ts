@@ -6,6 +6,13 @@ import { app } from 'electron'
 export interface RecordConfig {
   outputFormat: string
   outputPath: string
+  // OSS / Tingwu settings
+  ossAccessKeyId: string
+  ossAccessKeySecret: string
+  ossBucket: string
+  ossRegion: string
+  tingwuAccessKeyId: string
+  tingwuAccessKeySecret: string
 }
 
 function getConfigPath(): string {
@@ -14,11 +21,25 @@ function getConfigPath(): string {
 
 export function loadConfig(): RecordConfig {
   const configPath = getConfigPath()
-  if (!fs.existsSync(configPath)) return { outputFormat: 'mp3', outputPath: '' }
+  if (!fs.existsSync(configPath)) return defaultConfig()
   try {
-    return JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+    const cfg: RecordConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+    return { ...defaultConfig(), ...cfg }
   } catch {
-    return { outputFormat: 'mp3', outputPath: '' }
+    return defaultConfig()
+  }
+}
+
+function defaultConfig(): RecordConfig {
+  return {
+    outputFormat: 'mp3',
+    outputPath: '',
+    ossAccessKeyId: '',
+    ossAccessKeySecret: '',
+    ossBucket: '',
+    ossRegion: 'oss-cn-hangzhou',
+    tingwuAccessKeyId: '',
+    tingwuAccessKeySecret: ''
   }
 }
 

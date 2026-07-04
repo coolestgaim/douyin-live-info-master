@@ -13,6 +13,7 @@
     "electron:build": "npm run build && electron-builder"
   },
   "dependencies": {
+    "ali-oss": "^6.23.0",
     "axios": "^1.7.0",
     "sql.js": "^1.11.0",
     "ws": "^8.18.0"
