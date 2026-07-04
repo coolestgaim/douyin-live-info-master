@@ -73,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import { h } from 'vue'
+import { h, computed } from 'vue'
 import { NInput, NButton, NDataTable } from 'naive-ui'
 import { useRoomListStore } from '../stores/room-list'
 import { useDanmuStore } from '../stores/danmu'
@@ -102,23 +102,28 @@ const columns: DataTableColumns<any> = [
   },
   {
     title: '', key: 'connect', width: 50, align: 'center',
-    render: (row) => h('button', {
-      style: 'background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);color:#f97316;font-size:10px;padding:2px 8px;border-radius:4px;cursor:pointer;font-family:inherit',
-      onClick: (e: Event) => { e.stopPropagation(); danmuStore.connectRoom(row.enterRoomId, row.nickname) }
-    }, row.connectionState === 'Connected' ? '' : '连接')
+    render: (row) => {
+      const connected = row.connectionState === 'Connected'
+      return h('button', {
+        style: connected
+          ? 'background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;font-size:10px;padding:2px 8px;border-radius:4px;cursor:pointer;font-family:inherit'
+          : 'background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);color:#f97316;font-size:10px;padding:2px 8px;border-radius:4px;cursor:pointer;font-family:inherit',
+        onClick: (e: Event) => { e.stopPropagation(); connected ? danmuStore.disconnectRoom(row.enterRoomId) : danmuStore.connectRoom(row.enterRoomId, row.nickname) }
+      }, connected ? '断开' : '连接')
+    }
   }
 ]
 
-function rowProps(row: any) {
-  const selected = roomList.selectedRoom?.enterRoomId === row.enterRoomId
-  return {
-    style: { background: selected ? 'rgba(249,115,22,0.08)' : undefined, cursor: 'pointer' },
+const rowProps = computed(() => {
+  const selId = roomList.selectedRoom?.enterRoomId ?? ''
+  return (row: any) => ({
+    style: { background: row.enterRoomId === selId ? 'rgba(249,115,22,0.08)' : undefined, cursor: 'pointer' },
     onClick: () => {
       roomList.selectRoom(row)
       danmuStore.selectRoom(row)
     }
-  }
-}
+  })
+})
 
 async function handleFetch() {
   await roomList.fetchRooms()
