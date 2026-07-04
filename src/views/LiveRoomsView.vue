@@ -110,8 +110,9 @@ const columns: DataTableColumns<any> = [
 ]
 
 function rowProps(row: any) {
+  const selected = roomList.selectedRoom?.enterRoomId === row.enterRoomId
   return {
-    style: row === roomList.selectedRoom ? 'background: rgba(249,115,22,0.08); cursor: pointer' : 'cursor: pointer',
+    style: { background: selected ? 'rgba(249,115,22,0.08)' : undefined, cursor: 'pointer' },
     onClick: () => {
       roomList.selectRoom(row)
       danmuStore.selectRoom(row)
