@@ -1,0 +1,24 @@
+appId: com.douyin.live-info
+productName: DouyinLiveInfo
+directories:
+  output: release
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - sign.js
+  - ffmpeg.exe
+extraResources:
+  - from: sign.js
+    to: sign.js
+  - from: ffmpeg.exe
+    to: ffmpeg.exe
+win:
+  target:
+    - nsis
+    - portable
+  icon: public/icon.png
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+portable:
+  artifactName: "${productName}-${version}-Portable.${ext}"

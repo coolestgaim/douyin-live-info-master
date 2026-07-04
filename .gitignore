@@ -1,0 +1,24 @@
+node_modules/
+dist/
+dist-electron/
+release/
+.claude/
+
+# User data
+danmu.db
+record.json
+*.log
+
+# Binaries (download separately)
+ffmpeg.exe
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

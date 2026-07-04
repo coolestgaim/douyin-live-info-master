@@ -1,0 +1,35 @@
+{
+  "name": "douyin-live-info",
+  "version": "2.3.0",
+  "description": "抖音直播间信息获取工具 — 实时弹幕监听、数据统计、直播录制",
+  "author": "",
+  "license": "CC-BY-NC-4.0",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "npx vue-tsc --noEmit && npx vite build && npx tsc -p tsconfig.electron.json",
+    "preview": "vite preview",
+    "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron:build": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    "axios": "^1.7.0",
+    "sql.js": "^1.11.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/sql.js": "^1.4.11",
+    "@types/ws": "^8.18.1",
+    "@vitejs/plugin-vue": "^5.2.0",
+    "concurrently": "^9.0.0",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "naive-ui": "^2.40.0",
+    "pinia": "^2.2.0",
+    "typescript": "^5.6.0",
+    "vite": "^6.0.0",
+    "vue": "^3.5.0",
+    "vue-router": "^4.4.0",
+    "wait-on": "^8.0.0"
+  }
+}
