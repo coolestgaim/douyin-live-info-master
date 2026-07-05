@@ -231,10 +231,15 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('window:close', () => { mainWindow?.close() })
 
   // ===== 下播数据分析 (DashScope qwen-vl-plus) =====
-  const DASHSCOPE_KEY = 'sk-ws-H.RXRIXDR.GMmo.MEUCIDjHPaAcDJzcUXIEHRtZEf4DoET55gktdIBiHUPWyhIEAiEAmz587AkTWFSw4v6mmRJt5ftPfAOSyH5N-IuSRyLOP9c'
   const DASHSCOPE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'
 
+  function getDashScopeKey(): string {
+    return config.loadConfig().dashscopeKey
+  }
+
   async function callVision(base64Image: string, prompt: string): Promise<string> {
+    const key = getDashScopeKey()
+    if (!key) throw new Error('请先在设置页配置 DashScope API Key')
     const resp = await axios.post(DASHSCOPE_URL, {
       model: 'qwen-vl-plus',
       messages: [{
@@ -248,7 +253,7 @@ export function registerIpcHandlers(): void {
       temperature: 0
     }, {
       headers: {
-        'Authorization': `Bearer ${DASHSCOPE_KEY}`,
+        'Authorization': `Bearer ${key}`,
         'Content-Type': 'application/json'
       },
       timeout: 30000
