@@ -48,7 +48,11 @@ const api = {
   // Floating danmu
   floatingOpen: () => ipcRenderer.invoke('floating:open'),
   floatingClose: () => ipcRenderer.invoke('floating:close'),
-  onFloatingClosed: (cb: () => void) => ipcRenderer.on('floating:on-closed', cb),
+
+  // License
+  licenseCheck: () => ipcRenderer.invoke('license:check'),
+  licenseVerify: (key: string) => ipcRenderer.invoke('license:verify', key),
+  licenseDone: () => ipcRenderer.invoke('license:done'),
 
   // FFmpeg
   ffmpegCheck: () => ipcRenderer.invoke('ffmpeg:check'),
