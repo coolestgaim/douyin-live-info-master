@@ -7,6 +7,7 @@ import * as db from './services/database'
 import * as config from './services/record-config'
 import * as floatingDanmu from './services/floating-danmu'
 import * as ffmpegInstaller from './services/ffmpeg-installer'
+import * as license from './services/license'
 import * as logger from './services/logger'
 import * as fs from 'fs'
 import axios from 'axios'
@@ -206,6 +207,14 @@ export function registerIpcHandlers(): void {
   })
   ipcMain.on('floating:close', () => {
     floatingDanmu.closeFloatingDanmu()
+  })
+
+  // ===== License =====
+  ipcMain.handle('license:check', () => license.loadLicense())
+  ipcMain.handle('license:verify', (_e, key: string) => license.verifyKey(key))
+  ipcMain.handle('license:done', () => {
+    mainWindow?.webContents.send('license:passed')
+    return true
   })
 
   // ===== FFmpeg =====

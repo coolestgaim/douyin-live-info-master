@@ -1,5 +1,6 @@
 <template>
-  <n-config-provider :theme="darkTheme" :theme-overrides="themeOverrides">
+  <LicenseView v-if="!hasLicense" @verified="onVerified" />
+  <n-config-provider v-else :theme="darkTheme" :theme-overrides="themeOverrides">
     <n-message-provider>
       <div class="app-frame">
         <AppTitlebar />
@@ -19,11 +20,26 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { darkTheme, NConfigProvider, NMessageProvider, type GlobalThemeOverrides } from 'naive-ui'
 import AppTitlebar from './components/AppTitlebar.vue'
 import AppSidebar from './components/AppSidebar.vue'
+import LicenseView from './views/LicenseView.vue'
+
+const api = () => (window as any).electronAPI
+const hasLicense = ref(false)
+
+onMounted(async () => {
+  try {
+    const lic = await api().licenseCheck()
+    if (lic) hasLicense.value = true
+  } catch {}
+})
+
+function onVerified() {
+  hasLicense.value = true
+}
 
 const router = useRouter()
 const route = useRoute()
