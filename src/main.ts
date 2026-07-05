@@ -9,6 +9,7 @@ import RecordingView from './views/RecordingView.vue'
 import SettingsView from './views/SettingsView.vue'
 import AboutView from './views/AboutView.vue'
 import QuickReplyView from './views/QuickReplyView.vue'
+import OfflineDataView from './views/OfflineDataView.vue'
 
 import { useDanmuStore } from './stores/danmu'
 import { useRecordStore } from './stores/record'
@@ -23,7 +24,8 @@ const router = createRouter({
     { path: '/recording', component: RecordingView },
     { path: '/settings', component: SettingsView },
     { path: '/about', component: AboutView },
-    { path: '/quick-reply', component: QuickReplyView }
+    { path: '/quick-reply', component: QuickReplyView },
+    { path: '/offline', component: OfflineDataView }
   ]
 })
 

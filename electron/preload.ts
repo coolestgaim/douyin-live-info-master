@@ -54,6 +54,9 @@ const api = {
   ffmpegCheck: () => ipcRenderer.invoke('ffmpeg:check'),
   ffmpegInstall: () => ipcRenderer.invoke('ffmpeg:install'),
   onFfmpegProgress: (cb: (data: { pct: number; msg: string }) => void) => ipcRenderer.on('ffmpeg:progress', (_e, data) => cb(data)),
+
+  // 下播数据分析
+  offlineAnalyze: (douyinB64: string, videoB64: string) => ipcRenderer.invoke('offline:analyze', douyinB64, videoB64),
 }
 
 contextBridge.exposeInMainWorld('electronAPI', api)
