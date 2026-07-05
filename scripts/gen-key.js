@@ -70,13 +70,13 @@ const payload = `${userId}:${expires}`
 const privateKey = fs.readFileSync(PRIVATE_KEY_PATH, 'utf-8')
 const signature = crypto.sign('sha256', Buffer.from(payload), privateKey).toString('base64')
 
-// userId|expires|signature → base64url → 4字符分段
+// userId|expires|signature → base64url（不分段，仅 DY- 前缀）
 const raw = Buffer.from(`${userId}|${expires}|${signature}`)
   .toString('base64')
   .replace(/\+/g, '-')
   .replace(/\//g, '_')
   .replace(/=+$/, '')
-const key = 'DY-' + chunk(raw, 4).join('-')
+const key = 'DY-' + raw
 
 console.log('\n🔑 生成卡密:')
 console.log(`  ${key}\n`)

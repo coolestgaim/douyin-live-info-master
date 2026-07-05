@@ -16,7 +16,7 @@
           ref="inputRef"
           v-model="keyInput"
           class="license-input"
-          placeholder="DY-XXXX-XXXX-XXXX"
+          placeholder="粘贴卡密 DY-..."
           :disabled="verifying"
           @keyup.enter="doVerify"
         />

@@ -20,13 +20,11 @@ const LICENSE_FILE = path.join(app.getPath('userData'), 'license.dat')
 // ─── 验证卡密 ─────────────────────────────────────────
 export function verifyKey(input: string): { valid: boolean; message: string } {
   try {
-    // 去空格、DY- 前缀、分段横线
-    const raw = input.trim()
-      .replace(/^DY[-_]?/i, '')
-      .replace(/-/g, '')
+    // 去空格、DY- 前缀
+    const raw = input.trim().replace(/^DY-/i, '')
 
     // base64url → standard: -→+, _→/, 补 =
-    const b64 = raw.replace(/_/g, '/')
+    const b64 = raw.replace(/-/g, '+').replace(/_/g, '/')
     const padding = b64.length % 4
     const standard = b64 + (padding ? '='.repeat(4 - padding) : '')
 
