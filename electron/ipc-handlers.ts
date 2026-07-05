@@ -222,6 +222,7 @@ export function registerIpcHandlers(): void {
     mainWindow?.webContents.send('license:passed')
     return true
   })
+  ipcMain.handle('license:clear', () => { license.clearLicense(); return true })
 
   // ===== FFmpeg =====
   ipcMain.handle('ffmpeg:check', () => {

@@ -56,6 +56,7 @@ const api = {
   licenseCheck: () => ipcRenderer.invoke('license:check'),
   licenseVerify: (key: string) => ipcRenderer.invoke('license:verify', key),
   licenseDone: () => ipcRenderer.invoke('license:done'),
+  licenseClear: () => ipcRenderer.invoke('license:clear'),
 
   // FFmpeg
   ffmpegCheck: () => ipcRenderer.invoke('ffmpeg:check'),
