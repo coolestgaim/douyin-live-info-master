@@ -11,7 +11,7 @@ let mainWin: BrowserWindow | null = null
 const HTML = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:transparent;font-family:'Microsoft YaHei UI',system-ui,sans-serif;-webkit-app-region:drag}
+html,body{width:100%;height:100%;overflow:hidden;background:transparent;font-family:'Microsoft YaHei UI',system-ui,sans-serif}
 #container{width:100%;height:100%;display:flex;flex-direction:column;background:rgba(0,0,0,0.85);border-radius:12px;border:1px solid rgba(249,115,22,0.2);overflow:hidden}
 #titlebar{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;flex-shrink:0;-webkit-app-region:drag;border-bottom:1px solid rgba(42,45,54,0.6)}
 #titlebar .title{font-size:14px;font-weight:700;color:#e0e2e8}
@@ -35,7 +35,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:transparent;font-fam
 .r-chip.active{background:rgba(59,130,246,0.12);border-color:#3b82f6;color:#3b82f6}
 
 /* Danmu list */
-#list{flex:1;overflow-y:auto;padding:4px;min-height:0}
+#list{flex:1;overflow-y:scroll;padding:4px;min-height:0}
 .d-item{display:flex;align-items:center;padding:5px 10px;margin:2px 4px;border-radius:6px;gap:10px;transition:background .15s}
 .d-item:hover{background:rgba(249,115,22,0.04)}
 .d-gift{background:rgba(249,115,22,0.06);border:1px solid rgba(249,115,22,0.15)}
@@ -51,7 +51,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:transparent;font-fam
 /* Empty state */
 #empty{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:13px;color:#5a5a5a;display:none}
 
-::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#2a2d36;border-radius:2px}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:#2a2d36;border-radius:3px}::-webkit-scrollbar-track{background:transparent}
 </style></head><body>
 <div id="container">
 <div id="titlebar">
@@ -85,7 +85,7 @@ let allMsgs = []
 let autoScroll = true
 let rooms = []
 
-list.addEventListener('scroll', () => { autoScroll = list.scrollTop + list.clientHeight >= list.scrollHeight - 50 })
+list.addEventListener('scroll', () => { autoScroll = list.scrollTop + list.clientHeight >= list.scrollHeight - 20 })
 
 function buildRoomChips() {
   let html = '<span class="label">房间:</span>'
@@ -116,6 +116,8 @@ document.getElementById('tab-bar').querySelectorAll('.tab-btn').forEach(btn => {
 function timeStr() { const d = new Date(); return d.toTimeString().substring(0,8) }
 function esc(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML }
 
+function scrollBottom() { requestAnimationFrame(() => { if (autoScroll) list.scrollTop = list.scrollHeight }) }
+
 function renderList() {
   list.innerHTML = ''
   let msgs = allMsgs
@@ -124,7 +126,7 @@ function renderList() {
   const shown = msgs.slice(0, MAX)
   shown.forEach(msg => appendRow(msg))
   emptyEl.style.display = shown.length === 0 ? 'block' : 'none'
-  if (autoScroll) list.scrollTop = list.scrollHeight
+  scrollBottom()
 }
 
 function appendRow(msg) {
@@ -152,7 +154,7 @@ ipcRenderer.on('floating:danmu', (_e, msg) => {
   if ((!filterType || filterType === msg.type) && (!filterRoomId || filterRoomId === msg.roomId)) {
     appendRow(msg)
     while (list.children.length > MAX) list.removeChild(list.firstChild)
-    if (autoScroll) list.scrollTop = list.scrollHeight
+    scrollBottom()
   }
 })
 
