@@ -1,4 +1,4 @@
-import { ipcMain, BrowserWindow, dialog, shell } from 'electron'
+import { ipcMain, BrowserWindow, dialog, shell, session } from 'electron'
 import { DouyinLiveService } from './services/douyin-live'
 import { DanmuService, DanmuMsg } from './services/danmu'
 import { RecordingManager } from './services/recording-manager'
@@ -207,6 +207,14 @@ export function registerIpcHandlers(): void {
   })
   ipcMain.on('floating:close', () => {
     floatingDanmu.closeFloatingDanmu()
+  })
+
+  // ===== Session =====
+  ipcMain.handle('session:clear', async (_e, partition: string) => {
+    try {
+      await session.fromPartition(partition).clearStorageData()
+      return true
+    } catch (e: any) { return false }
   })
 
   // ===== FFmpeg =====

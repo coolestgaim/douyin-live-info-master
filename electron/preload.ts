@@ -50,6 +50,9 @@ const api = {
   floatingClose: () => ipcRenderer.invoke('floating:close'),
   onFloatingClosed: (cb: () => void) => ipcRenderer.on('floating:on-closed', cb),
 
+  // Session
+  sessionClear: (partition: string) => ipcRenderer.invoke('session:clear', partition),
+
   // FFmpeg
   ffmpegCheck: () => ipcRenderer.invoke('ffmpeg:check'),
   ffmpegInstall: () => ipcRenderer.invoke('ffmpeg:install'),

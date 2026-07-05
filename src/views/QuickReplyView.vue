@@ -20,6 +20,7 @@
             <button v-if="inst.status === 'running'" class="qr-btn qr-btn-pause" @click="togglePause(inst)">
               {{ pauseMap[inst.id] ? '恢复' : '暂停' }}
             </button>
+            <button v-if="inst.status === 'running'" class="qr-btn qr-btn-clear" @click="clearLogin(inst)">清除登录</button>
           </div>
         </div>
 
@@ -35,7 +36,26 @@
             />
           </div>
 
-          <div class="qr-sidebar" v-show="!inst.expanded">
+          <div class="qr-sidebar" v-show="!inst.expanded" @mousedown="blurWebview(inst.id)">
+
+            <!-- 定位输入框 -->
+            <div class="qr-section-label">
+              输入框定位
+              <button v-if="inst.inputPinState !== 'pinning'" class="qr-pin-btn" @click="pinInput(inst)">定位</button>
+              <span v-if="inst.inputPinState === 'pinning'" class="qr-pin-hint">请点击页面中的输入框...</span>
+              <span v-if="inst.inputPinState === 'ok'" class="qr-pin-ok">已定位 ✓</span>
+              <button v-if="inst.inputSelector" class="qr-pin-clear" @click="store.clearInputSelector(inst.id)">✕</button>
+            </div>
+            <div v-if="inst.inputSelector" class="qr-pin-sel" :title="inst.inputSelector">{{ inst.inputSelector }}</div>
+
+            <!-- 定位发送按钮 -->
+            <div class="qr-section-label">
+              发送按钮定位
+              <button v-if="inst.inputPinState !== 'pinning'" class="qr-pin-btn qr-pin-btn-send" @click="pinSend(inst)">定位</button>
+              <span v-if="inst.inputPinState === 'send-ok'" class="qr-pin-ok">已定位 ✓</span>
+              <button v-if="inst.sendSelector" class="qr-pin-clear" @click="store.clearInputSelector(inst.id)">✕</button>
+            </div>
+            <div v-if="inst.sendSelector" class="qr-pin-sel" :title="inst.sendSelector">{{ inst.sendSelector }}</div>
 
             <div class="qr-section-label">快捷回复 <button class="qr-add-group-btn" @click="store.addGroup(inst.id)">+ 分组</button></div>
             <div class="qr-groups">
@@ -64,8 +84,9 @@
             </div>
 
             <div class="qr-send-row">
-              <input v-model="inst.sendInput" class="qr-send-input" placeholder="手动输入..." @keyup.enter="manualSend(inst.id)" />
+              <textarea v-model="inst.sendInput" class="qr-send-input" placeholder="输入..." rows="2" @keyup.enter="manualSend(inst.id)"></textarea>
               <button class="qr-btn qr-btn-fill" @click="manualSend(inst.id)" :disabled="!inst.sendInput.trim()">发送</button>
+              <button class="qr-btn qr-btn-burst" @click="randomBurst(inst)" :disabled="burstMap[inst.id] || !inst.sendInput.trim()">{{ burstMap[inst.id] ? '发送中...' : '三连' }}</button>
             </div>
           </div>
         </div>
@@ -75,7 +96,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useQuickReplyStore } from '../stores/quick-reply'
 
 defineOptions({ name: 'QuickReplyView' })
@@ -83,6 +104,7 @@ defineOptions({ name: 'QuickReplyView' })
 const store = useQuickReplyStore()
 const webviewRefs = ref<Record<number, HTMLWebViewElement>>({})
 const pauseMap = ref<Record<number, boolean>>({})
+const burstMap = ref<Record<number, boolean>>({})
 
 function setWebviewRef(id: number, el: HTMLWebViewElement | null) {
   if (el) webviewRefs.value[id] = el
@@ -101,6 +123,42 @@ function togglePause(inst: any) {
   }
 }
 
+async function clearLogin(inst: any) {
+  if (!confirm('确定要清除此实例的登录状态？\\n清除后将重新加载页面。')) return
+  closeWebview(inst)
+  try {
+    await (window as any).electronAPI.sessionClear('persist:qr_' + inst.id)
+  } catch (e) {}
+  setTimeout(() => loadWebview(inst), 300)
+}
+
+function blurWebview(id: number) {
+  const webview = webviewRefs.value[id]
+  if (webview) {
+    try { webview.blur() } catch (e) {}
+  }
+}
+
+async function pinInput(inst: any) {
+  const webview = webviewRefs.value[inst.id]
+  if (!webview) return
+  inst.inputPinState = 'pinning'
+  const result = await store.pinInputSelector(webview, inst.id)
+  if (!result.success) {
+    if (result.error) alert('定位失败: ' + result.error)
+  }
+}
+
+async function pinSend(inst: any) {
+  const webview = webviewRefs.value[inst.id]
+  if (!webview) return
+  inst.inputPinState = 'pinning'
+  const result = await store.pinSendSelector(webview, inst.id)
+  if (!result.success) {
+    if (result.error) alert('定位失败: ' + result.error)
+  }
+}
+
 function resolveUrl(raw: string): string {
   if (!raw) return 'about:blank'
   return raw.includes('://') ? raw : 'https://' + raw
@@ -110,6 +168,7 @@ function loadWebview(inst: any) {
   if (!inst.roomUrl) return
   inst.status = 'running'
   inst.expanded = false
+  store.startPolling()
 }
 
 function closeWebview(inst: any) {
@@ -117,6 +176,7 @@ function closeWebview(inst: any) {
   inst.lastDanmu = []
   inst.expanded = false
   delete webviewRefs.value[inst.id]
+  if (!store.instances.some((i: any) => i.status === 'running')) store.stopPolling()
 }
 
 function onWebviewReady(id: number) {
@@ -145,8 +205,9 @@ function onWebviewReady(id: number) {
 async function quickSend(id: number, text: string) {
   const webview = webviewRefs.value[id]
   if (!webview) return
+  const inst = store.instances.find(i => i.id === id)
   try {
-    const result = await store.sendViaWebview(webview, text)
+    const result = await store.sendViaWebview(webview, text, inst?.inputSelector ?? null, inst?.sendSelector ?? null)
     if (!result.success) {
       alert('发送失败: ' + (result.error || '未知错误') + '\n\n请确保已在直播间页面中登录抖音账号')
     }
@@ -159,9 +220,25 @@ async function manualSend(id: number) {
   const inst = store.instances.find(i => i.id === id)
   if (!inst || !inst.sendInput.trim()) return
   const text = inst.sendInput.trim()
-  inst.sendInput = ''
   await quickSend(id, text)
 }
+
+async function randomBurst(inst: any) {
+  if (!inst.sendInput.trim() || burstMap.value[inst.id]) return
+  const text = inst.sendInput.trim()
+  burstMap.value[inst.id] = true
+  for (let i = 0; i < 3; i++) {
+    await quickSend(inst.id, text)
+    if (i < 2) {
+      // 随机间隔 500ms ~ 2500ms
+      await new Promise(r => setTimeout(r, 500 + Math.floor(Math.random() * 2000)))
+    }
+  }
+  burstMap.value[inst.id] = false
+}
+
+onMounted(() => store.startPolling())
+onUnmounted(() => store.stopPolling())
 </script>
 
 <style scoped>
@@ -190,6 +267,8 @@ async function manualSend(id: number) {
 .qr-btn-fill { background: rgba(249,115,22,0.1); color: #f97316; border: 1px solid rgba(249,115,22,0.3); }
 .qr-btn-fill:hover { background: rgba(249,115,22,0.2); }
 .qr-btn-fill:disabled { opacity: 0.3; cursor: default; }
+.qr-btn-clear { background: rgba(107,114,128,0.1); color: #6b7280; border: 1px solid rgba(107,114,128,0.3); }
+.qr-btn-clear:hover { background: rgba(107,114,128,0.2); }
 
 .qr-main { display: flex; gap: 12px; flex: 1; min-height: 0; }
 .qr-main-expanded { gap: 0; }
@@ -200,8 +279,14 @@ async function manualSend(id: number) {
 .qr-sidebar { width: 250px; flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
 
 .qr-section-label { font-size: 11px; color: #5a5e6e; font-weight: 600; display: flex; align-items: center; gap: 6px; }
-.qr-btn-effect { background: rgba(234,179,8,0.1); color: #eab308; border: 1px solid rgba(234,179,8,0.3); }
-.qr-btn-effect:hover { background: rgba(234,179,8,0.2); }
+
+/* 定位按钮 */
+.qr-pin-btn { background: rgba(34,197,94,0.1); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); font-size: 11px; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-family: inherit; }
+.qr-pin-btn:hover { background: rgba(34,197,94,0.2); }
+.qr-pin-hint { font-size: 10px; color: #eab308; font-weight: 400; }
+.qr-pin-ok { font-size: 10px; color: #22c55e; }
+.qr-pin-clear { background: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 12px; padding: 0 2px; line-height: 1; }
+.qr-pin-sel { font-size: 9px; color: #4a4e5e; padding: 2px 6px; background: #111318; border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .qr-add-group-btn { background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.3); color: #fb923c; font-size: 11px; padding: 2px 10px; border-radius: 4px; cursor: pointer; font-family: inherit; margin-left: auto; }
 .qr-add-group-btn:hover { background: rgba(249,115,22,0.18); }
@@ -227,6 +312,9 @@ async function manualSend(id: number) {
 .qr-chip:hover { background: rgba(249,115,22,0.18); }
 
 .qr-send-row { display: flex; gap: 6px; margin-top: auto; padding-top: 6px; }
-.qr-send-input { flex: 1; background: #111318; border: 1px solid #2a2d36; border-radius: 6px; padding: 6px 10px; color: #e0e2e8; font-size: 12px; font-family: inherit; outline: none; }
+.qr-send-input { flex: 0 0 100px; background: #111318; border: 1px solid #2a2d36; border-radius: 6px; padding: 4px 6px; color: #e0e2e8; font-size: 11px; font-family: inherit; outline: none; resize: none; overflow-wrap: break-word; }
 .qr-send-input:focus { border-color: #f97316; }
+.qr-btn-burst { background: rgba(168,85,247,0.1); color: #a855f7; border: 1px solid rgba(168,85,247,0.3); }
+.qr-btn-burst:hover:not(:disabled) { background: rgba(168,85,247,0.2); }
+.qr-btn-burst:disabled { opacity: 0.4; }
 </style>
