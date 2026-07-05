@@ -18,13 +18,17 @@ export interface QuickReplyInstance {
   quickReplyGroups: QuickReplyGroup[]
   sendInput: string
   lastDanmu: DanmuMessage[]
+  inputSelector: string | null
+  sendSelector: string | null
+  inputPinState: string
 }
 
 function defaultInstance(id: number): QuickReplyInstance {
   return {
     id, name: `实例 ${id}`, roomUrl: '', status: 'idle', expanded: false,
     quickReplyGroups: [{ name: '默认分组', expanded: true, items: ['欢迎来到直播间！', '谢谢关注~', '点点赞支持一下'] }],
-    sendInput: '', lastDanmu: []
+    sendInput: '', lastDanmu: [],
+    inputSelector: null, sendSelector: null, inputPinState: ''
   }
 }
 
@@ -36,12 +40,13 @@ function loadFromStorage(): QuickReplyInstance[] {
     if (raw) {
       const data = JSON.parse(raw)
       if (Array.isArray(data) && data.length === 3) {
-        // Merge saved data with full defaults so all fields are present
         return data.map((item: any, idx: number) => ({
           ...defaultInstance(idx + 1),
           id: item.id ?? idx + 1,
           name: item.name ?? defaultInstance(idx + 1).name,
           quickReplyGroups: Array.isArray(item.quickReplyGroups) ? item.quickReplyGroups : defaultInstance(idx + 1).quickReplyGroups,
+          inputSelector: item.inputSelector ?? null,
+          sendSelector: item.sendSelector ?? null,
         }))
       }
     }
@@ -52,7 +57,9 @@ function loadFromStorage(): QuickReplyInstance[] {
 function saveToStorage(instances: QuickReplyInstance[]) {
   try {
     const slim = instances.map(i => ({
-      id: i.id, name: i.name, quickReplyGroups: i.quickReplyGroups
+      id: i.id, name: i.name, quickReplyGroups: i.quickReplyGroups,
+      inputSelector: i.inputSelector,
+      sendSelector: i.sendSelector,
     }))
     localStorage.setItem(STORAGE_KEY, JSON.stringify(slim))
   } catch {}
@@ -75,84 +82,244 @@ export const useQuickReplyStore = defineStore('quickReply', () => {
   function startPolling() { if (!pollTimer) pollTimer = setInterval(updateDanmuMonitor, 2000) }
   function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null } }
 
-  function sendViaWebview(webview: any, text: string): Promise<{ success: boolean; error?: string }> {
+  // ===== 新方案：定位 → 填字 → 回车 =====
+
+  function sendViaWebview(webview: any, text: string, inputSelector: string | null, sendSelector: string | null): Promise<{ success: boolean; error?: string }> {
     if (!webview) return Promise.resolve({ success: false, error: 'webview 未就绪' })
     try {
       return webview.executeJavaScript(`
         (async function() {
           try {
             const txt = ${JSON.stringify(text)};
-            function findInput(doc) {
-              let el = doc.querySelector('div[contenteditable="true"][data-placeholder="说点什么..."]');
-              if (el) return el;
-              el = doc.querySelector('div[contenteditable="true"][data-placeholder*="说"], div[contenteditable="true"][data-placeholder*="发"]');
-              if (el) return el;
-              const textareas = doc.querySelectorAll('textarea');
-              for (const t of textareas) { if (t.isConnected) return t; }
-              const editables = doc.querySelectorAll('div[contenteditable="true"]');
-              for (const e of editables) { if (e.isConnected) { const s = getComputedStyle(e); if (s.display !== 'none') return e; } }
-              return null;
+            const inputSel = ${JSON.stringify(inputSelector || null)};
+            const sendSel = ${JSON.stringify(sendSelector || null)};
+
+            // 找输入框
+            let inputBox = null;
+            if (inputSel) {
+              try { inputBox = document.querySelector(inputSel); } catch(e) {}
             }
-            let inputBox = findInput(document);
-            if (!inputBox) {
-              const iframes = document.querySelectorAll('iframe');
-              for (const iframe of iframes) {
-                try {
-                  const doc = iframe.contentDocument || iframe.contentWindow.document;
-                  if (doc) { inputBox = findInput(doc); if (inputBox) break; }
-                } catch(e) {}
+            if (!inputBox || !inputBox.isConnected) {
+              const editables = document.querySelectorAll('div[contenteditable="true"]');
+              for (const e of editables) {
+                if (e.isConnected) { const s = getComputedStyle(e); if (s.display !== 'none') { inputBox = e; break; } }
               }
             }
-            if (!inputBox) return { success: false, error: '未找到聊天输入框' };
-            inputBox.innerText = txt;
+            if (!inputBox || !inputBox.isConnected) {
+              const textareas = document.querySelectorAll('textarea');
+              for (const t of textareas) { if (t.isConnected) { inputBox = t; break; } }
+            }
+            if (!inputBox) return { success: false, error: '未找到输入框' };
+
+            // 填入文字
+            inputBox.innerHTML = '';
+            inputBox.focus();
+            document.execCommand('insertText', false, txt);
             inputBox.dispatchEvent(new Event('input', { bubbles: true }));
-            inputBox.dispatchEvent(new Event('change', { bubbles: true }));
-            await new Promise(r => setTimeout(r, 200));
-            function findByText(doc, txt) {
-              const all = doc.querySelectorAll('button, [role="button"], div, span, a, i, svg');
+            await new Promise(r => setTimeout(r, 400));
+
+            // 找发送按钮
+            let sendBtn = null;
+            if (sendSel) {
+              try { sendBtn = document.querySelector(sendSel); } catch(e) {}
+            }
+            if (!sendBtn || !sendBtn.isConnected) {
+              // fallback: 找包含"发送"文字的可点击元素
+              const all = document.querySelectorAll('button, [role="button"], div, span');
               for (const el of all) {
-                if (!el.isConnected) continue;
-                const t = (el.textContent || el.getAttribute('aria-label') || el.title || '').trim();
-                if (t.includes(txt)) return el;
-              }
-              return null;
-            }
-            let sendBtn = findByText(document, '发送');
-            if (!sendBtn) {
-              const iframes = document.querySelectorAll('iframe');
-              for (const iframe of iframes) {
-                try {
-                  const doc = iframe.contentDocument || iframe.contentWindow.document;
-                  if (doc) { sendBtn = findByText(doc, '发送'); if (sendBtn) break; }
-                } catch(e) {}
+                if (!el.isConnected || el.offsetWidth === 0) continue;
+                const t = (el.textContent || '').trim();
+                if (t === '发送' || t === 'Send') { sendBtn = el; break; }
               }
             }
-            if (!sendBtn) {
-              let el = inputBox;
-              for (let i = 0; i < 5 && el; i++) {
-                el = el.parentElement;
-                if (!el) break;
-                const nearby = el.querySelectorAll('*');
-                for (const n of nearby) {
-                  const t = (n.textContent || '').trim();
-                  if ((t === '发送' || t === 'Send') && n.offsetWidth > 0) { sendBtn = n; break; }
-                }
-                if (sendBtn) break;
-              }
+            if (!sendBtn) return { success: false, error: '未找到发送按钮，请先定位发送按钮' };
+
+            // 自动向上找最近的 <button> 标签（避免定位到 span/svg 子元素）
+            let btn = sendBtn;
+            for (let i = 0; i < 5 && btn && btn.tagName !== 'BUTTON'; i++) {
+              btn = btn.parentElement;
             }
-            if (!sendBtn) {
-              inputBox.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
-              inputBox.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
-              return { success: true };
+            if (btn && btn.tagName === 'BUTTON') sendBtn = btn;
+
+            // 模拟真人操作：3秒内随机分散点击
+            function clickOnce(el) {
+              el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+              el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+              el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
             }
-            if (sendBtn.disabled) return { success: false, error: '发送按钮被禁用' };
-            sendBtn.click();
+            await new Promise(r => setTimeout(r, 200 + Math.random() * 800));
+            clickOnce(sendBtn);
+            await new Promise(r => setTimeout(r, 300 + Math.random() * 700));
+            clickOnce(sendBtn);
+            await new Promise(r => setTimeout(r, 400 + Math.random() * 800));
+            clickOnce(sendBtn);
+            if (typeof sendBtn.click === 'function') sendBtn.click();
+            await new Promise(r => setTimeout(r, 200));
             return { success: true };
           } catch(err) { return { success: false, error: err.message }; }
         })()
       `)
     } catch (e: any) { return Promise.resolve({ success: false, error: e.message }) }
   }
+
+  // ===== 定位输入框 =====
+
+  function pinInputSelector(webview: any, instId: number): Promise<{ success: boolean; selector?: string; tag?: string; text?: string; error?: string }> {
+    if (!webview) return Promise.resolve({ success: false, error: 'webview 未就绪' })
+    try {
+      return webview.executeJavaScript(`
+        (function() {
+          try {
+            document.addEventListener('click', function handler(e) {
+              document.removeEventListener('click', handler, true);
+              e.preventDefault();
+              e.stopPropagation();
+              const el = e.target;
+              function buildSelector(el) {
+                if (el.id) return '#' + CSS.escape(el.id);
+                const path = [];
+                let cur = el;
+                while (cur && cur !== document.body) {
+                  let seg = cur.tagName.toLowerCase();
+                  if (cur.className && typeof cur.className === 'string') {
+                    const cls = cur.className.trim().split(/\\s+/).slice(0, 2);
+                    if (cls.length) seg += '.' + cls.map(function(c){ return CSS.escape(c) }).join('.');
+                  }
+                  const parent = cur.parentElement;
+                  if (parent) {
+                    const siblings = Array.from(parent.children).filter(function(c) { return c.tagName === cur.tagName });
+                    if (siblings.length > 1) seg += ':nth-of-type(' + (siblings.indexOf(cur)+1) + ')';
+                  }
+                  path.unshift(seg);
+                  if (document.querySelectorAll(path.join(' > ')).length === 1) break;
+                  cur = cur.parentElement;
+                }
+                return path.join(' > ');
+              }
+              el.style.outline = '3px solid #f97316';
+              setTimeout(function() { el.style.outline = '' }, 3000);
+              window.__hermesPinned = {
+                selector: buildSelector(el),
+                tag: el.tagName,
+                text: (el.textContent||'').substring(0, 50)
+              };
+            }, { once: true, capture: true });
+            return { success: true };
+          } catch(err) { return { success: false, error: err.message }; }
+        })()
+      `).then(() => {
+        // Poll 等待用户点击
+        return new Promise((resolve) => {
+          const start = Date.now()
+          const poll = setInterval(async () => {
+            try {
+              const result = await webview.executeJavaScript('window.__hermesPinned || null')
+              if (result) {
+                clearInterval(poll)
+                delete result.then // just in case
+                const inst = instances.value.find(i => i.id === instId)
+                if (inst) {
+                  inst.inputSelector = result.selector
+                  inst.inputPinState = 'ok'
+                  persist()
+                }
+                resolve({ success: true, ...result })
+              } else if (Date.now() - start > 20000) {
+                clearInterval(poll)
+                const inst = instances.value.find(i => i.id === instId)
+                if (inst) inst.inputPinState = ''
+                resolve({ success: false, error: '定位超时，请重试' })
+              }
+            } catch (e) {
+              clearInterval(poll)
+              resolve({ success: false, error: String(e) })
+            }
+          }, 500)
+        })
+      })
+    } catch (e: any) { return Promise.resolve({ success: false, error: e.message }) }
+  }
+
+  function clearInputSelector(instId: number) {
+    const inst = instances.value.find(i => i.id === instId)
+    if (inst) { inst.inputSelector = null; inst.sendSelector = null; inst.inputPinState = ''; persist() }
+  }
+
+  // ===== 定位发送按钮 =====
+
+  function pinSendSelector(webview: any, instId: number): Promise<{ success: boolean; selector?: string; tag?: string; text?: string; error?: string }> {
+    if (!webview) return Promise.resolve({ success: false, error: 'webview 未就绪' })
+    try {
+      return webview.executeJavaScript(`
+        (function() {
+          try {
+            document.addEventListener('click', function handler(e) {
+              document.removeEventListener('click', handler, true);
+              e.preventDefault();
+              e.stopPropagation();
+              const el = e.target;
+              function buildSelector(el) {
+                if (el.id) return '#' + CSS.escape(el.id);
+                const path = [];
+                let cur = el;
+                while (cur && cur !== document.body) {
+                  let seg = cur.tagName.toLowerCase();
+                  if (cur.className && typeof cur.className === 'string') {
+                    const cls = cur.className.trim().split(/\\s+/).slice(0, 2);
+                    if (cls.length) seg += '.' + cls.map(function(c){ return CSS.escape(c) }).join('.');
+                  }
+                  const parent = cur.parentElement;
+                  if (parent) {
+                    const siblings = Array.from(parent.children).filter(function(c) { return c.tagName === cur.tagName });
+                    if (siblings.length > 1) seg += ':nth-of-type(' + (siblings.indexOf(cur)+1) + ')';
+                  }
+                  path.unshift(seg);
+                  if (document.querySelectorAll(path.join(' > ')).length === 1) break;
+                  cur = cur.parentElement;
+                }
+                return path.join(' > ');
+              }
+              el.style.outline = '3px solid #22c55e';
+              setTimeout(function() { el.style.outline = '' }, 3000);
+              window.__hermesSendPinned = {
+                selector: buildSelector(el),
+                tag: el.tagName,
+                text: (el.textContent||'').substring(0, 50)
+              };
+            }, { once: true, capture: true });
+            return { success: true };
+          } catch(err) { return { success: false, error: err.message }; }
+        })()
+      `).then(() => {
+        return new Promise((resolve) => {
+          const start = Date.now()
+          const poll = setInterval(async () => {
+            try {
+              const result = await webview.executeJavaScript('window.__hermesSendPinned || null')
+              if (result) {
+                clearInterval(poll)
+                const inst = instances.value.find(i => i.id === instId)
+                if (inst) {
+                  inst.sendSelector = result.selector
+                  inst.inputPinState = 'send-ok'
+                  persist()
+                }
+                resolve({ success: true, ...result })
+              } else if (Date.now() - start > 20000) {
+                clearInterval(poll)
+                resolve({ success: false, error: '定位超时，请重试' })
+              }
+            } catch (e) {
+              clearInterval(poll)
+              resolve({ success: false, error: String(e) })
+            }
+          }, 500)
+        })
+      })
+    } catch (e: any) { return Promise.resolve({ success: false, error: e.message }) }
+  }
+
+  // ===== 分组管理 =====
 
   function addGroup(id: number) {
     const inst = instances.value.find(i => i.id === id)
@@ -186,7 +353,7 @@ export const useQuickReplyStore = defineStore('quickReply', () => {
   }
 
   return {
-    instances, sendViaWebview,
+    instances, sendViaWebview, pinInputSelector, pinSendSelector, clearInputSelector,
     addGroup, removeGroup, toggleGroup, setGroupName,
     addQuickReply, removeQuickReply, setQuickReply,
     updateDanmuMonitor, startPolling, stopPolling

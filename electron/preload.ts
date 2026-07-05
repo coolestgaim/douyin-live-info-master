@@ -49,6 +49,9 @@ const api = {
   floatingOpen: () => ipcRenderer.invoke('floating:open'),
   floatingClose: () => ipcRenderer.invoke('floating:close'),
 
+  // Session
+  sessionClear: (partition: string) => ipcRenderer.invoke('session:clear', partition),
+
   // License
   licenseCheck: () => ipcRenderer.invoke('license:check'),
   licenseVerify: (key: string) => ipcRenderer.invoke('license:verify', key),
