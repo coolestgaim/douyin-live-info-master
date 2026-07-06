@@ -44,7 +44,7 @@ function createWindow(): void {
 
   mainWindow.on('close', (e) => {
     e.preventDefault()
-    cleanup().then(() => {
+    cleanup().catch(() => {}).finally(() => {
       app.exit(0)
     })
   })
