@@ -44,6 +44,13 @@ const api = {
   windowMinimize: () => ipcRenderer.invoke('window:minimize'),
   windowMaximize: () => ipcRenderer.invoke('window:maximize'),
   windowClose: () => ipcRenderer.invoke('window:close'),
+  windowPin: () => ipcRenderer.invoke('window:pin'),
+  windowIsPinned: () => ipcRenderer.invoke('window:isPinned'),
+
+  // DeskPins
+  deskpinsList: () => ipcRenderer.invoke('deskpins:list'),
+  deskpinsPin: (hwnd: string) => ipcRenderer.invoke('deskpins:pin', hwnd),
+  deskpinsUnpin: (hwnd: string) => ipcRenderer.invoke('deskpins:unpin', hwnd),
 
   // Floating danmu
   floatingOpen: () => ipcRenderer.invoke('floating:open'),
