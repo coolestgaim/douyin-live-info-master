@@ -8,9 +8,9 @@
           <AppSidebar :current="currentRoute" @navigate="navigate" />
           <div class="app-content">
             <router-view v-slot="{ Component }">
-              <transition name="page" mode="out-in">
+              <keep-alive>
                 <component :is="Component" />
-              </transition>
+              </keep-alive>
             </router-view>
           </div>
         </div>
