@@ -3,7 +3,7 @@
     <div class="titlebar-left">
       <div class="app-dot"></div>
     </div>
-    <div class="titlebar-center">抖音直播间信息获取</div>
+    <div class="titlebar-center">抖音直播控场助手</div>
     <div class="titlebar-controls">
       <button :class="['titlebar-btn', { active: pinned }]" @click="togglePin" title="置顶窗口">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
