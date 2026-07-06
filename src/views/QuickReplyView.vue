@@ -21,6 +21,7 @@
               {{ pauseMap[inst.id] ? '恢复' : '暂停' }}
             </button>
             <button v-if="inst.status === 'running'" class="qr-btn qr-btn-clear" @click="clearLogin(inst)">清除登录</button>
+            <button v-if="inst.status === 'running'" class="qr-btn qr-btn-refresh" @click="refreshWebview(inst)">刷新</button>
           </div>
         </div>
 
@@ -124,12 +125,23 @@ function togglePause(inst: any) {
 }
 
 async function clearLogin(inst: any) {
-  if (!confirm('确定要清除此实例的登录状态？\\n清除后将重新加载页面。')) return
-  closeWebview(inst)
+  if (!confirm('确定要清除此实例的登录状态？')) return
+  const webview = webviewRefs.value[inst.id]
   try {
     await (window as any).electronAPI.sessionClear('persist:qr_' + inst.id)
   } catch (e) {}
-  setTimeout(() => loadWebview(inst), 300)
+  // 强制刷新 webview 让登录态生效
+  if (webview) {
+    try { webview.reload() } catch {}
+    setTimeout(() => { try { webview.reload() } catch {} }, 500)
+  }
+}
+
+function refreshWebview(inst: any) {
+  const webview = webviewRefs.value[inst.id]
+  if (webview) {
+    try { webview.reload() } catch {}
+  }
 }
 
 function blurWebview(id: number) {
@@ -269,6 +281,8 @@ onUnmounted(() => store.stopPolling())
 .qr-btn-fill:disabled { opacity: 0.3; cursor: default; }
 .qr-btn-clear { background: rgba(107,114,128,0.1); color: #6b7280; border: 1px solid rgba(107,114,128,0.3); }
 .qr-btn-clear:hover { background: rgba(107,114,128,0.2); }
+.qr-btn-refresh { background: rgba(34,197,94,0.1); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+.qr-btn-refresh:hover { background: rgba(34,197,94,0.2); }
 
 .qr-main { display: flex; gap: 12px; flex: 1; min-height: 0; }
 .qr-main-hidden { display: none; }
