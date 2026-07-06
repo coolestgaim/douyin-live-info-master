@@ -23,7 +23,7 @@
       </button>
     </div>
     <div class="sidebar-footer">
-      <div class="version-tag">V 2.5.0</div>
+      <div class="version-tag">V 2.5.1</div>
     </div>
   </div>
 </template>
