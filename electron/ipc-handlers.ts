@@ -245,6 +245,19 @@ export function registerIpcHandlers(): void {
     mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize()
   })
   ipcMain.handle('window:close', () => { mainWindow?.close() })
+  ipcMain.handle('window:pin', () => {
+    if (!mainWindow) return false
+    const pinned = !mainWindow.isAlwaysOnTop()
+    mainWindow.setAlwaysOnTop(pinned)
+    return pinned
+  })
+  ipcMain.handle('window:isPinned', () => mainWindow?.isAlwaysOnTop() || false)
+
+  // ===== 外部窗口置顶（DeskPins） =====
+  const deskpins = require('./services/deskpins')
+  ipcMain.handle('deskpins:list', () => deskpins.listWindows())
+  ipcMain.handle('deskpins:pin', (_e, hwnd: string) => deskpins.pinWindow(hwnd))
+  ipcMain.handle('deskpins:unpin', (_e, hwnd: string) => deskpins.unpinWindow(hwnd))
 
   // ===== 下播数据分析 (DashScope qwen-vl-plus) =====
   const DASHSCOPE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'
