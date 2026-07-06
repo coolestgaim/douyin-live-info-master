@@ -33,6 +33,7 @@ export function isFfmpegAvailable(): boolean {
     getFfmpegUserPath(),
     path.join(__dirname, 'ffmpeg.exe'),
     path.join(process.cwd(), 'ffmpeg.exe'),
+    path.join(process.resourcesPath || '', 'ffmpeg.exe'),
     'ffmpeg'
   ]
   for (const p of paths) {
