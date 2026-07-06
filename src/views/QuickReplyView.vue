@@ -88,19 +88,21 @@
               <button class="qr-btn qr-btn-fill" @click="manualSend(inst.id)" :disabled="!inst.sendInput.trim()">发送</button>
               <button class="qr-btn qr-btn-burst" @click="randomBurst(inst)" :disabled="burstMap[inst.id] || !inst.sendInput.trim()">{{ burstMap[inst.id] ? '发送中...' : '三连' }}</button>
             </div>
-
-            <div class="qr-section-label deskpins-header" @click="deskpinsOpen = !deskpinsOpen">
-              📌 窗口置顶 <span class="deskpins-arrow">{{ deskpinsOpen ? '▾' : '▸' }}</span>
-            </div>
-            <div v-if="deskpinsOpen" class="deskpins-list">
-              <button class="qr-btn qr-btn-expand" style="font-size:10px;margin-bottom:4px" @click="refreshWindows">刷新窗口列表</button>
-              <div v-for="w in windows" :key="w.hwnd" class="deskpins-row">
-                <span class="deskpins-title" :title="w.title">{{ w.title }}</span>
-                <button v-if="!pinnedSet.has(w.hwnd)" class="qr-pin-btn" @click="pinWindow(w.hwnd)">置顶</button>
-                <button v-else class="qr-pin-btn" style="background:rgba(239,68,68,0.1);color:#ef4444;border-color:rgba(239,68,68,0.3)" @click="unpinWindow(w.hwnd)">取消</button>
-              </div>
-            </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="deskpins-panel card">
+      <div class="deskpins-header-fixed" @click="deskpinsOpen = !deskpinsOpen">
+        📌 窗口置顶 <span class="deskpins-arrow">{{ deskpinsOpen ? '▾' : '▸' }}</span>
+        <button v-if="deskpinsOpen" class="qr-pin-btn" style="margin-left:auto" @click.stop="refreshWindows">刷新</button>
+      </div>
+      <div v-if="deskpinsOpen" class="deskpins-list-fixed">
+        <div v-for="w in windows" :key="w.hwnd" class="deskpins-row">
+          <span class="deskpins-title" :title="w.title">{{ w.title }}</span>
+          <button v-if="!pinnedSet.has(w.hwnd)" class="qr-pin-btn" @click="pinWindow(w.hwnd)">置顶</button>
+          <button v-else class="qr-pin-btn deskpins-unpin-btn" @click="unpinWindow(w.hwnd)">取消</button>
         </div>
       </div>
     </div>
@@ -351,10 +353,12 @@ onUnmounted(() => store.stopPolling())
 .qr-btn-burst:disabled { opacity: 0.4; }
 
 /* DeskPins */
-.deskpins-header { cursor: pointer; user-select: none; padding: 4px 0; }
-.deskpins-header:hover { color: #f97316; }
+.deskpins-panel { padding: 10px 14px; flex-shrink: 0; margin-top: 8px; }
+.deskpins-header-fixed { cursor: pointer; user-select: none; font-size: 12px; font-weight: 600; color: #6b7080; display: flex; align-items: center; gap: 6px; }
+.deskpins-header-fixed:hover { color: #f97316; }
 .deskpins-arrow { font-size: 10px; }
-.deskpins-list { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; }
-.deskpins-row { display: flex; align-items: center; gap: 4px; padding: 3px 0; }
-.deskpins-title { flex: 1; font-size: 10px; color: #8b8fa3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.deskpins-list-fixed { max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; margin-top: 6px; }
+.deskpins-row { display: flex; align-items: center; gap: 4px; padding: 2px 0; }
+.deskpins-title { flex: 1; font-size: 11px; color: #8b8fa3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.deskpins-unpin-btn { background: rgba(239,68,68,0.1) !important; color: #ef4444 !important; border-color: rgba(239,68,68,0.3) !important; }
 </style>
