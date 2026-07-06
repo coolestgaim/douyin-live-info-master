@@ -329,9 +329,11 @@ export function registerIpcHandlers(): void {
 }
 
 export async function cleanup(): Promise<void> {
-  for (const [, service] of danmuConnections) service.disconnect()
-  danmuConnections.clear()
-  recordingManager.stopAll()
-  floatingDanmu.closeFloatingDanmu()
-  await db.flushDb()
+  try {
+    for (const [, service] of danmuConnections) { try { service.disconnect() } catch {} }
+    danmuConnections.clear()
+    try { recordingManager.stopAll() } catch {}
+    try { floatingDanmu.closeFloatingDanmu() } catch {}
+    try { await db.flushDb() } catch {}
+  } catch {}
 }
