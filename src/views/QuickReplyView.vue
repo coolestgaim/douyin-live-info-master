@@ -24,7 +24,7 @@
           </div>
         </div>
 
-        <div class="qr-main" v-if="inst.status === 'running'" :class="{ 'qr-main-expanded': inst.expanded }">
+        <div class="qr-main" :class="{ 'qr-main-expanded': inst.expanded, 'qr-main-hidden': inst.status !== 'running' }">
           <div class="qr-browser-wrap" :class="{ 'qr-browser-full': inst.expanded }">
             <webview
               :ref="(el: any) => setWebviewRef(inst.id, el)"
@@ -271,6 +271,7 @@ onUnmounted(() => store.stopPolling())
 .qr-btn-clear:hover { background: rgba(107,114,128,0.2); }
 
 .qr-main { display: flex; gap: 12px; flex: 1; min-height: 0; }
+.qr-main-hidden { display: none; }
 .qr-main-expanded { gap: 0; }
 .qr-browser-wrap { flex: 1; min-width: 0; border-radius: 8px; overflow: auto; border: 1px solid #2a2d36; position: relative; }
 .qr-browser-full { border-radius: 0; border: none; }
