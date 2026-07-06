@@ -7,11 +7,14 @@
         <div class="app-body">
           <AppSidebar :current="currentRoute" @navigate="navigate" />
           <div class="app-content">
-            <router-view v-slot="{ Component }">
-              <keep-alive>
-                <component :is="Component" />
-              </keep-alive>
-            </router-view>
+            <DashboardView v-show="currentRoute === '/dashboard'" />
+            <LiveRoomsView v-show="currentRoute === '/rooms'" />
+            <DanmuView v-show="currentRoute === '/danmu'" />
+            <RecordingView v-show="currentRoute === '/recording'" />
+            <SettingsView v-show="currentRoute === '/settings'" />
+            <QuickReplyView v-show="currentRoute === '/quick-reply'" />
+            <OfflineDataView v-show="currentRoute === '/offline'" />
+            <AboutView v-show="currentRoute === '/about'" />
           </div>
         </div>
       </div>
@@ -26,6 +29,14 @@ import { darkTheme, NConfigProvider, NMessageProvider, type GlobalThemeOverrides
 import AppTitlebar from './components/AppTitlebar.vue'
 import AppSidebar from './components/AppSidebar.vue'
 import LicenseView from './views/LicenseView.vue'
+import DashboardView from './views/DashboardView.vue'
+import LiveRoomsView from './views/LiveRoomsView.vue'
+import DanmuView from './views/DanmuView.vue'
+import RecordingView from './views/RecordingView.vue'
+import SettingsView from './views/SettingsView.vue'
+import QuickReplyView from './views/QuickReplyView.vue'
+import OfflineDataView from './views/OfflineDataView.vue'
+import AboutView from './views/AboutView.vue'
 
 const api = () => (window as any).electronAPI
 const hasLicense = ref(false)
