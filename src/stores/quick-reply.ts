@@ -33,25 +33,36 @@ function defaultInstance(id: number): QuickReplyInstance {
 }
 
 const STORAGE_KEY = 'quickReplyGroups_v1'
+const NEXT_ID_KEY = 'quickReply_nextId'
+
+function getNextId(): number {
+  try {
+    const raw = localStorage.getItem(NEXT_ID_KEY)
+    return raw ? parseInt(raw, 10) : 1
+  } catch { return 1 }
+}
+function saveNextId(id: number) {
+  try { localStorage.setItem(NEXT_ID_KEY, String(id)) } catch {}
+}
 
 function loadFromStorage(): QuickReplyInstance[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const data = JSON.parse(raw)
-      if (Array.isArray(data) && data.length === 3) {
-        return data.map((item: any, idx: number) => ({
-          ...defaultInstance(idx + 1),
-          id: item.id ?? idx + 1,
-          name: item.name ?? defaultInstance(idx + 1).name,
-          quickReplyGroups: Array.isArray(item.quickReplyGroups) ? item.quickReplyGroups : defaultInstance(idx + 1).quickReplyGroups,
+      if (Array.isArray(data) && data.length >= 1) {
+        return data.map((item: any) => ({
+          ...defaultInstance(item.id ?? 1),
+          id: item.id ?? 1,
+          name: item.name ?? '实例',
+          quickReplyGroups: Array.isArray(item.quickReplyGroups) ? item.quickReplyGroups : [{ name: '默认分组', expanded: true, items: [] }],
           inputSelector: item.inputSelector ?? null,
           sendSelector: item.sendSelector ?? null,
         }))
       }
     }
   } catch {}
-  return [defaultInstance(1), defaultInstance(2), defaultInstance(3)]
+  return [defaultInstance(1), defaultInstance(2)]
 }
 
 function saveToStorage(instances: QuickReplyInstance[]) {
@@ -352,10 +363,72 @@ export const useQuickReplyStore = defineStore('quickReply', () => {
     if (inst && inst.quickReplyGroups[gIdx]) { inst.quickReplyGroups[gIdx].items[idx] = text; persist() }
   }
 
+  // ===== 实例管理 =====
+
+  function addInstance() {
+    const maxId = instances.value.reduce((max, i) => Math.max(max, i.id), 0)
+    const nextId = Math.max(getNextId(), maxId + 1)
+    saveNextId(nextId + 1)
+    instances.value.push(defaultInstance(nextId))
+    persist()
+  }
+
+  function removeInstance(id: number) {
+    if (instances.value.length <= 1) return // 至少保留一个
+    const idx = instances.value.findIndex(i => i.id === id)
+    if (idx !== -1) {
+      const inst = instances.value[idx]
+      if (inst.status === 'running') {
+        inst.status = 'idle'
+        inst.lastDanmu = []
+      }
+      instances.value.splice(idx, 1)
+      // 检查是否还有运行中的实例
+      if (!instances.value.some(i => i.status === 'running')) stopPolling()
+      persist()
+    }
+  }
+
+  // ===== 导入导出 =====
+
+  function exportGroups(): string {
+    const data = instances.value.map(i => ({
+      instanceName: i.name,
+      groups: i.quickReplyGroups.map(g => ({
+        name: g.name,
+        items: g.items.filter(t => t.trim())
+      }))
+    }))
+    return JSON.stringify(data, null, 2)
+  }
+
+  function importGroups(json: string): { success: boolean; error?: string } {
+    try {
+      const data = JSON.parse(json)
+      if (!Array.isArray(data)) return { success: false, error: '无效格式：需要数组' }
+      for (let i = 0; i < Math.min(data.length, instances.value.length); i++) {
+        const item = data[i]
+        if (item.groups && Array.isArray(item.groups)) {
+          instances.value[i].quickReplyGroups = item.groups.map((g: any) => ({
+            name: g.name || '未命名',
+            expanded: true,
+            items: Array.isArray(g.items) ? g.items : []
+          }))
+        }
+      }
+      persist()
+      return { success: true }
+    } catch (e: any) {
+      return { success: false, error: e.message }
+    }
+  }
+
   return {
     instances, sendViaWebview, pinInputSelector, pinSendSelector, clearInputSelector,
     addGroup, removeGroup, toggleGroup, setGroupName,
     addQuickReply, removeQuickReply, setQuickReply,
+    addInstance, removeInstance,
+    exportGroups, importGroups,
     updateDanmuMonitor, startPolling, stopPolling
   }
 })
