@@ -29,7 +29,7 @@ function createWindow(): void {
   setMainWindow(mainWindow)
 
   // Dev: load from Vite dev server; Prod: load from built files
-  const devUrl = 'http://localhost:5173'
+  const devUrl = process.env.VITE_DEV_URL || 'http://localhost:5173'
   const prodPath = path.join(__dirname, '..', 'dist', 'index.html')
 
   if (fs.existsSync(prodPath)) {
