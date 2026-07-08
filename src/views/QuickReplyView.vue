@@ -62,7 +62,6 @@
             <div class="qr-section-label">快捷回复 <button class="qr-add-group-btn" @click="store.addGroup(inst.id)">+ 分组</button>
               <button class="qr-io-btn" @click="doExport" title="导出分组">导出</button>
               <button class="qr-io-btn" @click="triggerImport" title="导入分组">导入</button>
-              <input ref="importInput" type="file" accept=".json" style="display:none" @change="doImport" />
             </div>
             <div class="qr-groups">
               <div v-for="(group, gIdx) in inst.quickReplyGroups" :key="gIdx" class="qr-group">
@@ -102,6 +101,7 @@
     <div class="qr-add-inst-wrap">
       <button class="qr-btn qr-add-inst-btn" @click="store.addInstance()">+ 添加实例</button>
     </div>
+    <input ref="importInput" type="file" accept=".json" style="display:none" @change="doImport" />
   </div>
 </template>
 
