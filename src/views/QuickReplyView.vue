@@ -72,7 +72,7 @@
                 </div>
                 <div v-if="group.expanded" class="qr-group-body">
                   <div v-for="(_, qi) in group.items" :key="qi" class="qr-quick-field-row">
-                    <input v-model="group.items[qi]" class="qr-quick-input" placeholder="快捷内容..." @blur="store.setQuickReply(inst.id, gIdx, qi, group.items[qi])" />
+                    <input :value="group.items[qi]" @input="store.setQuickReply(inst.id, gIdx, qi, ($event.target as HTMLInputElement).value)" class="qr-quick-input" placeholder="快捷内容..." />
                     <button class="qr-remove-btn" @click="store.removeQuickReply(inst.id, gIdx, qi)">×</button>
                   </div>
                   <button class="qr-add-item-btn" @click="store.addQuickReply(inst.id, gIdx)">+ 添加短语</button>
