@@ -328,7 +328,7 @@ function doImport(e: Event) {
   reader.onload = () => {
     const result = store.importGroups(reader.result as string)
     if (result.success) {
-      alert('导入成功！')
+      alert(`导入成功！覆盖了 ${result.count ?? 0} 个实例的分组`)
     } else {
       alert('导入失败: ' + (result.error || '未知错误'))
     }
