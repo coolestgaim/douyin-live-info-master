@@ -402,22 +402,41 @@ export const useQuickReplyStore = defineStore('quickReply', () => {
     return JSON.stringify(data, null, 2)
   }
 
-  function importGroups(json: string): { success: boolean; error?: string } {
+  function importGroups(json: string): { success: boolean; error?: string; count?: number } {
     try {
       const data = JSON.parse(json)
       if (!Array.isArray(data)) return { success: false, error: '无效格式：需要数组' }
-      for (let i = 0; i < Math.min(data.length, instances.value.length); i++) {
-        const item = data[i]
-        if (item.groups && Array.isArray(item.groups)) {
-          instances.value[i].quickReplyGroups = item.groups.map((g: any) => ({
+      let count = 0
+      for (const item of data) {
+        // 按实例名匹配
+        const inst = instances.value.find(i => i.name === item.instanceName)
+        if (inst && item.groups && Array.isArray(item.groups)) {
+          const newGroups = item.groups.map((g: any) => ({
             name: g.name || '未命名',
             expanded: true,
             items: Array.isArray(g.items) ? g.items : []
           }))
+          inst.quickReplyGroups.splice(0, inst.quickReplyGroups.length, ...newGroups)
+          count++
+        }
+      }
+      // 名字没匹配上的，按序号兜底覆盖
+      if (count === 0) {
+        for (let i = 0; i < Math.min(data.length, instances.value.length); i++) {
+          const item = data[i]
+          if (item.groups && Array.isArray(item.groups)) {
+            const newGroups = item.groups.map((g: any) => ({
+              name: g.name || '未命名',
+              expanded: true,
+              items: Array.isArray(g.items) ? g.items : []
+            }))
+            instances.value[i].quickReplyGroups.splice(0, instances.value[i].quickReplyGroups.length, ...newGroups)
+            count++
+          }
         }
       }
       persist()
-      return { success: true }
+      return { success: true, count }
     } catch (e: any) {
       return { success: false, error: e.message }
     }
