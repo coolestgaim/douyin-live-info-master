@@ -65,6 +65,10 @@ const api = {
   licenseDone: () => ipcRenderer.invoke('license:done'),
   licenseClear: () => ipcRenderer.invoke('license:clear'),
 
+  // File
+  fileOpenLocation: (filePath: string) => ipcRenderer.invoke('file:open-location', filePath),
+  fileDelete: (filePath: string) => ipcRenderer.invoke('file:delete', filePath),
+
   // FFmpeg
   ffmpegCheck: () => ipcRenderer.invoke('ffmpeg:check'),
   ffmpegInstall: () => ipcRenderer.invoke('ffmpeg:install'),

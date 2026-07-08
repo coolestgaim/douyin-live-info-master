@@ -1,4 +1,4 @@
-import { ipcMain, BrowserWindow, dialog, session } from 'electron'
+import { ipcMain, BrowserWindow, dialog, shell, session } from 'electron'
 import { DouyinLiveService } from './services/douyin-live'
 import { DanmuService, DanmuMsg } from './services/danmu'
 import { RecordingManager } from './services/recording-manager'
@@ -223,6 +223,17 @@ export function registerIpcHandlers(): void {
     return true
   })
   ipcMain.handle('license:clear', () => { license.clearLicense(); return true })
+
+  // ===== File Operations =====
+  ipcMain.handle('file:open-location', (_e, filePath: string) => {
+    shell.showItemInFolder(filePath)
+  })
+  ipcMain.handle('file:delete', async (_e, filePath: string) => {
+    try {
+      if (fs.existsSync(filePath)) { fs.unlinkSync(filePath); return { success: true } }
+      return { success: false, error: '文件不存在' }
+    } catch (ex: any) { return { success: false, error: ex.message } }
+  })
 
   // ===== FFmpeg =====
   ipcMain.handle('ffmpeg:check', () => {

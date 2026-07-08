@@ -112,6 +112,17 @@
             {{ item.statusText }}
           </span>
           <n-button v-if="item.isActive" size="tiny" type="error" quaternary @click="recordStore.stopOne(item.roomId)">停止</n-button>
+          <template v-if="!item.isActive">
+            <n-button size="tiny" type="primary" quaternary @click="retryRecording(item)" title="新开录制">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polygon points="5,3 19,12 5,21" fill="#f97316"/></svg>
+            </n-button>
+            <n-button size="tiny" quaternary @click="openFileLocation(item.outputPath)" title="打开文件夹">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="#6b7080" stroke-width="1.8" fill="none"/></svg>
+            </n-button>
+            <n-button size="tiny" type="error" quaternary @click="confirmDelete(item)" title="删除">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="3 6 5 6 21 6" stroke="#ef4444" stroke-width="1.8"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="#ef4444" stroke-width="1.8"/></svg>
+            </n-button>
+          </template>
         </div>
       </div>
     </div>
@@ -126,22 +137,77 @@
       <div class="empty-title">暂无录制任务</div>
       <div class="empty-hint">在「直播间」页面连接直播间后，点击「全部录制」开始</div>
     </div>
+
+    <div class="history-section">
+      <div class="section-title">📼 历史录制</div>
+      <div v-if="recordStore.recordingHistory.length === 0" class="empty-hint">暂无录制记录，停止录制后会自动保存</div>
+      <div v-for="h in recordStore.recordingHistory" :key="h.outputPath" class="card history-row">
+        <span class="hist-nick">{{ h.nickname }}</span>
+        <span class="hist-detail">{{ h.durationText }} · {{ h.sizeText }}</span>
+        <span class="hist-time">{{ formatTime(h.timestamp) }}</span>
+        <div class="hist-actions">
+          <n-button size="tiny" quaternary @click="openFileLocation(h.outputPath)" title="打开文件夹">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="#6b7080" stroke-width="1.8" fill="none"/></svg>
+          </n-button>
+          <n-button size="tiny" type="error" quaternary @click="confirmDeleteHistory(h.roomId)" title="删除">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="3 6 5 6 21 6" stroke="#ef4444" stroke-width="1.8"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="#ef4444" stroke-width="1.8"/></svg>
+          </n-button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { NButton } from 'naive-ui'
+import { NButton, useDialog } from 'naive-ui'
 import { useRecordStore } from '../stores/record'
 import { useRoomListStore } from '../stores/room-list'
 import { formatFileSize } from '../utils/format'
 
 const recordStore = useRecordStore()
 const roomList = useRoomListStore()
+const dialog = useDialog()
+
+function confirmDelete(item: any) {
+  dialog.warning({
+    title: '确认删除',
+    content: `将删除「${item.nickname}」的录制记录及本地文件，此操作不可撤销。`,
+    positiveText: '确认删除',
+    negativeText: '取消',
+    onPositiveClick: () => recordStore.deleteRecording(item)
+  })
+}
+
+function confirmDeleteHistory(roomId: string) {
+  const item = recordStore.recordingHistory.find((h: any) => h.roomId === roomId)
+  if (!item) return
+  dialog.warning({
+    title: '确认删除',
+    content: `将删除「${item.nickname}」的录制文件及历史记录。`,
+    positiveText: '确认删除',
+    negativeText: '取消',
+    onPositiveClick: () => recordStore.deleteHistoryItem(roomId)
+  })
+}
+
+function openFileLocation(filePath: string) {
+  (window as any).electronAPI.fileOpenLocation(filePath)
+}
+
+function retryRecording(item: any) {
+  recordStore.startRecording({ enterRoomId: item.roomId, nickname: item.nickname })
+}
+
+function formatTime(ts: number): string {
+  const d = new Date(ts)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
 
 const availableRooms = computed(() => {
-  const recordingIds = new Set(recordStore.recordingItems.map(i => i.roomId))
-  return roomList.results.filter(r => !r.error && !recordingIds.has(r.enterRoomId))
+  const activeRecordingIds = new Set(recordStore.recordingItems.filter(i => i.isActive).map(i => i.roomId))
+  return roomList.results.filter(r => !r.error && !activeRecordingIds.has(r.enterRoomId))
 })
 
 const activeCount = computed(() => recordStore.recordingItems.filter(i => i.isActive).length)
@@ -432,4 +498,22 @@ function avatarGradient(roomId: string): string {
 .avail-nick { font-size: 13px; color: #e0e2e8; font-weight: 500; }
 .avail-id { font-size: 11px; color: #4a4e5e; }
 .avail-status { font-size: 11px; color: #10b981; margin-left: auto; }
+
+/* History */
+.history-section {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #1e2028;
+}
+.history-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  gap: 12px;
+  margin-top: 6px;
+}
+.hist-nick { font-size: 13px; font-weight: 500; color: #e0e2e8; min-width: 80px; }
+.hist-detail { font-size: 11px; color: #4a4e5e; flex: 1; }
+.hist-time { font-size: 11px; color: #3a3d46; }
+.hist-actions { display: flex; gap: 6px; }
 </style>

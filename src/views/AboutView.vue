@@ -12,12 +12,53 @@
           </svg>
         </div>
         <div>
-          <div class="app-name">LiveMonitor</div>
-          <div class="app-version">V 2.3.0 - 抖音直播间信息获取工具</div>
+          <div class="app-name">抖音直播控场助手</div>
+          <div class="app-version">V 2.5.1 — 实时弹幕监听 · 直播录制 · 快捷控场</div>
         </div>
       </div>
 
-      <!-- 联系方式和扫码关注已隐藏，后续自定义 -->
+      <div class="section-divider"></div>
+
+      <div class="section-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 3a4 4 0 100 8 4 4 0 000-8z" stroke="#f97316" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <h3 class="section-title">联系方式</h3>
+      </div>
+
+      <div class="contact-row">
+        <span class="contact-label">微信</span>
+        <span class="contact-value">Likeyou_OwO</span>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <div class="section-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <rect x="1" y="3" width="22" height="14" rx="2" stroke="#f97316" stroke-width="1.8"/>
+          <path d="M23 7l-11 7L1 7" stroke="#f97316" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h3 class="section-title">扫码关注</h3>
+      </div>
+
+      <div class="qr-grid">
+        <div class="qr-item">
+          <img src="/wechat.jpg" class="qr-img" alt="微信" />
+          <span class="qr-label">微信</span>
+        </div>
+        <div class="qr-item">
+          <img src="/douyin.jpg" class="qr-img" alt="抖音" />
+          <span class="qr-label">抖音</span>
+        </div>
+        <div class="qr-item">
+          <img src="/qq.jpg" class="qr-img" alt="QQ" />
+          <span class="qr-label">QQ</span>
+        </div>
+        <div class="qr-item">
+          <img src="/reward.jpg" class="qr-img" alt="赞赏" />
+          <span class="qr-label">赞赏支持</span>
+        </div>
+      </div>
 
       <div class="section-divider"></div>
 
@@ -29,12 +70,11 @@
       </div>
 
       <div class="disclaimer-text">
-        <p>1. 本工具仅供学习和技术研究使用，请勿用于任何商业用途或违法行为。</p>
+        <p>1. 本工具仅供学习和技术研究使用，请勿用于任何违法行为。</p>
         <p>2. 使用本工具所产生的一切后果由使用者自行承担，开发者不承担任何责任。</p>
         <p>3. 本工具不存储、不传播任何直播内容，仅采集公开的弹幕互动数据。</p>
         <p>4. 请遵守相关平台的使用条款和当地法律法规，尊重他人隐私和知识产权。</p>
-        <p>5. 如有侵权或不妥之处，请联系作者删除。</p>
-        <p>6. 本工具完全免费，如您是付费购买的本软件，证明您已经上当受骗。</p>
+        <p>5. 如有疑问或合作需求，请通过上方微信联系开发者。</p>
       </div>
     </div>
   </div>

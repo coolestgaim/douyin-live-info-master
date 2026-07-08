@@ -2,6 +2,7 @@
   <LicenseView v-if="!hasLicense" @verified="onVerified" />
   <n-config-provider v-else :theme="darkTheme" :theme-overrides="themeOverrides">
     <n-message-provider>
+      <n-dialog-provider>
       <div class="app-frame">
         <AppTitlebar />
         <div class="app-body">
@@ -18,6 +19,7 @@
           </div>
         </div>
       </div>
+      </n-dialog-provider>
     </n-message-provider>
   </n-config-provider>
 </template>
@@ -25,7 +27,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { darkTheme, NConfigProvider, NMessageProvider, type GlobalThemeOverrides } from 'naive-ui'
+import { darkTheme, NConfigProvider, NMessageProvider, NDialogProvider, type GlobalThemeOverrides } from 'naive-ui'
 import AppTitlebar from './components/AppTitlebar.vue'
 import AppSidebar from './components/AppSidebar.vue'
 import LicenseView from './views/LicenseView.vue'
