@@ -6,6 +6,7 @@ const LOG_MODULE = 'RecordingManager'
 
 interface RecordItem {
   nickname: string
+  outputPath: string
   durationText: string
   sizeText: string
   isActive: boolean
@@ -49,6 +50,7 @@ export class RecordingManager {
     this.recorders.set(roomId, recorder)
     this.items.set(roomId, {
       nickname,
+      outputPath: recorder.outputPath,
       durationText: '00:00:00',
       sizeText: '0 B',
       isActive: true,
@@ -61,12 +63,14 @@ export class RecordingManager {
 
   stopAll(): void {
     for (const [roomId, recorder] of this.recorders) {
-      recorder.stopRecording()
       const item = this.items.get(roomId)
       if (item) {
+        item.durationText = recorder.getDurationText()
+        item.sizeText = formatFileSize(recorder.currentFileSize)
         item.statusText = '已停止'
         item.isActive = false
       }
+      recorder.stopRecording()
     }
     logger.info(LOG_MODULE, `停止全部录制 count=${this.recorders.size}`)
     this.recorders.clear()
@@ -75,9 +79,15 @@ export class RecordingManager {
   stopOne(roomId: string): void {
     const recorder = this.recorders.get(roomId)
     if (recorder) {
+      const item = this.items.get(roomId)
+      if (item) {
+        item.durationText = recorder.getDurationText()
+        item.sizeText = formatFileSize(recorder.currentFileSize)
+        item.statusText = '已停止'
+        item.isActive = false
+      }
       recorder.stopRecording()
       this.recorders.delete(roomId)
-      this.items.delete(roomId)
       logger.info(LOG_MODULE, `停止录制 roomId=${roomId}`)
     }
   }
