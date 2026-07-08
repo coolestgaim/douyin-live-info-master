@@ -6,7 +6,7 @@
     </div>
 
     <div class="qr-grid-single" v-if="store.instances.length > 0">
-      <div v-for="inst in store.instances" :key="inst.id" class="card qr-card-full" :class="{ 'qr-card-expanded': inst.expanded }">
+      <div v-for="inst in store.instances" :key="inst.id" class="card qr-card-full" :class="{ 'qr-card-expanded': inst.expanded }" :style="cardHeightStyle(inst.id)">
         <div class="qr-card-header">
           <input v-model="inst.name" class="qr-name-input" placeholder="实例名称" />
           <div class="qr-url-row">
@@ -22,6 +22,7 @@
             </button>
             <button v-if="inst.status === 'running'" class="qr-btn qr-btn-clear" @click="clearLogin(inst)">清除登录</button>
             <button v-if="inst.status === 'running'" class="qr-btn qr-btn-refresh" @click="refreshWebview(inst)">刷新</button>
+            <button v-if="store.instances.length > 1" class="qr-btn qr-btn-remove-inst" @click="doRemoveInstance(inst)" title="删除实例">×</button>
           </div>
         </div>
 
@@ -58,7 +59,11 @@
             </div>
             <div v-if="inst.sendSelector" class="qr-pin-sel" :title="inst.sendSelector">{{ inst.sendSelector }}</div>
 
-            <div class="qr-section-label">快捷回复 <button class="qr-add-group-btn" @click="store.addGroup(inst.id)">+ 分组</button></div>
+            <div class="qr-section-label">快捷回复 <button class="qr-add-group-btn" @click="store.addGroup(inst.id)">+ 分组</button>
+              <button class="qr-io-btn" @click="doExport" title="导出分组">导出</button>
+              <button class="qr-io-btn" @click="triggerImport" title="导入分组">导入</button>
+              <input ref="importInput" type="file" accept=".json" style="display:none" @change="doImport" />
+            </div>
             <div class="qr-groups">
               <div v-for="(group, gIdx) in inst.quickReplyGroups" :key="gIdx" class="qr-group">
                 <div class="qr-group-header" @click="store.toggleGroup(inst.id, gIdx)">
@@ -91,7 +96,11 @@
             </div>
           </div>
         </div>
+        <div class="qr-resize-handle" @mousedown="startResize($event, inst.id)" v-show="!inst.expanded"></div>
       </div>
+    </div>
+    <div class="qr-add-inst-wrap">
+      <button class="qr-btn qr-add-inst-btn" @click="store.addInstance()">+ 添加实例</button>
     </div>
   </div>
 </template>
@@ -106,6 +115,44 @@ const store = useQuickReplyStore()
 const webviewRefs = ref<Record<number, HTMLWebViewElement>>({})
 const pauseMap = ref<Record<number, boolean>>({})
 const burstMap = ref<Record<number, boolean>>({})
+const importInput = ref<HTMLInputElement | null>(null)
+
+// ===== 实例高度拖拽 =====
+const cardHeights = ref<Record<number, number>>({})
+const resizing = ref<{ id: number; startY: number; startHeight: number } | null>(null)
+
+function cardHeightStyle(id: number) {
+  const h = cardHeights.value[id]
+  if (h) return { flex: 'none', height: h + 'px', minHeight: '260px' }
+  return {}
+}
+
+function startResize(e: MouseEvent, id: number) {
+  const card = (e.target as HTMLElement).closest('.qr-card-full') as HTMLElement
+  if (!card) return
+  const rect = card.getBoundingClientRect()
+  resizing.value = { id, startY: e.clientY, startHeight: rect.height }
+  document.addEventListener('mousemove', onResize)
+  document.addEventListener('mouseup', stopResize)
+  document.body.style.cursor = 'ns-resize'
+  document.body.style.userSelect = 'none'
+  e.preventDefault()
+}
+
+function onResize(e: MouseEvent) {
+  if (!resizing.value) return
+  const delta = e.clientY - resizing.value.startY
+  const newHeight = Math.max(260, resizing.value.startHeight + delta)
+  cardHeights.value = { ...cardHeights.value, [resizing.value.id]: newHeight }
+}
+
+function stopResize() {
+  resizing.value = null
+  document.removeEventListener('mousemove', onResize)
+  document.removeEventListener('mouseup', stopResize)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
 
 function setWebviewRef(id: number, el: HTMLWebViewElement | null) {
   if (el) webviewRefs.value[id] = el
@@ -191,6 +238,11 @@ function closeWebview(inst: any) {
   if (!store.instances.some((i: any) => i.status === 'running')) store.stopPolling()
 }
 
+function doRemoveInstance(inst: any) {
+  if (inst.status === 'running') closeWebview(inst)
+  store.removeInstance(inst.id)
+}
+
 function onWebviewReady(id: number) {
   const webview = webviewRefs.value[id]
   if (!webview) return
@@ -251,6 +303,40 @@ async function randomBurst(inst: any) {
 
 onMounted(() => store.startPolling())
 onUnmounted(() => store.stopPolling())
+
+// ===== 导入导出 =====
+
+function doExport() {
+  const json = store.exportGroups()
+  const blob = new Blob([json], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `快捷回复分组_${new Date().toISOString().slice(0, 10)}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+function triggerImport() {
+  importInput.value?.click()
+}
+
+function doImport(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = () => {
+    const result = store.importGroups(reader.result as string)
+    if (result.success) {
+      alert('导入成功！')
+    } else {
+      alert('导入失败: ' + (result.error || '未知错误'))
+    }
+  }
+  reader.readAsText(file)
+  // reset so same file can be re-imported
+  ;(e.target as HTMLInputElement).value = ''
+}
 </script>
 
 <style scoped>
@@ -258,9 +344,17 @@ onUnmounted(() => store.stopPolling())
 .qr-intro { margin-bottom: 12px; flex-shrink: 0; }
 .qr-title { font-size: 18px; font-weight: 700; color: #e0e2e8; }
 .qr-subtitle { font-size: 12px; color: #6b7080; margin-top: 2px; }
-.qr-grid-single { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.qr-btn-burst:disabled { opacity: 0.4; }
 
-.qr-card-full { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; }
+.qr-btn-remove-inst { background: transparent; border: 1px solid transparent; color: #ef4444; font-size: 14px; padding: 2px 6px; line-height: 1; }
+.qr-btn-remove-inst:hover { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); }
+
+.qr-add-inst-wrap { flex-shrink: 0; padding-top: 8px; }
+.qr-add-inst-btn { background: transparent; border: 1px dashed #2a2d36; color: #5a5e6e; font-size: 12px; padding: 6px 16px; width: 100%; }
+.qr-add-inst-btn:hover { border-color: #f97316; color: #f97316; }
+
+.qr-grid-single { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
+.qr-card-full { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; min-height: 320px; }
 .qr-card-expanded { position: absolute; top: 38px; left: 200px; right: 0; bottom: 0; z-index: 100; margin: 0; border-radius: 0; }
 
 .qr-card-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex-shrink: 0; }
@@ -305,6 +399,8 @@ onUnmounted(() => store.stopPolling())
 
 .qr-add-group-btn { background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.3); color: #fb923c; font-size: 11px; padding: 2px 10px; border-radius: 4px; cursor: pointer; font-family: inherit; margin-left: auto; }
 .qr-add-group-btn:hover { background: rgba(249,115,22,0.18); }
+.qr-io-btn { background: transparent; border: 1px solid #2a2d36; color: #6b7080; font-size: 11px; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-family: inherit; }
+.qr-io-btn:hover { border-color: #5a5e6e; color: #a0a4b0; }
 .qr-groups { display: flex; flex-direction: column; gap: 3px; }
 .qr-group { border: 1px solid #1e2028; border-radius: 6px; overflow: hidden; }
 .qr-group-header { display: flex; align-items: center; gap: 4px; padding: 3px 8px; background: #15171e; cursor: pointer; user-select: none; }
@@ -332,4 +428,32 @@ onUnmounted(() => store.stopPolling())
 .qr-btn-burst { background: rgba(168,85,247,0.1); color: #a855f7; border: 1px solid rgba(168,85,247,0.3); }
 .qr-btn-burst:hover:not(:disabled) { background: rgba(168,85,247,0.2); }
 .qr-btn-burst:disabled { opacity: 0.4; }
+
+/* 实例高度拖拽 */
+.qr-resize-handle {
+  height: 8px;
+  cursor: ns-resize;
+  flex-shrink: 0;
+  background: #1a1d26;
+  border-top: 1px solid #3a3d46;
+  border-bottom: 1px solid #3a3d46;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.qr-resize-handle::after {
+  content: '•  •  •';
+  color: #5a5e6e;
+  font-size: 8px;
+  letter-spacing: 2px;
+  line-height: 1;
+}
+.qr-resize-handle:hover {
+  background: rgba(249,115,22,0.15);
+  border-color: rgba(249,115,22,0.4);
+}
+.qr-resize-handle:hover::after {
+  color: #fb923c;
+}
 </style>
