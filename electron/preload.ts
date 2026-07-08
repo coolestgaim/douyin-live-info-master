@@ -55,6 +55,7 @@ const api = {
   // Floating danmu
   floatingOpen: () => ipcRenderer.invoke('floating:open'),
   floatingClose: () => ipcRenderer.invoke('floating:close'),
+  onFloatingClosed: (cb: () => void) => ipcRenderer.on('floating:on-closed', () => cb()),
 
   // Session
   sessionClear: (partition: string) => ipcRenderer.invoke('session:clear', partition),
