@@ -95,7 +95,10 @@
             </div>
           </div>
         </div>
-        <div class="qr-resize-handle" @mousedown="startResize($event, inst.id)" v-show="!inst.expanded"></div>
+        <div class="qr-resize-handle" @mousedown="startResize($event, inst.id)" v-show="!inst.expanded">
+          <span class="qr-resize-grip">⋮⋮</span>
+          <button v-if="cardHeights[inst.id]" class="qr-resize-reset" @click.stop="resetCardHeight(inst.id)" title="恢复默认高度">↺</button>
+        </div>
       </div>
     </div>
     <div class="qr-add-inst-wrap">
@@ -123,8 +126,14 @@ const resizing = ref<{ id: number; startY: number; startHeight: number } | null>
 
 function cardHeightStyle(id: number) {
   const h = cardHeights.value[id]
-  if (h) return { flex: 'none', height: h + 'px', minHeight: '260px' }
+  if (h) return { flex: 'none', height: h + 'px', minHeight: '260px', overflow: 'hidden' }
   return {}
+}
+
+function resetCardHeight(id: number) {
+  const next = { ...cardHeights.value }
+  delete next[id]
+  cardHeights.value = next
 }
 
 function startResize(e: MouseEvent, id: number) {
@@ -431,29 +440,45 @@ function doImport(e: Event) {
 
 /* 实例高度拖拽 */
 .qr-resize-handle {
-  height: 8px;
+  height: 12px;
   cursor: ns-resize;
   flex-shrink: 0;
   background: #1a1d26;
   border-top: 1px solid #3a3d46;
   border-bottom: 1px solid #3a3d46;
-  margin-top: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
+  transition: background 0.15s, border-color 0.15s;
+  user-select: none;
 }
-.qr-resize-handle::after {
-  content: '•  •  •';
+.qr-resize-grip {
   color: #5a5e6e;
-  font-size: 8px;
-  letter-spacing: 2px;
+  font-size: 10px;
+  letter-spacing: 3px;
   line-height: 1;
+  pointer-events: none;
+}
+.qr-resize-reset {
+  background: transparent;
+  border: none;
+  color: #6b7080;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  border-radius: 3px;
+}
+.qr-resize-reset:hover {
+  color: #fb923c;
+  background: rgba(249,115,22,0.1);
 }
 .qr-resize-handle:hover {
   background: rgba(249,115,22,0.15);
   border-color: rgba(249,115,22,0.4);
 }
-.qr-resize-handle:hover::after {
+.qr-resize-handle:hover .qr-resize-grip {
   color: #fb923c;
 }
 </style>
