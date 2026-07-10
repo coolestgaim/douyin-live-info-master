@@ -6,7 +6,7 @@
     </div>
 
     <div class="qr-grid-single" v-if="store.instances.length > 0">
-      <div v-for="inst in store.instances" :key="inst.id" class="card qr-card-full" :class="{ 'qr-card-expanded': inst.expanded }" :style="cardHeightStyle(inst.id)">
+      <div v-for="inst in store.instances" :key="inst.id" class="card qr-card-full" :class="{ 'qr-card-expanded': inst.expanded }" :style="cardHeightStyle(inst)">
         <div class="qr-card-header">
           <input v-model="inst.name" class="qr-name-input" placeholder="实例名称" />
           <div class="qr-url-row">
@@ -124,9 +124,10 @@ const importInput = ref<HTMLInputElement | null>(null)
 const cardHeights = ref<Record<number, number>>({})
 const resizing = ref<{ id: number; startY: number; startHeight: number } | null>(null)
 
-function cardHeightStyle(id: number) {
-  const h = cardHeights.value[id]
-  if (h) return { flex: 'none', height: h + 'px', minHeight: '260px', overflow: 'hidden' }
+function cardHeightStyle(inst: any) {
+  const h = cardHeights.value[inst.id]
+  // 全屏模式下不锁高度，让绝对定位生效
+  if (h && !inst.expanded) return { flex: 'none', height: h + 'px', minHeight: '260px', overflow: 'hidden' }
   return {}
 }
 
