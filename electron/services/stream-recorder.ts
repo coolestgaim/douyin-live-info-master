@@ -128,6 +128,13 @@ function resolveFfmpegPath(): string {
   const localRoot = path.join(process.cwd(), 'ffmpeg.exe')
   if (fs.existsSync(localRoot)) return localRoot
 
-  // 3. Fallback to PATH
+  // 3. ExtraResources (electron-builder packaging)
+  const resourcesPath = (process as any).resourcesPath || ''
+  if (resourcesPath) {
+    const resPath = path.join(resourcesPath, 'ffmpeg.exe')
+    if (fs.existsSync(resPath)) return resPath
+  }
+
+  // 4. Fallback to PATH
   return 'ffmpeg'
 }
