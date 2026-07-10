@@ -20,6 +20,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:transparent;font-fam
 #opacity::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#f97316;cursor:pointer}
 #closeBtn{background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#ef4444;font-size:12px;width:22px;height:22px;border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 #closeBtn:hover{background:rgba(239,68,68,0.25)}
+#latestBtn{background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.3);color:#fb923c;font-size:12px;width:22px;height:22px;border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+#latestBtn:hover{background:rgba(249,115,22,0.2)}
 
 /* Tab bar — matches n-tabs line style */
 #tab-bar{display:flex;gap:0;padding:0 10px;flex-shrink:0;border-bottom:1px solid #1e2028}
@@ -58,6 +60,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:transparent;font-fam
 <span class="title">弹幕浮窗</span>
 <div id="controls">
 <input id="opacity" type="range" min="30" max="100" value="85" title="透明度">
+<button id="latestBtn" title="回到最新弹幕">⬇</button>
 <button id="closeBtn">✕</button>
 </div></div>
 <div id="tab-bar">
@@ -116,7 +119,20 @@ document.getElementById('tab-bar').querySelectorAll('.tab-btn').forEach(btn => {
 function timeStr() { const d = new Date(); return d.toTimeString().substring(0,8) }
 function esc(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML }
 
-function scrollBottom() { requestAnimationFrame(() => { if (autoScroll) list.scrollTop = list.scrollHeight }) }
+function scrollBottom() {
+  requestAnimationFrame(() => {
+    if (autoScroll) list.scrollTop = list.scrollHeight
+    requestAnimationFrame(() => {
+      if (autoScroll) list.scrollTop = list.scrollHeight
+    })
+  })
+}
+
+// 手动回到最新：跳到底部且重新启用自动滚动
+function goLatest() {
+  autoScroll = true
+  list.scrollTop = list.scrollHeight
+}
 
 function renderList() {
   list.innerHTML = ''
@@ -165,6 +181,7 @@ ipcRenderer.on('floating:rooms', (_e, newRooms) => {
 
 document.getElementById('closeBtn').onclick = () => ipcRenderer.send('floating:action', 'close')
 document.getElementById('opacity').oninput = (e) => ipcRenderer.send('floating:action', 'opacity', e.target.value/100)
+document.getElementById('latestBtn').onclick = () => goLatest()
 </script></body></html>`
 
 export function createFloatingDanmu(): void {

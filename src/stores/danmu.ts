@@ -154,6 +154,11 @@ export const useDanmuStore = defineStore('danmu', () => {
       if (room) room.connectionState = DanmuConnectionState.Connected
 
       dashboard.updateConnectionState(roomId, true)
+
+      // 多房间时默认筛选到新连的房间，避免弹幕混在一起
+      if (connectedRoomIds.size >= 2 && !filterRoomId.value) {
+        filterRoomId.value = roomId
+      }
     } catch (ex: any) {
       danmuStatus.value = `连接失败: ${ex.message}`
     }
@@ -162,6 +167,13 @@ export const useDanmuStore = defineStore('danmu', () => {
   async function disconnectRoom(roomId: string) {
     await api().danmuDisconnect(roomId)
     connectedRoomIds.delete(roomId)
+
+    // 如果当前筛选的是断开连接的房间，切换到其他房间或清除筛选
+    if (filterRoomId.value === roomId) {
+      const remaining = [...connectedRoomIds]
+      filterRoomId.value = remaining.length > 0 ? remaining[0] : ''
+    }
+
     updateCountText()
 
     const roomList = useRoomListStore()
@@ -197,6 +209,11 @@ export const useDanmuStore = defineStore('danmu', () => {
     danmuStatus.value = `已连接 ${successCount}/${toConnect.length} 个直播间`
     updateCountText()
 
+    // 多房间时默认筛选到第一个连上的房间
+    if (connectedRoomIds.size >= 2 && !filterRoomId.value) {
+      filterRoomId.value = [...connectedRoomIds][0]
+    }
+
     if (successCount > 0) dashboard.startMonitoring()
   }
 
@@ -227,6 +244,28 @@ export const useDanmuStore = defineStore('danmu', () => {
     danmuStatus.value = '数据库已清空'
   }
 
+  // 清空当前筛选房间的内存弹幕（不删数据库）
+  function clearMessages(roomId?: string) {
+    const filterFn = (m: DanmuMessage) => roomId ? m.roomId !== roomId : false
+    if (roomId) {
+      allMessages.value = allMessages.value.filter(filterFn)
+      chatMessages.value = chatMessages.value.filter(filterFn)
+      giftMessages.value = giftMessages.value.filter(filterFn)
+      likeMessages.value = likeMessages.value.filter(filterFn)
+      memberMessages.value = memberMessages.value.filter(filterFn)
+      socialMessages.value = socialMessages.value.filter(filterFn)
+    } else {
+      // 无筛选时清空全部
+      allMessages.value = []
+      chatMessages.value = []
+      giftMessages.value = []
+      likeMessages.value = []
+      memberMessages.value = []
+      socialMessages.value = []
+    }
+    updateCountText()
+  }
+
   async function getMessages(roomId: string, typeFilter?: string, keyword?: string, username?: string) {
     return api().dbGetMessages(roomId, typeFilter, keyword, username)
   }
@@ -240,6 +279,6 @@ export const useDanmuStore = defineStore('danmu', () => {
     filteredLikeMessages, filteredMemberMessages, filteredSocialMessages,
     setupListeners, removeListeners, selectRoom,
     connectRoom, disconnectRoom, connectAll, disconnectAll,
-    loadHistory, clearDatabase, getMessages
+    loadHistory, clearDatabase, clearMessages, getMessages
   }
 })
