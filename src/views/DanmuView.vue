@@ -7,6 +7,7 @@
       </div>
       <div class="danmu-status-area">
         <button class="float-btn" @click="toggleFloating" :title="floatingOpen ? '关闭弹幕浮窗' : '打开弹幕浮窗'">{{ floatingOpen ? '关闭浮窗' : '弹幕浮窗' }}</button>
+        <button class="clear-btn" @click="clearCurrentMessages" title="清空当前筛选的消息">清空</button>
         <span class="danmu-count">{{ danmuStore.danmuCountText }}</span>
         <span :class="['status-dot', { green: danmuStore.connectedRoomCount > 0, red: danmuStore.danmuStatus.includes('失败') }]"></span>
         <span class="danmu-status-text">{{ danmuStore.danmuStatus }}</span>
@@ -134,6 +135,10 @@ function toggleFloating() {
   }
 }
 
+function clearCurrentMessages() {
+  danmuStore.clearMessages(danmuStore.filterRoomId || undefined)
+}
+
 onMounted(() => {
   if (danmuStore.selectedTab === 'history') danmuStore.loadHistory()
   api().onFloatingClosed(() => { floatingOpen.value = false })
@@ -205,6 +210,8 @@ async function exportData(format: 'csv' | 'json') {
 .danmu-status-area { display: flex; align-items: center; gap: 8px; }
 .float-btn { background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.3); color: #fb923c; font-size: 11px; padding: 2px 10px; border-radius: 4px; cursor: pointer; font-family: inherit; white-space: nowrap; }
 .float-btn:hover { background: rgba(249,115,22,0.18); }
+.clear-btn { background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2); color: #f87171; font-size: 11px; padding: 2px 10px; border-radius: 4px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.clear-btn:hover { background: rgba(239,68,68,0.15); }
 .danmu-count { font-size: 11px; color: #4a4e5e; }
 .danmu-status-text { font-size: 12px; color: #6b7080; }
 
