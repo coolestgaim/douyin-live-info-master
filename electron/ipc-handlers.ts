@@ -20,12 +20,19 @@ const roomNicknames = new Map<string, string>()
 const recordingManager = new RecordingManager()
 
 let mainWindow: BrowserWindow | null = null
+function safeSend(channel: string, ...args: any[]): void {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(channel, ...args)
+  }
+}
+
+
 
 export function setMainWindow(win: BrowserWindow): void {
   mainWindow = win
   floatingDanmu.setMainWindow(win)
   recordingManager.onUpdate = () => {
-    mainWindow?.webContents.send('record:on-update', recordingManager.getState())
+    safeSend('record:on-update', recordingManager.getState())
   }
 }
 
@@ -60,18 +67,18 @@ export function registerIpcHandlers(): void {
     danmuConnections.set(roomId, service)
 
     service.onMessage = (msg: DanmuMsg) => {
-      mainWindow?.webContents.send('danmu:on-message', { roomId, msg })
+      safeSend('danmu:on-message', { roomId, msg })
       if (msg.type !== 'Stats') {
         const nick = roomNicknames.get(roomId) || ''
         floatingDanmu.sendDanmuToFloating({ ...msg, roomId, roomNickname: nick })
       }
     }
     service.onStatusChanged = (status: string) => {
-      mainWindow?.webContents.send('danmu:on-status', { roomId, status })
+      safeSend('danmu:on-status', { roomId, status })
     }
     service.onDisconnected = (reason: string) => {
       danmuConnections.delete(roomId)
-      mainWindow?.webContents.send('danmu:on-disconnect', { roomId, reason })
+      safeSend('danmu:on-disconnect', { roomId, reason })
     }
 
     await service.connect(roomId, douyinLive.cookie, nickname)
@@ -93,7 +100,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('danmu:disconnect-all', async () => {
     for (const [roomId, service] of danmuConnections) {
       service.disconnect()
-      mainWindow?.webContents.send('danmu:on-disconnect', { roomId, reason: '主动断开' })
+      safeSend('danmu:on-disconnect', { roomId, reason: '主动断开' })
     }
     danmuConnections.clear()
     roomNicknames.clear()
@@ -219,7 +226,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('license:check', () => license.loadLicense())
   ipcMain.handle('license:verify', (_e, key: string) => license.verifyKey(key))
   ipcMain.handle('license:done', () => {
-    mainWindow?.webContents.send('license:passed')
+    safeSend('license:passed')
     return true
   })
   ipcMain.handle('license:clear', () => { license.clearLicense(); return true })
@@ -243,7 +250,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('ffmpeg:install', async () => {
     try {
       const ok = await ffmpegInstaller.downloadAndInstall((pct, msg) => {
-        mainWindow?.webContents.send('ffmpeg:progress', { pct, msg })
+        safeSend('ffmpeg:progress', { pct, msg })
       })
       return { success: ok }
     } catch (ex: any) {

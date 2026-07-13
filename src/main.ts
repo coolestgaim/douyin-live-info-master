@@ -1,4 +1,4 @@
-import { createApp } from 'vue'
+﻿import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import App from './App.vue'
@@ -9,7 +9,7 @@ import RecordingView from './views/RecordingView.vue'
 import SettingsView from './views/SettingsView.vue'
 import AboutView from './views/AboutView.vue'
 import QuickReplyView from './views/QuickReplyView.vue'
-import OfflineDataView from './views/OfflineDataView.vue'
+import ImageRecognitionView from './views/OfflineDataView.vue'
 
 import { useDanmuStore } from './stores/danmu'
 import { useRecordStore } from './stores/record'
@@ -25,7 +25,7 @@ const router = createRouter({
     { path: '/settings', component: SettingsView },
     { path: '/about', component: AboutView },
     { path: '/quick-reply', component: QuickReplyView },
-    { path: '/offline', component: OfflineDataView }
+    { path: '/offline', component: ImageRecognitionView }
   ]
 })
 
@@ -43,3 +43,4 @@ const recordStore = useRecordStore()
 recordStore.setupListeners()
 
 app.mount('#app')
+

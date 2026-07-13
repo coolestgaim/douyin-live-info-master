@@ -2,9 +2,9 @@
   <div class="offline-data">
     <div class="dash-header">
       <div>
-        <h2 class="dash-title">下播数据</h2>
+        <h2 class="dash-title">识图</h2>
         <div class="dash-subtitle">
-          <span class="subtitle-text">上传截图，自动提取直播数据</span>
+          <span class="subtitle-text">上传截图，AI自动识别直播数据</span>
         </div>
       </div>
       <n-button
