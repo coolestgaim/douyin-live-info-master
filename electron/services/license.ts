@@ -6,14 +6,70 @@
  */
 
 import * as crypto from 'crypto'
+import axios from 'axios'
 import * as fs from 'fs'
 import * as path from 'path'
 import { app } from 'electron'
+import { verifyOnline, startHeartbeat, stopHeartbeat, deactivateOnline, getMachineCode } from './license-online'
 
 const SECRET = 'dylive-kms-2026-secret-key-v1'
 const LICENSE_FILE = path.join(app.getPath('userData'), 'license.dat')
+const COS_REVOKED_URL = 'https://douyin-license-1304282821.cos.ap-guangzhou.myqcloud.com/revoked_list.json'
 
-export function verifyKey(input: string): { valid: boolean; message: string } {
+// ? COS ??????
+let revokedCache: Set<string> | null = null
+let revokedCacheTime = 0
+
+async function getRevokedList(): Promise<Set<string>> {
+  // ?? 5 ??
+  if (revokedCache && Date.now() - revokedCacheTime < 5 * 60 * 1000) {
+    return revokedCache
+  }
+  try {
+    const res = await axios.get(COS_REVOKED_URL, { timeout: 5000 })
+    revokedCache = new Set(res.data)
+    revokedCacheTime = Date.now()
+    return revokedCache
+  } catch {
+    // ????????????
+    return new Set()
+  }
+}
+
+export let lastVerifiedKey = ''
+
+export function verifyKeyOnline(input: string): Promise<{ valid: boolean; message: string }> {
+  return verifyKey(input, true)
+}
+
+export function verifyKey(input: string, tryOnline = false): Promise<{ valid: boolean; message: string }> {
+  if (tryOnline) {
+    return (async () => {
+      const machineCode = getMachineCode()
+      const onlineResult = await verifyOnline(input, machineCode)
+      if (onlineResult) {
+        if (onlineResult.valid) {
+          lastVerifiedKey = input
+          startHeartbeat(input, machineCode)
+          const expiresMs = onlineResult.expiresAt ? new Date(onlineResult.expiresAt).getTime() : Date.now() + 365 * 86400_000
+          const uid = onlineResult.userId || ''
+          fs.writeFileSync(LICENSE_FILE, JSON.stringify({
+            userId: uid,
+            expires: new Date(expiresMs).toISOString(),
+            savedAt: new Date().toISOString()
+          }), 'utf-8')
+          return { valid: true, message: onlineResult.message }
+        }
+        return { valid: false, message: onlineResult.message }
+      }
+      // 网络不通，降级到离线验证
+      return doOfflineVerify(input)
+    })()
+  }
+  return doOfflineVerify(input)
+}
+
+async function doOfflineVerify(input: string): Promise<{ valid: boolean; message: string }> {
   try {
     // base64url → standard
     const raw = input.trim()
@@ -51,6 +107,8 @@ export function verifyKey(input: string): { valid: boolean; message: string } {
     return { valid: false, message: '卡密解析失败: ' + e.message }
   }
 }
+
+
 
 function saveLicense(userId: string, expireMs: number) {
   try {

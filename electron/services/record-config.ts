@@ -7,6 +7,7 @@ export interface RecordConfig {
   outputFormat: string
   outputPath: string
   dashscopeKey: string
+  licenseServerUrl: string
 }
 
 const DEFAULT_KEY = 'sk-ws-H.RXRIXDR.GMmo.MEUCIDjHPaAcDJzcUXIEHRtZEf4DoET55gktdIBiHUPWyhIEAiEAmz587AkTWFSw4v6mmRJt5ftPfAOSyH5N-IuSRyLOP9c'
@@ -17,12 +18,12 @@ function getConfigPath(): string {
 
 export function loadConfig(): RecordConfig {
   const configPath = getConfigPath()
-  if (!fs.existsSync(configPath)) return { outputFormat: 'mp3', outputPath: '', dashscopeKey: DEFAULT_KEY }
+  if (!fs.existsSync(configPath)) return { outputFormat: 'mp3', outputPath: '', dashscopeKey: DEFAULT_KEY, licenseServerUrl: '' }
   try {
     const cfg = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
-    return { outputFormat: cfg.outputFormat || 'mp3', outputPath: cfg.outputPath || '', dashscopeKey: cfg.dashscopeKey || DEFAULT_KEY }
+    return { outputFormat: cfg.outputFormat || 'mp3', outputPath: cfg.outputPath || '', dashscopeKey: cfg.dashscopeKey || DEFAULT_KEY, licenseServerUrl: cfg.licenseServerUrl || '' }
   } catch {
-    return { outputFormat: 'mp3', outputPath: '', dashscopeKey: DEFAULT_KEY }
+    return { outputFormat: 'mp3', outputPath: '', dashscopeKey: DEFAULT_KEY, licenseServerUrl: '' }
   }
 }
 

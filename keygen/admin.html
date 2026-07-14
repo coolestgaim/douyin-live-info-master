@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>???? - DouyinLiveInfo</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, "Microsoft YaHei UI", sans-serif; background: #111318; color: #e0e2e8; padding: 20px; }
+h1 { font-size: 20px; margin-bottom: 20px; color: #f97316; }
+h2 { font-size: 15px; color: #e0e2e8; margin-bottom: 12px; }
+.card { background: #1a1d26; border: 1px solid #2a2d36; border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+label { font-size: 12px; color: #6b7080; display: flex; align-items: center; gap: 6px; }
+input, select { background: #0d0f14; border: 1px solid #2a2d36; border-radius: 6px; padding: 8px 12px; color: #e0e2e8; font-size: 13px; font-family: inherit; }
+input:focus { outline: none; border-color: #f97316; }
+input[type=number] { width: 70px; }
+input[type=text] { width: 200px; }
+button { background: #f97316; border: none; border-radius: 6px; padding: 8px 20px; color: #fff; cursor: pointer; font-size: 13px; font-family: inherit; }
+button:hover { background: #fb923c; }
+button.danger { background: #ef4444; }
+button.danger:hover { background: #dc2626; }
+button.sm { padding: 4px 12px; font-size: 11px; }
+button.outline { background: transparent; border: 1px solid #2a2d36; color: #6b7080; }
+button.outline:hover { border-color: #f97316; color: #f97316; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th { text-align: left; padding: 10px; color: #6b7080; border-bottom: 1px solid #2a2d36; font-weight: 600; font-size: 11px; }
+td { padding: 10px; border-bottom: 1px solid #1e2028; }
+tr:hover td { background: rgba(249,115,22,0.03); }
+.key-text { font-family: "SF Mono", monospace; font-size: 11px; color: #22d3ee; word-break: break-all; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+.badge.active { background: rgba(16,185,129,0.1); color: #10b981; border: 1px solid rgba(16,185,129,0.2); }
+.badge.revoked { background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.2); }
+.badge.expired { background: rgba(107,114,128,0.1); color: #6b7080; border: 1px solid rgba(107,114,128,0.2); }
+.preview { margin-top: 10px; padding: 12px; background: #0d0f14; border-radius: 6px; font-family: monospace; font-size: 12px; color: #6b7080; white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow-y: auto; }
+.stat { font-size: 12px; color: #6b7080; }
+.stat span { color: #f97316; font-weight: 700; }
+.tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+.tab { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; background: transparent; color: #5a5e6e; border: 1px solid transparent; }
+.tab:hover { color: #e0e2e8; }
+.tab.active { background: #1a1d26; border-color: #2a2d36; color: #f97316; }
+.panel { display: none; }
+.panel.active { display: block; }
+.msg { margin-top: 10px; padding: 8px 12px; border-radius: 6px; font-size: 12px; }
+.msg.ok { background: rgba(16,185,129,0.1); color: #10b981; }
+.msg.err { background: rgba(239,68,68,0.1); color: #ef4444; }
+.clear-btn { background: transparent; border: none; color: #4a4e5e; cursor: pointer; font-size: 11px; text-decoration: underline; padding: 0; }
+.clear-btn:hover { color: #ef4444; }
+.empty { text-align: center; color: #3a3d46; padding: 30px; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<h1>?? ??????</h1>
+
+<div class="tabs" id="tabs">
+  <div class="tab active" onclick="switchTab('generate')">????</div>
+  <div class="tab" onclick="switchTab('list')">????</div>
+  <div class="tab" onclick="switchTab('revoke')">????</div>
+</div>
+
+<!-- ???? -->
+<div id="panel-generate" class="panel active">
+  <div class="card">
+    <h2>??????</h2>
+    <div class="row">
+      <label>?? <input id="genCount" type="number" value="1" min="1" max="100"></label>
+      <label>???? <input id="genDays" type="number" value="30" min="1" max="3650"></label>
+      <label>??ID <input id="genUser" type="text" value="user"></label>
+      <button onclick="generateKeys()">??</button>
+    </div>
+    <div id="genResult"></div>
+  </div>
+</div>
+
+<!-- ???? -->
+<div id="panel-list" class="panel">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h2 style="margin:0;">???? <span class="stat" id="keyStats"></span></h2>
+      <div>
+        <button class="sm outline" onclick="exportKeys()">?? ?? JSON</button>
+        <button class="sm danger outline" onclick="clearAllKeys()">?? ??</button>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>??</th><th>??</th><th>??</th><th>??</th><th>????</th><th>??</th></tr></thead>
+      <tbody id="keyTable"><tr><td colspan="6" class="empty">??????</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ???? -->
+<div id="panel-revoke" class="panel">
+  <div class="card">
+    <h2>??????</h2>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button class="sm outline" onclick="exportRevoked()">?? ?? revoked_list.json???? COS?</button>
+    </div>
+    <div class="preview" id="revokedContent">???...</div>
+    <div class="stat" style="margin-top:8px;">??? <span id="revokedCount">0</span> ???</div>
+  </div>
+
+  <div class="card">
+    <h2>??????</h2>
+    <div class="row">
+      <input id="revokeInput" type="text" style="width:400px;font-family:monospace;" placeholder="????? 64 ???">
+      <button class="danger" onclick="revokeKeyByInput()">??</button>
+    </div>
+    <div id="revokeResult"></div>
+  </div>
+</div>
+
+<script>
+// ========== HMAC-SHA256 ?????? gen-key.js ??? ==========
+const SECRET = 'dylive-kms-2026-secret-key-v1';
+const BASE = new Date('2025-01-01').getTime();
+
+async function generateKey(userId, days) {
+  const enc = new TextEncoder();
+  const payload = new Uint8Array(2 + enc.encode(userId).length);
+  const expireDays = Math.floor((Date.now() + days * 86400000 - BASE) / 86400000);
+  payload[0] = (expireDays >> 8) & 0xFF;
+  payload[1] = expireDays & 0xFF;
+  for (let i = 0; i < userId.length; i++) payload[2 + i] = userId.charCodeAt(i);
+
+  const key = await crypto.subtle.importKey('raw', enc.encode(SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const hmac = await crypto.subtle.sign('HMAC', key, payload);
+
+  const combined = new Uint8Array(payload.length + 32);
+  combined.set(payload);
+  combined.set(new Uint8Array(hmac), payload.length);
+
+  return btoa(String.fromCharCode(...combined))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function sha256(text) {
+  return crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
+    .then(b => Array.from(new Uint8Array(b)).map(b => b.toString(16).padStart(2, '0')).join(''));
+}
+
+// ========== ???? ==========
+function loadDB() {
+  try { return JSON.parse(localStorage.getItem('keys_db')) || { keys: [], revoked: [] }; }
+  catch { return { keys: [], revoked: [] }; }
+}
+function saveDB(db) {
+  localStorage.setItem('keys_db', JSON.stringify(db));
+}
+
+// ========== ???? ==========
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`.tab[onclick*="${name}"]`).classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+  if (name === 'list') renderTable();
+  if (name === 'revoke') renderRevoked();
+}
+
+// ========== ???? ==========
+async function generateKeys() {
+  const count = parseInt(document.getElementById('genCount').value) || 1;
+  const days = parseInt(document.getElementById('genDays').value) || 30;
+  const userId = document.getElementById('genUser').value || 'user';
+  const result = document.getElementById('genResult');
+  result.innerHTML = '<div class="msg" style="color:#6b7080;">???...</div>';
+
+  const db = loadDB();
+  const generated = [];
+  for (let i = 0; i < count; i++) {
+    const uid = count > 1 ? userId + '_' + (i + 1) : userId;
+    const expiresAt = new Date(Date.now() + days * 86400000);
+    const key = await generateKey(uid, days);
+    generated.push(key);
+    db.keys.push({
+      key, userId: uid, days, maxDevices: 1, status: 'active',
+      created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      expires_at: expiresAt.toISOString().slice(0, 10)
+    });
+  }
+  saveDB(db);
+
+  result.innerHTML = '<div class="msg ok">? ??? ' + count + ' ???</div><div class="preview">' +
+    generated.map((k, i) => `${i+1}. ${k}`).join('\n') + '</div>';
+  renderTable();
+}
+
+// ========== ?????? ==========
+function renderTable() {
+  const db = loadDB();
+  const tbody = document.getElementById('keyTable');
+  const stats = document.getElementById('keyStats');
+
+  const total = db.keys.length;
+  const active = db.keys.filter(k => k.status === 'active').length;
+  const revoked = db.keys.filter(k => db.revoked.includes(k.key) || k.status === 'revoked').length;
+  stats.innerHTML = `?? <span>${total}</span> ? ?? <span>${active}</span> ? ?? <span>${revoked}</span>`;
+
+  if (total === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">??????????????????</td></tr>';
+    return;
+  }
+
+  // ???????
+  const sorted = [...db.keys].reverse();
+  tbody.innerHTML = sorted.map(k => {
+    const isRevoked = db.revoked.includes(k.key) || k.status === 'revoked';
+    const isExpired = !isRevoked && k.expires_at && new Date(k.expires_at) < new Date();
+    const statusBadge = isRevoked ? '<span class="badge revoked">???</span>'
+      : isExpired ? '<span class="badge expired">???</span>'
+      : '<span class="badge active">??</span>';
+    return `<tr>
+      <td class="key-text">${k.key.slice(0, 24)}...</td>
+      <td>${k.userId}</td>
+      <td>${k.days}</td>
+      <td>${statusBadge}</td>
+      <td>${k.expires_at || '-'}</td>
+      <td>${!isRevoked ? '<button class="sm danger" onclick="revokeKey(\'' + k.key + '\')">??</button>' : '-'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ========== ?? ==========
+async function revokeKey(key) {
+  if (!confirm('????????')) return;
+  const db = loadDB();
+  const hash = await sha256(key);
+  if (!db.revoked.includes(hash)) db.revoked.push(hash);
+  const idx = db.keys.findIndex(k => k.key === key);
+  if (idx >= 0) db.keys[idx].status = 'revoked';
+  saveDB(db);
+  renderTable();
+  document.getElementById('revokeResult').innerHTML = '<div class="msg ok">??????</div>';
+  setTimeout(() => document.getElementById('revokeResult').innerHTML = '', 3000);
+}
+
+async function revokeKeyByInput() {
+  const input = document.getElementById('revokeInput').value.trim();
+  if (!input) return;
+  const hash = await sha256(input);
+  const db = loadDB();
+  if (!db.revoked.includes(hash)) db.revoked.push(hash);
+  const idx = db.keys.findIndex(k => k.key === input);
+  if (idx >= 0) db.keys[idx].status = 'revoked';
+  saveDB(db);
+  document.getElementById('revokeInput').value = '';
+  document.getElementById('revokeResult').innerHTML = '<div class="msg ok">? ???<br>SHA256: ' + hash + '</div>';
+  renderTable();
+  renderRevoked();
+}
+
+// ========== ?????? ==========
+function renderRevoked() {
+  const db = loadDB();
+  document.getElementById('revokedContent').textContent = JSON.stringify(db.revoked, null, 2);
+  document.getElementById('revokedCount').textContent = db.revoked.length;
+}
+
+function exportRevoked() {
+  const db = loadDB();
+  const json = JSON.stringify(db.revoked, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'revoked_list.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  document.getElementById('revokeResult').innerHTML = '<div class="msg ok">? ??? revoked_list.json???? COS ??????????</div>';
+}
+
+function exportKeys() {
+  const db = loadDB();
+  const blob = new Blob([JSON.stringify(db.keys, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'keys_backup.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function clearAllKeys() {
+  if (!confirm('???????????????????')) return;
+  if (!confirm('????????????????')) return;
+  saveDB({ keys: [], revoked: [] });
+  renderTable();
+  renderRevoked();
+}
+
+// ========== ??? ==========
+document.addEventListener('DOMContentLoaded', () => {
+  renderTable();
+  renderRevoked();
+});
+</script>
+</body>
+</html>
