@@ -74,7 +74,10 @@ async function sh(t){var b=await crypto.subtle.digest("SHA-256",new TextEncoder(
 async function rev(){var inp=document.getElementById("ri").value.trim();if(!inp)return;if(!confirm("\u786e\u5b9a\u5214\u9500\u5417\uff1f"))return;var h=await sh(inp),db=ld();if(db.r.indexOf(h)>=0){document.getElementById("rm").innerHTML='<div style="margin-top:8px;font-size:12px;color:#ef4444;">\u5df2\u5728\u5214\u9500\u5217\u8868\u4e2d</div>';return}db.r.push(h);sd(db);document.getElementById("ri").value="";document.getElementById("rm").innerHTML='<div style="margin-top:8px;font-size:12px;color:#10b981;">\u5df2\u5214\u9500</div>';setTimeout(function(){document.getElementById("rm").innerHTML=""},3000);rr()}
 function rr(){var db=ld(),s=document.getElementById("rs"),c=document.getElementById("rc"),p=document.getElementById("rp");c.textContent=db.r.length;if(db.r.length>0){s.style.display="block";p.textContent=JSON.stringify(db.r,null,2)}else{s.style.display="none"}}
 function ex(){var b=new Blob([JSON.stringify(ld().r,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="revoked_list.json";a.click()}
-rr()
+function rk(){var d=ld(),c=document.getElementById("kc"),p=document.getElementById("kp");c.textContent=d.k.length;if(d.k.length>0){p.textContent=d.k.map(function(k,i){return (i+1)+". "+k.key+" ("+k.uid+", "+k.days+"\\u5929)"}).join("\\n")}}
+function exk(){var d=ld(),b=new Blob([JSON.stringify(d.k,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="keys_backup.json";a.click()}
+rk();rr()
 </script>
 </body>
 </html>
+
