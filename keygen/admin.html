@@ -1,38 +1,28 @@
 ﻿<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Key Manager - DouyinLiveInfo</title>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>卡密管理 - DouyinLiveInfo</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,"Microsoft YaHei UI",sans-serif;background:#111318;color:#e0e2e8;padding:20px}
+body{font-family:-apple-system,sans-serif;background:#111318;color:#e0e2e8;padding:20px}
 h1{font-size:20px;margin-bottom:20px;color:#f97316}
 h2{font-size:15px;color:#e0e2e8;margin-bottom:12px}
 .card{background:#1a1d26;border:1px solid #2a2d36;border-radius:10px;padding:20px;margin-bottom:16px}
 .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
-label{font-size:12px;color:#6b7080;display:flex;align-items:center;gap:6px}
+label{font-size:12px;color:#6b7080}
 input{background:#0d0f14;border:1px solid #2a2d36;border-radius:6px;padding:8px 12px;color:#e0e2e8;font-size:13px}
 input:focus{outline:none;border-color:#f97316}
 input[type=number]{width:70px}
 input[type=text]{width:200px}
-button{background:#f97316;border:none;border-radius:6px;padding:8px 20px;color:#fff;cursor:pointer;font-size:13px;font-family:inherit}
+button{background:#f97316;border:none;border-radius:6px;padding:8px 20px;color:#fff;cursor:pointer;font-size:13px}
 button:hover{background:#fb923c}
 button.danger{background:#ef4444}
 button.danger:hover{background:#dc2626}
-button.sm{padding:4px 12px;font-size:11px}
 table{width:100%;border-collapse:collapse;font-size:12px}
-th{text-align:left;padding:10px;color:#6b7080;border-bottom:1px solid #2a2d36;font-weight:600;font-size:11px}
+th{text-align:left;padding:10px;color:#6b7080;border-bottom:1px solid #2a2d36;font-weight:600}
 td{padding:10px;border-bottom:1px solid #1e2028}
-.key-text{font-family:monospace;font-size:11px;color:#22d3ee;word-break:break-all}
-.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600}
-.badge.active{background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.2)}
-.badge.revoked{background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.2)}
-.badge.expired{background:rgba(107,114,128,0.1);color:#6b7080;border:1px solid rgba(107,114,128,0.2)}
 .preview{margin-top:10px;padding:12px;background:#0d0f14;border-radius:6px;font-family:monospace;font-size:12px;color:#6b7080;white-space:pre-wrap;word-break:break-all;max-height:200px;overflow-y:auto}
-.stat{font-size:12px;color:#6b7080}
-.stat span{color:#f97316;font-weight:700}
 .tabs{display:flex;gap:4px;margin-bottom:16px}
-.tab{padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;background:transparent;color:#5a5e6e;border:1px solid transparent}
+.tab{padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;color:#5a5e6e;border:1px solid transparent}
 .tab:hover{color:#e0e2e8}
 .tab.active{background:#1a1d26;border-color:#2a2d36;color:#f97316}
 .panel{display:none}
@@ -40,168 +30,58 @@ td{padding:10px;border-bottom:1px solid #1e2028}
 .msg{margin-top:10px;padding:8px 12px;border-radius:6px;font-size:12px}
 .msg.ok{background:rgba(16,185,129,0.1);color:#10b981}
 .msg.err{background:rgba(239,68,68,0.1);color:#ef4444}
-.empty{text-align:center;color:#3a3d46;padding:30px;font-size:13px}
-</style>
-</head>
+</style></head>
 <body>
-
-<h1>Key Management</h1>
-
-<div class="tabs" id="tabs">
-  <div class="tab active" onclick="switchTab('generate')">Generate</div>
-  <div class="tab" onclick="switchTab('list')">Key List</div>
-  <div class="tab" onclick="switchTab('revoke')">Revoke</div>
+<h1>卡密管理</h1>
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('generate')">生成卡密</div>
+  <div class="tab" onclick="switchTab('list')">卡密列表</div>
+  <div class="tab" onclick="switchTab('revoke')">刔销管理</div>
 </div>
 
 <div id="panel-generate" class="panel active">
-  <div class="card">
-    <h2>Generate Keys</h2>
-    <div class="row">
-      <label>Count <input id="genCount" type="number" value="1" min="1" max="100"></label>
-      <label>Days <input id="genDays" type="number" value="30" min="1" max="3650"></label>
-      <label>User ID <input id="genUser" type="text" value="user"></label>
-      <button onclick="generateKeys()">Generate</button>
-    </div>
-    <div id="genResult"></div>
-  </div>
-</div>
+<div class="card"><h2>批量生成卡密</h2>
+<div class="row">
+<label>数量 <input id="genCount" type="number" value="1" min="1" max="100"></label>
+<label>有效天数 <input id="genDays" type="number" value="30" min="1" max="3650"></label>
+<label>用户ID <input id="genUser" type="text" value="user"></label>
+<button onclick="generateKeys()">生成</button>
+</div><div id="genResult"></div></div></div>
 
 <div id="panel-list" class="panel">
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <h2 style="margin:0;">All Keys <span class="stat" id="keyStats"></span></h2>
-      <button class="sm" onclick="exportKeys()" style="background:transparent;border:1px solid #2a2d36;color:#6b7080;">Export JSON</button>
-    </div>
-    <table>
-      <thead><tr><th>Key</th><th>User</th><th>Days</th><th>Status</th><th>Expires</th><th>Action</th></tr></thead>
-      <tbody id="keyTable"></tbody>
-    </table>
-  </div>
-</div>
+<div class="card">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+<h2 style="margin:0;">全部卡密 <span class="stat" id="keyStats"></span></h2>
+<button class="sm" onclick="exportKeys()" style="background:transparent;border:1px solid #2a2d36;color:#6b7080;">导出 JSON</button></div>
+<table><thead><tr><th>卡密</th><th>用户</th><th>天数</th><th>状态</th><th>过期时间</th><th>操作</th></tr></thead>
+<tbody id="keyTable"></tbody></table>
+</div></div>
 
 <div id="panel-revoke" class="panel">
-  <div class="card">
-    <h2>Revoked Keys</h2>
-    <button class="sm" onclick="exportRevoked()" style="margin-bottom:12px;background:transparent;border:1px solid #2a2d36;color:#6b7080;">Export revoked_list.json for COS</button>
-    <div class="preview" id="revokedContent">Loading...</div>
-  </div>
-  <div class="card">
-    <h2>Revoke by Key</h2>
-    <div class="row">
-      <input id="revokeInput" type="text" style="width:400px;font-family:monospace;" placeholder="Paste full key here">
-      <button class="danger" onclick="revokeKeyByInput()">Revoke</button>
-    </div>
-    <div id="revokeResult"></div>
-  </div>
-</div>
+<div class="card"><h2>被刔销的卡密</h2>
+<button class="sm" onclick="exportRevoked()" style="margin-bottom:12px;background:transparent;border:1px solid #2a2d36;color:#6b7080;">导出 revoked_list.json</button>
+<div class="preview" id="revokedContent">加载中...</div></div>
+<div class="card"><h2>手动刔销</h2>
+<div class="row">
+<input id="revokeInput" type="text" style="width:400px;font-family:monospace;" placeholder="输入完整 64 位卡密">
+<button class="danger" onclick="revokeKeyByInput()">刔销</button>
+</div><div id="revokeResult"></div></div></div>
 
 <script>
-const SECRET = "dylive-kms-2026-secret-key-v1";
-const BASE = new Date("2025-01-01").getTime();
-
-async function generateKey(userId, days) {
-  const enc = new TextEncoder();
-  const payload = new Uint8Array(2 + enc.encode(userId).length);
-  const expireDays = Math.floor((Date.now() + days*86400000 - BASE)/86400000);
-  payload[0] = (expireDays>>8)&0xFF; payload[1] = expireDays&0xFF;
-  for(let i=0;i<userId.length;i++) payload[2+i]=userId.charCodeAt(i);
-  const key = await crypto.subtle.importKey("raw", enc.encode(SECRET), {name:"HMAC",hash:"SHA-256"},false,["sign"]);
-  const hmac = new Uint8Array(await crypto.subtle.sign("HMAC",key,payload));
-  const c = new Uint8Array(payload.length+32); c.set(payload); c.set(hmac,payload.length);
-  return btoa(String.fromCharCode(...c)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
-}
-
-function sha256(t){return crypto.subtle.digest("SHA-256",new TextEncoder().encode(t)).then(b=>Array.from(new Uint8Array(b)).map(b=>b.toString(16).padStart(2,"0")).join(""));}
-
-function loadDB(){try{return JSON.parse(localStorage.getItem("keys_db"))||{keys:[],revoked:[]}}catch{return{keys:[],revoked:[]}}}
-function saveDB(d){localStorage.setItem("keys_db",JSON.stringify(d))}
-
-function switchTab(n){document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));document.querySelector('.tab[onclick*="'+n+'"]').classList.add("active");document.getElementById("panel-"+n).classList.add("active");if(n=="list")renderTable();if(n=="revoke")renderRevoked()}
-
-async function generateKeys(){
-  const c=parseInt(document.getElementById("genCount").value)||1;
-  const d=parseInt(document.getElementById("genDays").value)||30;
-  const u=document.getElementById("genUser").value||"user";
-  const db=loadDB();
-  const gens=[];
-  for(let i=0;i<c;i++){
-    const uid=c>1?u+"_"+(i+1):u;
-    const ea=new Date(Date.now()+d*86400000);
-    const k=await generateKey(uid,d);
-    gens.push(k);
-    db.keys.push({key:k,userId:uid,days:d,maxDevices:1,status:"active",created_at:new Date().toISOString().slice(0,19).replace("T"," "),expires_at:ea.toISOString().slice(0,10)});
-  }
-  saveDB(db);
-  document.getElementById("genResult").innerHTML='<div class="msg ok">Generated '+c+' keys</div><div class="preview">'+gens.map((k,i)=>(i+1)+". "+k).join("\n")+"</div>";
-  renderTable();
-}
-
-function renderTable(){
-  const db=loadDB();
-  const tb=document.getElementById("keyTable");
-  const st=document.getElementById("keyStats");
-  st.innerHTML="Total <span>"+db.keys.length+"</span>";
-  if(!db.keys.length){tb.innerHTML='<tr><td colspan="6" class="empty">No keys yet</td></tr>';return}
-  const s=[...db.keys].reverse();
-  tb.innerHTML=s.map(k=>{
-    const ir=db.revoked.includes(k.key)||k.status=="revoked";
-    const ie=!ir&&k.expires_at&&new Date(k.expires_at)<new Date();
-    const sb=ir?"REVOKED":ie?"EXPIRED":"ACTIVE";
-    const sc=ir?"revoked":ie?"expired":"active";
-    return '<tr><td class="key-text">'+k.key.slice(0,24)+'...</td><td>'+k.userId+'</td><td>'+k.days+'</td><td><span class="badge '+sc+'">'+sb+'</span></td><td>'+(k.expires_at||"-")+'</td><td>'+(ir?"-":'<button class="sm danger" onclick="revokeKey(\''+k.key+'\')">Revoke</button>')+"</td></tr>";
-  }).join("");
-}
-
-async function revokeKey(key){
-  if(!confirm("Revoke this key?"))return;
-  const db=loadDB();
-  const hash=await sha256(key);
-  if(!db.revoked.includes(key))db.revoked.push(key);
-  const idx=db.keys.findIndex(k=>k.key===key);
-  if(idx>=0)db.keys[idx].status="revoked";
-  saveDB(db);renderTable();renderRevoked();
-}
-
-async function revokeKeyByInput(){
-  const inp=document.getElementById("revokeInput").value.trim();
-  if(!inp)return;
-  const hash=await sha256(inp);
-  const db=loadDB();
-  if(!db.revoked.includes(inp))db.revoked.push(inp);
-  const idx=db.keys.findIndex(k=>k.key===inp);
-  if(idx>=0)db.keys[idx].status="revoked";
-  saveDB(db);
-  document.getElementById("revokeInput").value="";
-  document.getElementById("revokeResult").innerHTML='<div class="msg ok">Revoked<br>SHA256: '+hash+"</div>";
-  renderTable();renderRevoked();
-}
-
-function renderRevoked(){
-  const db=loadDB();
-  document.getElementById("revokedContent").textContent=JSON.stringify(db.revoked,null,2);
-}
-
-async function exportRevoked(){
-  const db=loadDB();
-  const hashes=[];
-  for(const key of db.revoked){
-    hashes.push(await sha256(key));
-  }
-  const blob=new Blob([JSON.stringify(hashes,null,2)],{type:"application/json"});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");a.href=url;a.download="revoked_list.json";a.click();
-  URL.revokeObjectURL(url);
-}
-
-function exportKeys(){
-  const db=loadDB();
-  const blob=new Blob([JSON.stringify(db.keys,null,2)],{type:"application/json"});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");a.href=url;a.download="keys_backup.json";a.click();
-  URL.revokeObjectURL(url);
-}
-
-renderTable();renderRevoked();
+var S="dylive-kms-2026-secret-key-v1",B=new Date("2025-01-01").getTime();
+async function gk(uid,d){var e=new TextEncoder(),p=new Uint8Array(2+e.encode(uid).length),ex=Math.floor((Date.now()+d*864e5-B)/864e5);p[0]=ex>>8&255;p[1]=ex&255;for(var i=0;i<uid.length;i++)p[2+i]=uid.charCodeAt(i);var k=await crypto.subtle.importKey("raw",e.encode(S),{name:"HMAC",hash:"SHA-256"},false,["sign"]);var h=new Uint8Array(await crypto.subtle.sign("HMAC",k,p)),c=new Uint8Array(p.length+32);c.set(p);c.set(h,p.length);return btoa(String.fromCharCode.apply(null,c)).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/,"")}
+function sh(t){return crypto.subtle.digest("SHA-256",new TextEncoder().encode(t)).then(function(b){return Array.from(new Uint8Array(b)).map(function(b){return b.toString(16).padStart(2,"0")}).join("")})}
+function ld(){try{return JSON.parse(localStorage.getItem("kd"))||{k:[],r:[]}}catch(e){return{k:[],r:[]}}}
+function sd(d){localStorage.setItem("kd",JSON.stringify(d))}
+function st(n){document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active")});document.querySelector('.tab[onclick*="'+n+'"]').classList.add("active");document.querySelectorAll(".panel").forEach(function(p){p.classList.remove("active")});document.getElementById("panel-"+n).classList.add("active");if(n=="list")rt();if(n=="revoke")rr()}
+async function gn(){var c=parseInt(document.getElementById("genCount").value)||1,d=parseInt(document.getElementById("genDays").value)||30,u=document.getElementById("genUser").value||"user",db=ld(),g=[];for(var i=0;i<c;i++){var uid=c>1?u+"_"+(i+1):u,ea=new Date(Date.now()+d*864e5),k=await gk(uid,d);g.push(k);db.k.push({key:k,userId:uid,days:d,status:"a",created_at:new Date().toISOString().slice(0,19).replace("T"," "),expires_at:ea.toISOString().slice(0,10)})}sd(db);document.getElementById("genResult").innerHTML='<div class="msg ok">已生息 '+c+' 张卡密</div><div class="preview">'+g.map(function(k,i){return (i+1)+". "+k}).join("\\n")+"</div>";rt()}
+function rt(){var db=ld(),tb=document.getElementById("keyTable"),st2=document.getElementById("keyStats");st2.innerHTML="总计 <span>"+db.k.length+"</span>";if(!db.k.length){tb.innerHTML='<tr><td colspan="6" class="empty">暂无数据</td></tr>';return}var s=[].concat(db.k).reverse();tb.innerHTML=s.map(function(k){var ir=db.r.indexOf(k.key)>=0||k.status=="r",ie=!ir&&k.expires_at&&new Date(k.expires_at)<new Date(),sb=ir?"已刔销":ie?"已过期":"有效",sc=ir?"revoked":ie?"expired":"active";return'<tr><td style="font-family:monospace;font-size:11px;color:#22d3ee">'+k.key.slice(0,24)+'...</td><td>'+k.userId+'</td><td>'+k.days+'</td><td><span class="badge '+sc+'">'+sb+'</span></td><td>'+(k.expires_at||"-")+'</td><td>'+(ir?"-":'<button class="sm danger" onclick="rv(\\''+k.key+'\\')">刔销</button>')+"</td></tr>"}).join("")}
+async function rv(key){if(!confirm("确定刔销？"))return;var db=ld(),h=await sh(key);if(db.r.indexOf(key)<0)db.r.push(key);for(var i=0;i<db.k.length;i++){if(db.k[i].key===key){db.k[i].status="r";break}}sd(db);rt();rr()}
+async function rvi(){var inp=document.getElementById("revokeInput").value.trim();if(!inp)return;var h=await sh(inp),db=ld();if(db.r.indexOf(inp)<0)db.r.push(inp);for(var i=0;i<db.k.length;i++){if(db.k[i].key===inp){db.k[i].status="r";break}}sd(db);document.getElementById("revokeInput").value="";document.getElementById("revokeResult").innerHTML='<div class="msg ok">已刔销<br>SHA256: '+h+"</div>";rt();rr()}
+function rr(){var db=ld();document.getElementById("revokedContent").textContent=JSON.stringify(db.r,null,2)}
+async function er(){var db=ld(),h=[];for(var i=0;i<db.r.length;i++)h.push(await sh(db.r[i]));var b=new Blob([JSON.stringify(h,null,2)],{type:"application/json"}),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download="revoked_list.json";a.click();URL.revokeObjectURL(u)}
+function ek(){var db=ld(),b=new Blob([JSON.stringify(db.k,null,2)],{type:"application/json"}),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download="keys_backup.json";a.click();URL.revokeObjectURL(u)}
+rt();rr()
 </script>
 </body>
 </html>
