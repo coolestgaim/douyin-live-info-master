@@ -87,6 +87,9 @@ export const useDanmuStore = defineStore('danmu', () => {
     api().onDanmuDisconnect((data: { roomId: string; reason: string }) => {
       connectedRoomIds.delete(data.roomId)
 
+      const dashboard = useDashboardStore()
+      if (connectedRoomIds.size === 0) dashboard.stopMonitoring()
+
       const roomList = useRoomListStore()
       const room = roomList.results.find(r => r.enterRoomId === data.roomId)
       if (room) room.connectionState = DanmuConnectionState.Disconnected
@@ -154,6 +157,7 @@ export const useDanmuStore = defineStore('danmu', () => {
       if (room) room.connectionState = DanmuConnectionState.Connected
 
       dashboard.updateConnectionState(roomId, true)
+      dashboard.startMonitoring()
 
       // 多房间时默认筛选到新连的房间，避免弹幕混在一起
       if (connectedRoomIds.size >= 2 && !filterRoomId.value) {
@@ -175,6 +179,9 @@ export const useDanmuStore = defineStore('danmu', () => {
     }
 
     updateCountText()
+
+    const dashboard = useDashboardStore()
+    if (connectedRoomIds.size === 0) dashboard.stopMonitoring()
 
     const roomList = useRoomListStore()
     const room = roomList.results.find(r => r.enterRoomId === roomId)
