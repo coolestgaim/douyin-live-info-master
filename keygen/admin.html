@@ -1,200 +1,80 @@
-﻿<!DOCTYPE html>
-<html lang="zh">
+<!DOCTYPE html>
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>????</title>
+<title>&#x5361;&#x5BC6;&#x7BA1;&#x7406;</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:#111318;color:#e0e2e8;font-family:'Microsoft YaHei UI',system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
-.card{background:#1a1d26;border:1px solid #2a2d36;border-radius:16px;padding:36px;width:480px;display:flex;flex-direction:column;gap:16px}
-h1{font-size:20px;text-align:center;color:#f97316}
-h2{font-size:14px;color:#e0e2e8;margin-bottom:4px}
-hr{border:none;border-top:1px solid #2a2d36;margin:4px 0}
-.row{display:flex;flex-direction:column;gap:4px}
-label{font-size:12px;color:#6b7080}
-input,select{background:#111318;border:1px solid #2a2d36;border-radius:8px;padding:10px 14px;color:#e0e2e8;font-size:14px;font-family:inherit;outline:none}
-input:focus,select:focus{border-color:#f97316}
-.btn{background:#f97316;color:#fff;border:none;border-radius:8px;padding:12px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer}
+body{background:#111318;color:#e0e2e8;font-family:sans-serif;padding:20px;max-width:480px;margin:0 auto}
+.card{background:#1a1d26;border:1px solid #2a2d36;border-radius:16px;padding:36px;display:flex;flex-direction:column;gap:14px}
+h1{text-align:center;color:#f97316;font-size:20px}
+h2{font-size:14px;color:#e0e2e8}
+label{font-size:12px;color:#6b7080;display:block;margin-bottom:4px}
+input,select{background:#111318;border:1px solid #2a2d36;border-radius:8px;padding:10px;color:#e0e2e8;font-size:14px;width:100%;box-sizing:border-box}
+.btn{background:#f97316;color:#fff;border:none;border-radius:8px;padding:12px;font-size:15px;font-weight:600;cursor:pointer;text-align:center}
 .btn:hover{background:#fb923c}
-.btn-sm{background:transparent;border:1px solid #2a2d36;color:#6b7080;border-radius:6px;padding:6px 14px;font-size:12px;font-family:inherit;cursor:pointer}
-.btn-sm:hover{border-color:#f97316;color:#f97316}
-.btn-danger{background:#ef4444;color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-family:inherit;cursor:pointer}
-.btn-danger:hover{background:#dc2626}
-.result{display:none;background:#111318;border:1px solid #2a2d36;border-radius:8px;padding:14px;margin-top:4px}
-.result.show{display:block}
-.key-text{font-family:monospace;font-size:13px;color:#f97316;word-break:break-all;margin-bottom:8px}
-.info{font-size:11px;color:#6b7080}
-.copy-btn{background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);color:#fb923c;font-size:11px;padding:4px 12px;border-radius:4px;cursor:pointer;font-family:inherit;margin-top:6px}
-.copy-btn:hover{background:rgba(249,115,22,0.2)}
-.preview{background:#111318;border:1px solid #2a2d36;border-radius:8px;padding:12px;font-family:monospace;font-size:11px;color:#6b7080;word-break:break-all;max-height:150px;overflow-y:auto;margin-top:4px}
-.warn{font-size:10px;color:#3a3d46;text-align:center;margin-top:4px}
-.section + .section{margin-top:8px}
+.btn-d{background:#ef4444;color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;cursor:pointer;text-align:center}
+.btn-d:hover{background:#dc2626}
+.btn-s{background:transparent;border:1px solid #2a2d36;color:#6b7080;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer}
+.btn-s:hover{border-color:#f97316;color:#f97316}
+.r{display:none;background:#111318;border:1px solid #2a2d36;border-radius:8px;padding:14px}
+.r.s{display:block}
+.k{font-family:monospace;font-size:13px;color:#f97316;word-break:break-all}
+.c{background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);color:#fb923c;font-size:11px;padding:4px 12px;border-radius:4px;cursor:pointer}
+.p{background:#111318;border:1px solid #2a2d36;border-radius:8px;padding:12px;font-family:monospace;font-size:11px;color:#6b7080;white-space:pre-wrap;word-break:break-all;max-height:150px;overflow-y:auto}
+hr{border:none;border-top:1px solid #2a2d36;margin:8px 0}
+.w{font-size:10px;color:#3a3d46;text-align:center}
 </style>
 </head>
 <body>
 <div class="card">
+<h1>&#x5361;&#x5BC6;&#x7BA1;&#x7406;</h1>
 
-<h1>????</h1>
-
-<!-- ???? -->
-<div class="section">
-<h2>????</h2>
-<div class="row">
-<label>?? ID</label>
-<input id="uid" placeholder="??: vip001" autofocus>
-</div>
-<div class="row">
-<label>???</label>
+<h2>&#x751F;&#x6210;&#x5361;&#x5BC6;</h2>
+<label>&#x7528;&#x6237; ID</label>
+<input id="uid" placeholder="vip001" autofocus>
+<label>&#x6709;&#x6548;&#x671F;</label>
 <select id="days">
-<option value="7">7 ?</option>
-<option value="30" selected>30 ?</option>
-<option value="90">90 ?</option>
-<option value="180">180 ?</option>
-<option value="365">365 ??1??</option>
-<option value="730">730 ??2??</option>
-<option value="9999">??</option>
+<option value="7">7 &#x5929;</option>
+<option value="30" selected>30 &#x5929;</option>
+<option value="90">90 &#x5929;</option>
+<option value="365">365 &#x5929;&#xFF08;1&#x5E74;&#xFF09;</option>
+<option value="730">730 &#x5929;&#xFF08;2&#x5E74;&#xFF09;</option>
 </select>
-</div>
-<button class="btn" onclick="generate()">????</button>
-<div class="result" id="genResult">
-<div class="key-text" id="keyText"></div>
-<div class="info" id="infoText"></div>
-<button class="copy-btn" onclick="copyKey()">????</button>
-</div>
+<div class="btn" onclick="gen()">&#x751F;&#x6210;&#x5361;&#x5BC6;</div>
+<div class="r" id="gr">
+<div class="k" id="kt"></div>
+<button class="c" onclick="copyKey()">&#x590D;&#x5236;</button>
 </div>
 
 <hr>
 
-<!-- ???? -->
-<div class="section">
-<h2>????</h2>
-<div class="row">
-<label>????????</label>
-<input id="revokeInput" placeholder="????? 64 ???" style="font-family:monospace">
-</div>
-<button class="btn-danger" onclick="revokeKey()">?????</button>
-<div id="revokeMsg"></div>
-<div id="revokedSection" style="display:none">
+<h2>&#x5214;&#x9500;&#x5361;&#x5BC6;</h2>
+<label>&#x8F93;&#x5165;&#x5B8C;&#x6574;64&#x4F4D;&#x5361;&#x5BC6;</label>
+<input id="ri" style="font-family:monospace">
+<div class="btn-d" onclick="rev()">&#x5214;&#x9500;&#x6B64;&#x5361;&#x5BC6;</div>
+<div id="rm"></div>
+<div id="rs" style="display:none">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-<label style="font-size:12px;color:#ef4444;">??????? <span id="revokeCount">0</span> ??</label>
-<button class="btn-sm" onclick="exportRevoked()">?? revoked_list.json</button>
+<span style="font-size:12px;color:#ef4444;">&#x5DF2;&#x5214;&#x9500;&#x5217;&#x8868;&#xFF08;&#x5171; <span id="rc">0</span> &#x6761;&#xFF09;</span>
+<button class="btn-s" onclick="ex()">&#x5BFC;&#x51FA;</button>
 </div>
-<div class="preview" id="revokedPreview"></div>
-</div>
+<div class="p" id="rp"></div>
 </div>
 
-<div class="warn">??????????????</div>
+<div class="w">&#x6B64;&#x5DE5;&#x5177;&#x4EC5;&#x4F9B;&#x672C;&#x5730;&#x4F7F;&#x7528;</div>
 </div>
 
 <script>
-const SECRET = 'dylive-kms-2026-secret-key-v1'
-const BASE = new Date('2025-01-01').getTime()
-
-// ??/????
-function loadDB() {
-  try { return JSON.parse(localStorage.getItem('keys_db')) || {keys:[], revoked:[]} }
-  catch { return {keys:[], revoked:[]} }
-}
-function saveDB(d) { localStorage.setItem('keys_db', JSON.stringify(d)) }
-
-// ????
-function generate() {
-  const uid = document.getElementById('uid').value.trim()
-  if (!uid) return alert('????? ID')
-  const days = parseInt(document.getElementById('days').value)
-  if (isNaN(days)) return
-  const expires = new Date(Date.now() + days * 86400000)
-  const expireDays = Math.floor((expires.getTime() - BASE) / 86400000)
-  const payload = new Uint8Array(2 + new TextEncoder().encode(uid).length)
-  const view = new DataView(payload.buffer)
-  view.setUint16(0, expireDays, false)
-  new TextEncoder().encodeInto(uid, payload.subarray(2))
-
-  const keyData = new TextEncoder().encode(SECRET)
-  crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
-    .then(key => crypto.subtle.sign('HMAC', key, payload))
-    .then(sig => {
-      const raw = new Uint8Array(payload.length + sig.byteLength)
-      raw.set(payload)
-      raw.set(new Uint8Array(sig), payload.length)
-      const b64 = btoa(String.fromCharCode.apply(null, raw))
-        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-      const until = expires.toISOString().substring(0, 10)
-      document.getElementById('keyText').textContent = b64
-      document.getElementById('infoText').textContent = '??: '+uid+' ? ???: '+days+'? ? ? '+until
-      document.getElementById('genResult').classList.add('show')
-
-      // ?????
-      const db = loadDB()
-      db.keys.push({key:b64, uid:uid, days:days, created:new Date().toISOString()})
-      saveDB(db)
-    })
-}
-
-function copyKey() {
-  const key = document.getElementById('keyText').textContent
-  navigator.clipboard.writeText(key).then(() => {
-    const btn = document.querySelector('.copy-btn')
-    btn.textContent = '???'
-    setTimeout(() => btn.textContent = '????', 1500)
-  })
-}
-
-// SHA256 ??
-async function sha256(text) {
-  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
-  return Array.from(new Uint8Array(b)).map(b => b.toString(16).padStart(2,'0')).join('')
-}
-
-// ??
-async function revokeKey() {
-  const inp = document.getElementById('revokeInput').value.trim()
-  if (!inp) return alert('?????????')
-  if (!confirm('????????')) return
-
-  const hash = await sha256(inp)
-  const db = loadDB()
-  if (db.revoked.indexOf(hash) >= 0) {
-    document.getElementById('revokeMsg').innerHTML = '<div style="margin-top:8px;font-size:12px;color:#ef4444;">??????????</div>'
-    return
-  }
-  db.revoked.push(hash)
-  saveDB(db)
-
-  document.getElementById('revokeInput').value = ''
-  document.getElementById('revokeMsg').innerHTML = '<div style="margin-top:8px;font-size:12px;color:#10b981;">????SHA256: '+hash+'</div>'
-  setTimeout(() => document.getElementById('revokeMsg').innerHTML = '', 3000)
-  renderRevoked()
-}
-
-// ???????
-function renderRevoked() {
-  const db = loadDB()
-  const section = document.getElementById('revokedSection')
-  const count = document.getElementById('revokeCount')
-  const preview = document.getElementById('revokedPreview')
-  count.textContent = db.revoked.length
-  if (db.revoked.length > 0) {
-    section.style.display = 'block'
-    preview.textContent = JSON.stringify(db.revoked, null, 2)
-  } else {
-    section.style.display = 'none'
-  }
-}
-
-// ?? revoked_list.json
-async function exportRevoked() {
-  const db = loadDB()
-  // ???? revoked keys ? SHA256 ??
-  const blob = new Blob([JSON.stringify(db.revoked, null, 2)], {type:'application/json'})
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url; a.download = 'revoked_list.json'; a.click()
-  URL.revokeObjectURL(url)
-}
-
-renderRevoked()
+var S="dylive-kms-2026-secret-key-v1",B=new Date("2025-01-01").getTime();
+function ld(){try{return JSON.parse(localStorage.getItem("kd"))||{k:[],r:[]}}catch(e){return{k:[],r:[]}}}
+function sd(d){localStorage.setItem("kd",JSON.stringify(d))}
+function gen(){var u=document.getElementById("uid").value.trim();if(!u)return alert("\u8bf7\u8f93\u5165\u7528\u6237 ID");var d=parseInt(document.getElementById("days").value);if(isNaN(d))return;var e=new Date(Date.now()+d*864e5),ed=Math.floor((e.getTime()-B)/864e5),p=new Uint8Array(2+new TextEncoder().encode(u).length),v=new DataView(p.buffer);v.setUint16(0,ed,false);new TextEncoder().encodeInto(u,p.subarray(2));crypto.subtle.importKey("raw",new TextEncoder().encode(S),{name:"HMAC",hash:"SHA-256"},false,["sign"]).then(function(k){return crypto.subtle.sign("HMAC",k,p)}).then(function(s){var r=new Uint8Array(p.length+s.byteLength);r.set(p);r.set(new Uint8Array(s),p.length);var b64=btoa(String.fromCharCode.apply(null,r)).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/,"");document.getElementById("kt").textContent=b64;document.getElementById("gr").classList.add("s");var db=ld();db.k.push({key:b64,uid:u,days:d});sd(db)})}
+function copyKey(){navigator.clipboard.writeText(document.getElementById("kt").textContent)}
+async function sh(t){var b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));return Array.from(new Uint8Array(b)).map(function(b){return b.toString(16).padStart(2,"0")}).join("")}
+async function rev(){var inp=document.getElementById("ri").value.trim();if(!inp)return;if(!confirm("\u786e\u5b9a\u5214\u9500\u5417\uff1f"))return;var h=await sh(inp),db=ld();if(db.r.indexOf(h)>=0){document.getElementById("rm").innerHTML='<div style="margin-top:8px;font-size:12px;color:#ef4444;">\u5df2\u5728\u5214\u9500\u5217\u8868\u4e2d</div>';return}db.r.push(h);sd(db);document.getElementById("ri").value="";document.getElementById("rm").innerHTML='<div style="margin-top:8px;font-size:12px;color:#10b981;">\u5df2\u5214\u9500</div>';setTimeout(function(){document.getElementById("rm").innerHTML=""},3000);rr()}
+function rr(){var db=ld(),s=document.getElementById("rs"),c=document.getElementById("rc"),p=document.getElementById("rp");c.textContent=db.r.length;if(db.r.length>0){s.style.display="block";p.textContent=JSON.stringify(db.r,null,2)}else{s.style.display="none"}}
+function ex(){var b=new Blob([JSON.stringify(ld().r,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="revoked_list.json";a.click()}
+rr()
 </script>
 </body>
 </html>
