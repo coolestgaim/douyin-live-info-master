@@ -1,6 +1,8 @@
 ﻿<!DOCTYPE html>
-<html lang="zh-CN">
-<head><meta charset="UTF-8"><title>卡密管理 - DouyinLiveInfo</title>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>&#x5361;&#x5BC6;&#x7BA1;&#x7406; - DouyinLiveInfo</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,sans-serif;background:#111318;color:#e0e2e8;padding:20px}
@@ -9,11 +11,11 @@ h2{font-size:15px;color:#e0e2e8;margin-bottom:12px}
 .card{background:#1a1d26;border:1px solid #2a2d36;border-radius:10px;padding:20px;margin-bottom:16px}
 .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
 label{font-size:12px;color:#6b7080}
-input{background:#0d0f14;border:1px solid #2a2d36;border-radius:6px;padding:8px 12px;color:#e0e2e8;font-size:13px}
+input{background:#0d0f14;border:1px solid #2a2d36;border-radius:6px;padding:8px 12px;color:#e0e2e8;font-size:13px;font-family:monospace}
 input:focus{outline:none;border-color:#f97316}
 input[type=number]{width:70px}
 input[type=text]{width:200px}
-button{background:#f97316;border:none;border-radius:6px;padding:8px 20px;color:#fff;cursor:pointer;font-size:13px}
+button{background:#f97316;border:none;border-radius:6px;padding:8px 20px;color:#fff;cursor:pointer;font-size:13px;font-family:sans-serif}
 button:hover{background:#fb923c}
 button.danger{background:#ef4444}
 button.danger:hover{background:#dc2626}
@@ -30,57 +32,66 @@ td{padding:10px;border-bottom:1px solid #1e2028}
 .msg{margin-top:10px;padding:8px 12px;border-radius:6px;font-size:12px}
 .msg.ok{background:rgba(16,185,129,0.1);color:#10b981}
 .msg.err{background:rgba(239,68,68,0.1);color:#ef4444}
-</style></head>
+</style>
+</head>
 <body>
-<h1>卡密管理</h1>
+<h1>&#x1F511; &#x5361;&#x5BC6;&#x7BA1;&#x7406;</h1>
 <div class="tabs">
-  <div class="tab active" onclick="switchTab('generate')">生成卡密</div>
-  <div class="tab" onclick="switchTab('list')">卡密列表</div>
-  <div class="tab" onclick="switchTab('revoke')">刔销管理</div>
+  <div class="tab active" onclick="switchTab('generate')">&#x751F;&#x6210;&#x5361;&#x5BC6;</div>
+  <div class="tab" onclick="switchTab('list')">&#x5361;&#x5BC6;&#x5217;&#x8868;</div>
+  <div class="tab" onclick="switchTab('revoke')">&#x5214;&#x9500;&#x7BA1;&#x7406;</div>
 </div>
 
 <div id="panel-generate" class="panel active">
-<div class="card"><h2>批量生成卡密</h2>
+<div class="card">
+<h2>&#x6279;&#x91CF;&#x751F;&#x6210;&#x5361;&#x5BC6;</h2>
 <div class="row">
-<label>数量 <input id="genCount" type="number" value="1" min="1" max="100"></label>
-<label>有效天数 <input id="genDays" type="number" value="30" min="1" max="3650"></label>
-<label>用户ID <input id="genUser" type="text" value="user"></label>
-<button onclick="generateKeys()">生成</button>
-</div><div id="genResult"></div></div></div>
+<label>&#x6570;&#x91CF; <input id="genCount" type="number" value="1" min="1" max="100"></label>
+<label>&#x6709;&#x6548;&#x5929;&#x6570; <input id="genDays" type="number" value="30" min="1" max="3650"></label>
+<label>&#x7528;&#x6237;ID <input id="genUser" type="text" value="user"></label>
+<button onclick="generateKeys()">&#x751F;&#x6210;</button>
+</div>
+<div id="genResult"></div>
+</div></div>
 
 <div id="panel-list" class="panel">
 <div class="card">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-<h2 style="margin:0;">全部卡密 <span class="stat" id="keyStats"></span></h2>
-<button class="sm" onclick="exportKeys()" style="background:transparent;border:1px solid #2a2d36;color:#6b7080;">导出 JSON</button></div>
-<table><thead><tr><th>卡密</th><th>用户</th><th>天数</th><th>状态</th><th>过期时间</th><th>操作</th></tr></thead>
+<h2 style="margin:0;">&#x5168;&#x90E8;&#x5361;&#x5BC6; <span class="stat" id="keyStats"></span></h2>
+<button class="sm" onclick="exportKeys()" style="background:transparent;border:1px solid #2a2d36;color:#6b7080;">&#x5BFC;&#x51FA; JSON</button></div>
+<table><thead><tr><th>&#x5361;&#x5BC6;</th><th>&#x7528;&#x6237;</th><th>&#x5929;&#x6570;</th><th>&#x72B6;&#x6001;</th><th>&#x8FC7;&#x671F;&#x65F6;&#x95F4;</th><th>&#x64CD;&#x4F5C;</th></tr></thead>
 <tbody id="keyTable"></tbody></table>
 </div></div>
 
 <div id="panel-revoke" class="panel">
-<div class="card"><h2>被刔销的卡密</h2>
-<button class="sm" onclick="exportRevoked()" style="margin-bottom:12px;background:transparent;border:1px solid #2a2d36;color:#6b7080;">导出 revoked_list.json</button>
-<div class="preview" id="revokedContent">加载中...</div></div>
-<div class="card"><h2>手动刔销</h2>
+<div class="card">
+<h2>&#x88AB;&#x5214;&#x9500;&#x7684;&#x5361;&#x5BC6;</h2>
+<button class="sm" onclick="exportRevoked()" style="margin-bottom:12px;background:transparent;border:1px solid #2a2d36;color:#6b7080;">&#x5BFC;&#x51FA; revoked_list.json</button>
+<div class="preview" id="revokedContent">&#x52A0;&#x8F7D;&#x4E2D;...</div>
+</div>
+<div class="card">
+<h2>&#x624B;&#x52A8;&#x5214;&#x9500;</h2>
 <div class="row">
-<input id="revokeInput" type="text" style="width:400px;font-family:monospace;" placeholder="输入完整 64 位卡密">
-<button class="danger" onclick="revokeKeyByInput()">刔销</button>
-</div><div id="revokeResult"></div></div></div>
+<input id="revokeInput" type="text" style="width:400px;font-family:monospace;" placeholder="&#x8F93;&#x5165;&#x5B8C;&#x6574;64&#x4F4D;&#x5361;&#x5BC6;">
+<button class="danger" onclick="revokeKeyByInput()">&#x5214;&#x9500;</button>
+</div>
+<div id="revokeResult"></div>
+</div></div>
 
 <script>
 var S="dylive-kms-2026-secret-key-v1",B=new Date("2025-01-01").getTime();
-async function gk(uid,d){var e=new TextEncoder(),p=new Uint8Array(2+e.encode(uid).length),ex=Math.floor((Date.now()+d*864e5-B)/864e5);p[0]=ex>>8&255;p[1]=ex&255;for(var i=0;i<uid.length;i++)p[2+i]=uid.charCodeAt(i);var k=await crypto.subtle.importKey("raw",e.encode(S),{name:"HMAC",hash:"SHA-256"},false,["sign"]);var h=new Uint8Array(await crypto.subtle.sign("HMAC",k,p)),c=new Uint8Array(p.length+32);c.set(p);c.set(h,p.length);return btoa(String.fromCharCode.apply(null,c)).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/,"")}
+async function gk(uid,d){var e=new TextEncoder(),p=new Uint8Array(2+e.encode(uid).length),ex=Math.floor((Date.now()+d*864e5-B)/864e5);p[0]=ex>>8&255;p[1]=ex&255;for(var i=0;i<uid.length;i++)p[2+i]=uid.charCodeAt(i);var k=await crypto.subtle.importKey("raw",e.encode(S),{name:"HMAC",hash:"SHA-256"},false,["sign"]);var h=new Uint8Array(await crypto.subtle.sign("HMAC",k,p)),c=new Uint8Array(p.length+32);c.set(p);c.set(h,p.length);return btoa(String.fromCharCode.apply(null,c)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
 function sh(t){return crypto.subtle.digest("SHA-256",new TextEncoder().encode(t)).then(function(b){return Array.from(new Uint8Array(b)).map(function(b){return b.toString(16).padStart(2,"0")}).join("")})}
 function ld(){try{return JSON.parse(localStorage.getItem("kd"))||{k:[],r:[]}}catch(e){return{k:[],r:[]}}}
 function sd(d){localStorage.setItem("kd",JSON.stringify(d))}
 function st(n){document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active")});document.querySelector('.tab[onclick*="'+n+'"]').classList.add("active");document.querySelectorAll(".panel").forEach(function(p){p.classList.remove("active")});document.getElementById("panel-"+n).classList.add("active");if(n=="list")rt();if(n=="revoke")rr()}
-async function gn(){var c=parseInt(document.getElementById("genCount").value)||1,d=parseInt(document.getElementById("genDays").value)||30,u=document.getElementById("genUser").value||"user",db=ld(),g=[];for(var i=0;i<c;i++){var uid=c>1?u+"_"+(i+1):u,ea=new Date(Date.now()+d*864e5),k=await gk(uid,d);g.push(k);db.k.push({key:k,userId:uid,days:d,status:"a",created_at:new Date().toISOString().slice(0,19).replace("T"," "),expires_at:ea.toISOString().slice(0,10)})}sd(db);document.getElementById("genResult").innerHTML='<div class="msg ok">已生息 '+c+' 张卡密</div><div class="preview">'+g.map(function(k,i){return (i+1)+". "+k}).join("\\n")+"</div>";rt()}
-function rt(){var db=ld(),tb=document.getElementById("keyTable"),st2=document.getElementById("keyStats");st2.innerHTML="总计 <span>"+db.k.length+"</span>";if(!db.k.length){tb.innerHTML='<tr><td colspan="6" class="empty">暂无数据</td></tr>';return}var s=[].concat(db.k).reverse();tb.innerHTML=s.map(function(k){var ir=db.r.indexOf(k.key)>=0||k.status=="r",ie=!ir&&k.expires_at&&new Date(k.expires_at)<new Date(),sb=ir?"已刔销":ie?"已过期":"有效",sc=ir?"revoked":ie?"expired":"active";return'<tr><td style="font-family:monospace;font-size:11px;color:#22d3ee">'+k.key.slice(0,24)+'...</td><td>'+k.userId+'</td><td>'+k.days+'</td><td><span class="badge '+sc+'">'+sb+'</span></td><td>'+(k.expires_at||"-")+'</td><td>'+(ir?"-":'<button class="sm danger" onclick="rv(\\''+k.key+'\\')">刔销</button>')+"</td></tr>"}).join("")}
-async function rv(key){if(!confirm("确定刔销？"))return;var db=ld(),h=await sh(key);if(db.r.indexOf(key)<0)db.r.push(key);for(var i=0;i<db.k.length;i++){if(db.k[i].key===key){db.k[i].status="r";break}}sd(db);rt();rr()}
-async function rvi(){var inp=document.getElementById("revokeInput").value.trim();if(!inp)return;var h=await sh(inp),db=ld();if(db.r.indexOf(inp)<0)db.r.push(inp);for(var i=0;i<db.k.length;i++){if(db.k[i].key===inp){db.k[i].status="r";break}}sd(db);document.getElementById("revokeInput").value="";document.getElementById("revokeResult").innerHTML='<div class="msg ok">已刔销<br>SHA256: '+h+"</div>";rt();rr()}
+async function gn(){var c=parseInt(document.getElementById("genCount").value)||1,d=parseInt(document.getElementById("genDays").value)||30,u=document.getElementById("genUser").value||"user",db=ld(),g=[];for(var i=0;i<c;i++){var uid=c>1?u+"_"+(i+1):u,ea=new Date(Date.now()+d*864e5),k=await gk(uid,d);g.push(k);db.k.push({key:k,userId:uid,days:d,status:"a",created_at:new Date().toISOString().slice(0,19).replace("T"," "),expires_at:ea.toISOString().slice(0,10)})}sd(db);document.getElementById("genResult").innerHTML='<div class="msg ok">\u5df2\u751f\u6210 '+c+' \u5f20\u5361\u5bc6</div><div class="preview">'+g.map(function(k,i){return(i+1)+". "+k}).join("\n")+"</div>";rt()}
+function rt(){var db=ld(),tb=document.getElementById("keyTable"),st2=document.getElementById("keyStats");st2.innerHTML="\u603b\u8ba1 <span>"+db.k.length+"</span>";if(!db.k.length){tb.innerHTML='<tr><td colspan="6" class="empty">\u6682\u65e0\u6570\u636e</td></tr>';return}var s=[].concat(db.k).reverse();tb.innerHTML=s.map(function(k){var ir=db.r.indexOf(k.key)>=0||k.status=="r",ie=!ir&&k.expires_at&&new Date(k.expires_at)<new Date(),sb=ir?"\u5df2\u5214\u9500":ie?"\u5df2\u8fc7\u671f":"\u6709\u6548",sc=ir?"revoked":ie?"expired":"active";return'<tr><td style="font-family:monospace;font-size:11px;color:#22d3ee">'+k.key.slice(0,24)+'...</td><td>'+k.userId+'</td><td>'+k.days+'</td><td><span class="badge '+sc+'">'+sb+'</span></td><td>'+(k.expires_at||"-")+'</td><td>'+(ir?"-":'<button class="sm danger" onclick="rv(\''+k.key+'\')">\u5214\u9500</button>')+"</td></tr>"}).join("")}
+async function rv(key){if(!confirm("\u786e\u5b9a\u5214\u9500\uff1f"))return;var db=ld(),h=await sh(key);if(db.r.indexOf(key)<0)db.r.push(key);for(var i=0;i<db.k.length;i++){if(db.k[i].key===key){db.k[i].status="r";break}}sd(db);rt();rr()}
+async function rvi(){var inp=document.getElementById("revokeInput").value.trim();if(!inp)return;var h=await sh(inp),db=ld();if(db.r.indexOf(inp)<0)db.r.push(inp);for(var i=0;i<db.k.length;i++){if(db.k[i].key===inp){db.k[i].status="r";break}}sd(db);document.getElementById("revokeInput").value="";document.getElementById("revokeResult").innerHTML='<div class="msg ok">\u5df2\u5214\u9500<br>SHA256: '+h+"</div>";rt();rr()}
 function rr(){var db=ld();document.getElementById("revokedContent").textContent=JSON.stringify(db.r,null,2)}
-async function er(){var db=ld(),h=[];for(var i=0;i<db.r.length;i++)h.push(await sh(db.r[i]));var b=new Blob([JSON.stringify(h,null,2)],{type:"application/json"}),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download="revoked_list.json";a.click();URL.revokeObjectURL(u)}
 function ek(){var db=ld(),b=new Blob([JSON.stringify(db.k,null,2)],{type:"application/json"}),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download="keys_backup.json";a.click();URL.revokeObjectURL(u)}
+async function er(){var db=ld(),h=[];for(var i=0;i<db.r.length;i++)h.push(await sh(db.r[i]));var b=new Blob([JSON.stringify(h,null,2)],{type:"application/json"}),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download="revoked_list.json";a.click();URL.revokeObjectURL(u)}
 rt();rr()
 </script>
 </body>
