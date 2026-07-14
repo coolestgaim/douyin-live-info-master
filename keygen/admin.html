@@ -47,6 +47,14 @@ hr{border:none;border-top:1px solid #2a2d36;margin:8px 0}
 </div>
 
 <hr>
+<h2>&#x5DF2;&#x751F;&#x6210;&#x8BB0;&#x5F55;</h2>
+<div style="display:flex;justify-content:space-between;align-items:center">
+<span style="font-size:13px;color:#6b7080;">&#x5171; <span id="kc">0</span> &#x5F20;&#x5361;&#x5BC6;</span>
+<button class="btn-s" onclick="exk()">&#x5BFC;&#x51FA; JSON</button>
+</div>
+<div class="p" id="kp"></div>
+
+<hr>
 
 <h2>&#x5214;&#x9500;&#x5361;&#x5BC6;</h2>
 <label>&#x8F93;&#x5165;&#x5B8C;&#x6574;64&#x4F4D;&#x5361;&#x5BC6;</label>
@@ -68,7 +76,7 @@ hr{border:none;border-top:1px solid #2a2d36;margin:8px 0}
 var S="dylive-kms-2026-secret-key-v1",B=new Date("2025-01-01").getTime();
 function ld(){try{return JSON.parse(localStorage.getItem("kd"))||{k:[],r:[]}}catch(e){return{k:[],r:[]}}}
 function sd(d){localStorage.setItem("kd",JSON.stringify(d))}
-function gen(){var u=document.getElementById("uid").value.trim();if(!u)return alert("\u8bf7\u8f93\u5165\u7528\u6237 ID");var d=parseInt(document.getElementById("days").value);if(isNaN(d))return;var e=new Date(Date.now()+d*864e5),ed=Math.floor((e.getTime()-B)/864e5),p=new Uint8Array(2+new TextEncoder().encode(u).length),v=new DataView(p.buffer);v.setUint16(0,ed,false);new TextEncoder().encodeInto(u,p.subarray(2));crypto.subtle.importKey("raw",new TextEncoder().encode(S),{name:"HMAC",hash:"SHA-256"},false,["sign"]).then(function(k){return crypto.subtle.sign("HMAC",k,p)}).then(function(s){var r=new Uint8Array(p.length+s.byteLength);r.set(p);r.set(new Uint8Array(s),p.length);var b64=btoa(String.fromCharCode.apply(null,r)).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/,"");document.getElementById("kt").textContent=b64;document.getElementById("gr").classList.add("s");var db=ld();db.k.push({key:b64,uid:u,days:d});sd(db)})}
+function gen(){var u=document.getElementById("uid").value.trim();if(!u)return alert("\u8bf7\u8f93\u5165\u7528\u6237 ID");var d=parseInt(document.getElementById("days").value);if(isNaN(d))return;var e=new Date(Date.now()+d*864e5),ed=Math.floor((e.getTime()-B)/864e5),p=new Uint8Array(2+new TextEncoder().encode(u).length),v=new DataView(p.buffer);v.setUint16(0,ed,false);new TextEncoder().encodeInto(u,p.subarray(2));crypto.subtle.importKey("raw",new TextEncoder().encode(S),{name:"HMAC",hash:"SHA-256"},false,["sign"]).then(function(k){return crypto.subtle.sign("HMAC",k,p)}).then(function(s){var r=new Uint8Array(p.length+s.byteLength);r.set(p);r.set(new Uint8Array(s),p.length);var b64=btoa(String.fromCharCode.apply(null,r)).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/,"");document.getElementById("kt").textContent=b64;document.getElementById("gr").classList.add("s");var db=ld();db.k.push({key:b64,uid:u,days:d});sd(db)}).catch(function(e){alert(e.message)})}
 function copyKey(){navigator.clipboard.writeText(document.getElementById("kt").textContent)}
 async function sh(t){var b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));return Array.from(new Uint8Array(b)).map(function(b){return b.toString(16).padStart(2,"0")}).join("")}
 async function rev(){var inp=document.getElementById("ri").value.trim();if(!inp)return;if(!confirm("\u786e\u5b9a\u5214\u9500\u5417\uff1f"))return;var h=await sh(inp),db=ld();if(db.r.indexOf(h)>=0){document.getElementById("rm").innerHTML='<div style="margin-top:8px;font-size:12px;color:#ef4444;">\u5df2\u5728\u5214\u9500\u5217\u8868\u4e2d</div>';return}db.r.push(h);sd(db);document.getElementById("ri").value="";document.getElementById("rm").innerHTML='<div style="margin-top:8px;font-size:12px;color:#10b981;">\u5df2\u5214\u9500</div>';setTimeout(function(){document.getElementById("rm").innerHTML=""},3000);rr()}
