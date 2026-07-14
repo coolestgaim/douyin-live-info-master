@@ -1,9 +1,8 @@
 ﻿<!DOCTYPE html>
-<html lang="zh-CN">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<title>???? - DouyinLiveInfo</title>
+<title>Key Manager - DouyinLiveInfo</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,"Microsoft YaHei UI",sans-serif;background:#111318;color:#e0e2e8;padding:20px}
@@ -46,22 +45,22 @@ td{padding:10px;border-bottom:1px solid #1e2028}
 </head>
 <body>
 
-<h1>&#128273; ??????</h1>
+<h1>Key Management</h1>
 
 <div class="tabs" id="tabs">
-  <div class="tab active" onclick="switchTab('generate')">????</div>
-  <div class="tab" onclick="switchTab('list')">????</div>
-  <div class="tab" onclick="switchTab('revoke')">????</div>
+  <div class="tab active" onclick="switchTab('generate')">Generate</div>
+  <div class="tab" onclick="switchTab('list')">Key List</div>
+  <div class="tab" onclick="switchTab('revoke')">Revoke</div>
 </div>
 
 <div id="panel-generate" class="panel active">
   <div class="card">
-    <h2>??????</h2>
+    <h2>Generate Keys</h2>
     <div class="row">
-      <label>?? <input id="genCount" type="number" value="1" min="1" max="100"></label>
-      <label>???? <input id="genDays" type="number" value="30" min="1" max="3650"></label>
-      <label>??ID <input id="genUser" type="text" value="user"></label>
-      <button onclick="generateKeys()">??</button>
+      <label>Count <input id="genCount" type="number" value="1" min="1" max="100"></label>
+      <label>Days <input id="genDays" type="number" value="30" min="1" max="3650"></label>
+      <label>User ID <input id="genUser" type="text" value="user"></label>
+      <button onclick="generateKeys()">Generate</button>
     </div>
     <div id="genResult"></div>
   </div>
@@ -70,11 +69,11 @@ td{padding:10px;border-bottom:1px solid #1e2028}
 <div id="panel-list" class="panel">
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <h2 style="margin:0;">???? <span class="stat" id="keyStats"></span></h2>
-      <button class="sm" onclick="exportKeys()" style="background:transparent;border:1px solid #2a2d36;color:#6b7080;">?? JSON</button>
+      <h2 style="margin:0;">All Keys <span class="stat" id="keyStats"></span></h2>
+      <button class="sm" onclick="exportKeys()" style="background:transparent;border:1px solid #2a2d36;color:#6b7080;">Export JSON</button>
     </div>
     <table>
-      <thead><tr><th>??</th><th>??</th><th>??</th><th>??</th><th>????</th><th>??</th></tr></thead>
+      <thead><tr><th>Key</th><th>User</th><th>Days</th><th>Status</th><th>Expires</th><th>Action</th></tr></thead>
       <tbody id="keyTable"></tbody>
     </table>
   </div>
@@ -82,15 +81,15 @@ td{padding:10px;border-bottom:1px solid #1e2028}
 
 <div id="panel-revoke" class="panel">
   <div class="card">
-    <h2>??????</h2>
-    <button class="sm" onclick="exportRevoked()" style="margin-bottom:12px;background:transparent;border:1px solid #2a2d36;color:#6b7080;">?? revoked_list.json ? COS</button>
-    <div class="preview" id="revokedContent">???...</div>
+    <h2>Revoked Keys</h2>
+    <button class="sm" onclick="exportRevoked()" style="margin-bottom:12px;background:transparent;border:1px solid #2a2d36;color:#6b7080;">Export revoked_list.json for COS</button>
+    <div class="preview" id="revokedContent">Loading...</div>
   </div>
   <div class="card">
-    <h2>????</h2>
+    <h2>Revoke by Key</h2>
     <div class="row">
-      <input id="revokeInput" type="text" style="width:400px;font-family:monospace;" placeholder="??????">
-      <button class="danger" onclick="revokeKeyByInput()">??</button>
+      <input id="revokeInput" type="text" style="width:400px;font-family:monospace;" placeholder="Paste full key here">
+      <button class="danger" onclick="revokeKeyByInput()">Revoke</button>
     </div>
     <div id="revokeResult"></div>
   </div>
@@ -109,7 +108,7 @@ async function generateKey(userId, days) {
   const key = await crypto.subtle.importKey("raw", enc.encode(SECRET), {name:"HMAC",hash:"SHA-256"},false,["sign"]);
   const hmac = new Uint8Array(await crypto.subtle.sign("HMAC",key,payload));
   const c = new Uint8Array(payload.length+32); c.set(payload); c.set(hmac,payload.length);
-  return btoa(String.fromCharCode(...c)).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/,"");
+  return btoa(String.fromCharCode(...c)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
 }
 
 function sha256(t){return crypto.subtle.digest("SHA-256",new TextEncoder().encode(t)).then(b=>Array.from(new Uint8Array(b)).map(b=>b.toString(16).padStart(2,"0")).join(""));}
@@ -117,7 +116,7 @@ function sha256(t){return crypto.subtle.digest("SHA-256",new TextEncoder().encod
 function loadDB(){try{return JSON.parse(localStorage.getItem("keys_db"))||{keys:[],revoked:[]}}catch{return{keys:[],revoked:[]}}}
 function saveDB(d){localStorage.setItem("keys_db",JSON.stringify(d))}
 
-function switchTab(n){document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));document.querySelector(\'.tab[onclick*="\'+n+\'"]\').classList.add("active");document.getElementById("panel-"+n).classList.add("active");if(n=="list")renderTable();if(n=="revoke")renderRevoked()}
+function switchTab(n){document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));document.querySelector('.tab[onclick*="'+n+'"]').classList.add("active");document.getElementById("panel-"+n).classList.add("active");if(n=="list")renderTable();if(n=="revoke")renderRevoked()}
 
 async function generateKeys(){
   const c=parseInt(document.getElementById("genCount").value)||1;
@@ -133,7 +132,7 @@ async function generateKeys(){
     db.keys.push({key:k,userId:uid,days:d,maxDevices:1,status:"active",created_at:new Date().toISOString().slice(0,19).replace("T"," "),expires_at:ea.toISOString().slice(0,10)});
   }
   saveDB(db);
-  document.getElementById("genResult").innerHTML=\'<div class="msg ok">\'+c+\' ??????</div><div class="preview">\'+gens.map((k,i)=>(i+1)+". "+k).join("\\n")+"</div>";
+  document.getElementById("genResult").innerHTML='<div class="msg ok">Generated '+c+' keys</div><div class="preview">'+gens.map((k,i)=>(i+1)+". "+k).join("\n")+"</div>";
   renderTable();
 }
 
@@ -141,19 +140,20 @@ function renderTable(){
   const db=loadDB();
   const tb=document.getElementById("keyTable");
   const st=document.getElementById("keyStats");
-  st.innerHTML="?? <span>"+db.keys.length+"</span>";
-  if(!db.keys.length){tb.innerHTML=\'<tr><td colspan="6" class="empty">????</td></tr>\';return}
-  tb.innerHTML=[...db.keys].reverse().map(k=>{
+  st.innerHTML="Total <span>"+db.keys.length+"</span>";
+  if(!db.keys.length){tb.innerHTML='<tr><td colspan="6" class="empty">No keys yet</td></tr>';return}
+  const s=[...db.keys].reverse();
+  tb.innerHTML=s.map(k=>{
     const ir=db.revoked.includes(k.key)||k.status=="revoked";
     const ie=!ir&&k.expires_at&&new Date(k.expires_at)<new Date();
-    const sb=ir?"???":ie?"???":"??";
+    const sb=ir?"REVOKED":ie?"EXPIRED":"ACTIVE";
     const sc=ir?"revoked":ie?"expired":"active";
-    return \'<tr><td class="key-text">\'+k.key.slice(0,24)+\'...</td><td>\'+k.userId+\'</td><td>\'+k.days+\'</td><td><span class="badge \'+sc+\'">\'+sb+\'</span></td><td>\'+(k.expires_at||"-")+\'</td><td>\'+(ir?"-":\'<button class="sm danger" onclick="revokeKey(\\\'\'+k.key+\'\\\')">??</button>\')+"</td></tr>";
+    return '<tr><td class="key-text">'+k.key.slice(0,24)+'...</td><td>'+k.userId+'</td><td>'+k.days+'</td><td><span class="badge '+sc+'">'+sb+'</span></td><td>'+(k.expires_at||"-")+'</td><td>'+(ir?"-":'<button class="sm danger" onclick="revokeKey(\''+k.key+'\')">Revoke</button>')+"</td></tr>";
   }).join("");
 }
 
 async function revokeKey(key){
-  if(!confirm("?????"))return;
+  if(!confirm("Revoke this key?"))return;
   const db=loadDB();
   const hash=await sha256(key);
   if(!db.revoked.includes(key))db.revoked.push(key);
@@ -172,18 +172,12 @@ async function revokeKeyByInput(){
   if(idx>=0)db.keys[idx].status="revoked";
   saveDB(db);
   document.getElementById("revokeInput").value="";
-  document.getElementById("revokeResult").innerHTML=\'<div class="msg ok">???<br>SHA256: \'+hash+"</div>";
+  document.getElementById("revokeResult").innerHTML='<div class="msg ok">Revoked<br>SHA256: '+hash+"</div>";
   renderTable();renderRevoked();
 }
 
 function renderRevoked(){
   const db=loadDB();
-  // Build JSON array of SHA256 hashes
-  const revokedHashes = [];
-  for(let key of db.revoked){
-    // For now store the key itself, we compute hashes on export
-    // Actually convert on export only
-  }
   document.getElementById("revokedContent").textContent=JSON.stringify(db.revoked,null,2);
 }
 
