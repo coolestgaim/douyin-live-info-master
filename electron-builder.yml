@@ -1,7 +1,7 @@
 appId: com.douyin.live-info
 productName: DouyinLiveInfo
 directories:
-  output: release
+  output: release/v${version}
 files:
   - dist/**/*
   - dist-electron/**/*
