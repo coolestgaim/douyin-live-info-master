@@ -18,23 +18,27 @@ export class StreamRecorder {
 
   public onStatusChanged: ((status: string) => void) | null = null
 
-  startRecording(pullUrl: string, nickname: string, format = 'mp3'): void {
+  startRecording(pullUrl: string, nickname: string, format = 'mp3', segmentMin = 0): void {
     const config = loadConfig()
     const dir = getEffectiveOutputPath(config)
     fs.mkdirSync(dir, { recursive: true })
 
     const ext = format
     const safeName = nickname.replace(/[<>:"/\\|?*]/g, '_')
-    const fileName = `${safeName}_${new Date().toISOString().replace(/[-:T]/g, '').substring(0, 14)}.${ext}`
-    this.outputPath = path.join(dir, fileName)
+    const quality = config.recordQuality || 'OD'
+    const ts = new Date().toISOString().replace(/[-:T]/g, '').substring(0, 14)
 
-    const ffmpegArgs: string[] = format === 'mp4'
-      ? ['-y', '-i', pullUrl, '-c', 'copy', this.outputPath]
-      : format === 'flv'
-        ? ['-y', '-i', pullUrl, '-c', 'copy', this.outputPath]
-        : format === 'wav'
-          ? ['-y', '-i', pullUrl, '-vn', '-acodec', 'pcm_s16le', this.outputPath]
-          : ['-y', '-i', pullUrl, '-vn', '-acodec', 'libmp3lame', '-q:a', '2', this.outputPath]
+    const useSegments = segmentMin > 0 && (format === 'mp4' || format === 'flv')
+    const segSec = segmentMin * 60
+    const baseName = `${safeName}_${quality}_${ts}`
+
+    if (useSegments) {
+      this.outputPath = path.join(dir, `${baseName}_%03d.${ext}`)
+    } else {
+      this.outputPath = path.join(dir, `${baseName}.${ext}`)
+    }
+
+    const ffmpegArgs = this.buildFfmpegArgs(pullUrl, format, this.outputPath, useSegments, segSec)
 
     const ffmpegExe = resolveFfmpegPath()
 
@@ -76,6 +80,35 @@ export class StreamRecorder {
     })
 
     this.onStatusChanged?.('正在录制...')
+  }
+
+  private buildFfmpegArgs(url: string, format: string, outPath: string, useSegments: boolean, segSec: number): string[] {
+    if (useSegments) {
+      // Segment recording
+      const segArgs = [
+        '-y', '-i', url,
+        '-c', 'copy',
+        '-map', '0',
+        '-f', 'segment',
+        '-segment_time', String(segSec),
+        '-segment_format', format === 'mp4' ? 'mp4' : 'flv',
+        '-reset_timestamps', '1'
+      ]
+      if (format === 'mp4') {
+        segArgs.push('-movflags', '+frag_keyframe+empty_moov+faststart')
+      }
+      segArgs.push(outPath)
+      return segArgs
+    }
+
+    // Single file recording
+    return format === 'mp4'
+      ? ['-y', '-i', url, '-c', 'copy', outPath]
+      : format === 'flv'
+        ? ['-y', '-i', url, '-c', 'copy', outPath]
+        : format === 'wav'
+          ? ['-y', '-i', url, '-vn', '-acodec', 'pcm_s16le', outPath]
+          : ['-y', '-i', url, '-vn', '-acodec', 'libmp3lame', '-q:a', '2', outPath]
   }
 
   stopRecording(): void {

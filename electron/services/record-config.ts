@@ -6,6 +6,9 @@ import { app } from 'electron'
 export interface RecordConfig {
   outputFormat: string
   outputPath: string
+  recordQuality: string
+  segmentEnabled: boolean
+  segmentDuration: number
   licenseServerUrl: string
 }
 
@@ -17,12 +20,20 @@ function getConfigPath(): string {
 
 export function loadConfig(): RecordConfig {
   const configPath = getConfigPath()
-  if (!fs.existsSync(configPath)) return { outputFormat: 'mp3', outputPath: '', licenseServerUrl: '' }
+  const defaults: RecordConfig = { outputFormat: 'mp3', outputPath: '', recordQuality: 'OD', segmentEnabled: false, segmentDuration: 30, licenseServerUrl: '' }
+  if (!fs.existsSync(configPath)) return { ...defaults }
   try {
     const cfg = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
-    return { outputFormat: cfg.outputFormat || 'mp3', outputPath: cfg.outputPath || '', licenseServerUrl: cfg.licenseServerUrl || '' }
+    return {
+      outputFormat: cfg.outputFormat || defaults.outputFormat,
+      outputPath: cfg.outputPath || defaults.outputPath,
+      recordQuality: cfg.recordQuality || defaults.recordQuality,
+      segmentEnabled: cfg.segmentEnabled ?? defaults.segmentEnabled,
+      segmentDuration: cfg.segmentDuration || defaults.segmentDuration,
+      licenseServerUrl: cfg.licenseServerUrl || defaults.licenseServerUrl
+    }
   } catch {
-    return { outputFormat: 'mp3', outputPath: '', licenseServerUrl: '' }
+    return { ...defaults }
   }
 }
 

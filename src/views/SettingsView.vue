@@ -12,8 +12,24 @@
       </div>
 
       <div class="form-group">
+        <label class="form-label">清晰度</label>
+        <n-select v-model:value="settings.selectedQuality" :options="qualityOptions" />
+      </div>
+
+      <div class="form-group">
         <label class="form-label">输出格式</label>
         <n-select v-model:value="settings.selectedFormat" :options="formatOptions" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">分段录制</label>
+        <n-switch v-model:value="settings.segmentEnabled" />
+        <span class="switch-label">{{ settings.segmentEnabled ? '已启用' : '已关闭' }}</span>
+      </div>
+
+      <div class="form-group" v-if="settings.segmentEnabled">
+        <label class="form-label">分段时长（分钟）</label>
+        <n-input-number v-model:value="settings.segmentDuration" :min="5" :max="120" :step="5" />
       </div>
 
       <div class="form-group">
@@ -53,7 +69,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { NInput, NButton, NSelect } from 'naive-ui'
+import { NInput, NButton, NSelect, NSwitch, NInputNumber } from 'naive-ui'
 import { useSettingsStore } from '../stores/settings'
 
 const settings = useSettingsStore()
@@ -65,6 +81,14 @@ const formatOptions = [
   { label: 'MP4', value: 'mp4' },
   { label: 'WAV', value: 'wav' },
   { label: 'FLV', value: 'flv' }
+]
+
+const qualityOptions = [
+  { label: '原画', value: 'OD' },
+  { label: '超清', value: 'UHD' },
+  { label: '高清', value: 'HD' },
+  { label: '标清', value: 'SD' },
+  { label: '流畅', value: 'LD' }
 ]
 
 onMounted(async () => {
@@ -104,6 +128,7 @@ async function clearLicense() {
   margin-bottom: 6px;
   font-weight: 500;
 }
+.switch-label { font-size: 12px; color: #8b8fa3; margin-left: 8px; vertical-align: middle; }
 
 .path-row { display: flex; gap: 8px; }
 .form-hint { font-size: 10px; color: #3a3d46; margin-top: 6px; }

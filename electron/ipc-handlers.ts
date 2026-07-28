@@ -109,7 +109,9 @@ export function registerIpcHandlers(): void {
 
   // ===== Record =====
   ipcMain.handle('record:start-all', async (_e, rooms: any[]) => {
-    const format = config.loadConfig().outputFormat
+    const cfg = config.loadConfig()
+    const format = cfg.outputFormat
+    const segmentMin = cfg.segmentEnabled ? cfg.segmentDuration : 0
     const toRecord = rooms.filter((r: any) => !r.error && r.roomStatus !== 2 && !recordingManager.has(r.enterRoomId))
 
     for (const room of toRecord) {
@@ -120,19 +122,21 @@ export function registerIpcHandlers(): void {
       }
 
       const nick = nickname || room.nickname
-      recordingManager.startRecording(room.enterRoomId, pullUrl, nick, format)
+      recordingManager.startRecording(room.enterRoomId, pullUrl, nick, format, segmentMin)
     }
 
     return recordingManager.getState()
   })
 
   ipcMain.handle('record:start-one', async (_e, room: any) => {
-    const format = config.loadConfig().outputFormat
+    const cfg = config.loadConfig()
+    const format = cfg.outputFormat
+    const segmentMin = cfg.segmentEnabled ? cfg.segmentDuration : 0
     const { success, pullUrl, nickname } = await getPullUrl(room.enterRoomId)
     if (!success) throw new Error('无法获取直播流')
 
     const nick = nickname || room.nickname
-    recordingManager.startRecording(room.enterRoomId, pullUrl, nick, format)
+    recordingManager.startRecording(room.enterRoomId, pullUrl, nick, format, segmentMin)
     return recordingManager.getState()
   })
 
