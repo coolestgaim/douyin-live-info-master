@@ -1,5 +1,6 @@
 import { StreamRecorder } from './stream-recorder'
 import { formatFileSize } from './format'
+import { loadConfig } from './record-config'
 import * as logger from './logger'
 
 const LOG_MODULE = 'RecordingManager'
@@ -23,7 +24,7 @@ export class RecordingManager {
     return this.recorders.has(roomId)
   }
 
-  startRecording(roomId: string, pullUrl: string, nickname: string, format: string): boolean {
+  startRecording(roomId: string, pullUrl: string, nickname: string, format: string, segmentMin: number): boolean {
     const recorder = new StreamRecorder()
 
     recorder.onStatusChanged = (status) => {
@@ -40,7 +41,7 @@ export class RecordingManager {
       }
     }
 
-    recorder.startRecording(pullUrl, nickname, format)
+    recorder.startRecording(pullUrl, nickname, format, segmentMin)
 
     if (!recorder.isRecording) {
       logger.warn(LOG_MODULE, `录制启动失败 roomId=${roomId}`)
