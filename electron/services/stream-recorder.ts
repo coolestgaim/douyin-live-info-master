@@ -18,19 +18,19 @@ export class StreamRecorder {
 
   public onStatusChanged: ((status: string) => void) | null = null
 
-  startRecording(pullUrl: string, nickname: string, format = 'mp3', segmentMin = 0): void {
+  startRecording(pullUrl: string, nickname: string, format = 'mp3', segmentMin = 0, quality = ''): void {
     const config = loadConfig()
     const dir = getEffectiveOutputPath(config)
     fs.mkdirSync(dir, { recursive: true })
 
     const ext = format
     const safeName = nickname.replace(/[<>:"/\\|?*]/g, '_')
-    const quality = config.recordQuality || 'OD'
+    const qLabel = quality || config.recordQuality || 'OD'
     const ts = new Date().toISOString().replace(/[-:T]/g, '').substring(0, 14)
 
     const useSegments = segmentMin > 0 && (format === 'mp4' || format === 'flv')
     const segSec = segmentMin * 60
-    const baseName = `${safeName}_${quality}_${ts}`
+    const baseName = `${safeName}_${qLabel}_${ts}`
 
     if (useSegments) {
       this.outputPath = path.join(dir, `${baseName}_%03d.${ext}`)

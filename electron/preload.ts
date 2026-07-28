@@ -24,6 +24,7 @@ const api = {
   recordStopAll: () => ipcRenderer.invoke('record:stop-all'),
   recordStopOne: (roomId: string) => ipcRenderer.invoke('record:stop-one', roomId),
   recordGetState: () => ipcRenderer.invoke('record:get-state'),
+  recordGetQualities: (roomId: string) => ipcRenderer.invoke('record:get-qualities', roomId),
   onRecordUpdate: (cb: (data: any) => void) => ipcRenderer.on('record:on-update', (_e, data) => cb(data)),
   removeRecordListeners: () => ipcRenderer.removeAllListeners('record:on-update'),
 

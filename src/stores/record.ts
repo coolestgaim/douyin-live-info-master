@@ -89,7 +89,8 @@ export const useRecordStore = defineStore('record', () => {
     danmuStatus.value = `正在获取 ${room.nickname} 的直播流...`
     const state = await api().recordStartOne({
       enterRoomId: room.enterRoomId,
-      nickname: room.nickname
+      nickname: room.nickname,
+      quality: room.quality || ''
     })
     applyState(state)
     danmuStatus.value = state?.count ? `${room.nickname} 开始录制` : '录制失败'

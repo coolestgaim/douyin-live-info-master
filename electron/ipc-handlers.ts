@@ -2,7 +2,7 @@ import { ipcMain, BrowserWindow, dialog, shell, session } from 'electron'
 import { DouyinLiveService } from './services/douyin-live'
 import { DanmuService, DanmuMsg } from './services/danmu'
 import { RecordingManager } from './services/recording-manager'
-import { getPullUrl } from './services/live-stream'
+import { getPullUrl, type PullUrlResult } from './services/live-stream'
 import * as db from './services/database'
 import * as config from './services/record-config'
 import * as floatingDanmu from './services/floating-danmu'
@@ -18,6 +18,12 @@ const douyinLive = new DouyinLiveService()
 export const danmuConnections = new Map<string, DanmuService>()
 const roomNicknames = new Map<string, string>()
 const recordingManager = new RecordingManager()
+
+function pickQualityUrl(result: PullUrlResult, quality: string): string {
+  if (!quality || result.qualities.length === 0) return result.pullUrl
+  const match = result.qualities.find(q => q.value === quality)
+  return match ? match.url : result.pullUrl
+}
 
 let mainWindow: BrowserWindow | null = null
 function safeSend(channel: string, ...args: any[]): void {
@@ -108,6 +114,11 @@ export function registerIpcHandlers(): void {
   })
 
   // ===== Record =====
+  ipcMain.handle('record:get-qualities', async (_e, roomId: string) => {
+    const { success, qualities } = await getPullUrl(roomId)
+    return { success, qualities }
+  })
+
   ipcMain.handle('record:start-all', async (_e, rooms: any[]) => {
     const cfg = config.loadConfig()
     const format = cfg.outputFormat
@@ -115,14 +126,15 @@ export function registerIpcHandlers(): void {
     const toRecord = rooms.filter((r: any) => !r.error && r.roomStatus !== 2 && !recordingManager.has(r.enterRoomId))
 
     for (const room of toRecord) {
-      const { success, pullUrl, nickname } = await getPullUrl(room.enterRoomId)
-      if (!success) {
+      const result = await getPullUrl(room.enterRoomId)
+      if (!result.success) {
         logger.warn(LOG_MODULE, `获取直播流失败 roomId=${room.enterRoomId}`)
         continue
       }
 
-      const nick = nickname || room.nickname
-      recordingManager.startRecording(room.enterRoomId, pullUrl, nick, format, segmentMin)
+      const pullUrl = pickQualityUrl(result, room.quality || '')
+      const nick = result.nickname || room.nickname
+      recordingManager.startRecording(room.enterRoomId, pullUrl, nick, format, segmentMin, room.quality || '')
     }
 
     return recordingManager.getState()
@@ -132,11 +144,12 @@ export function registerIpcHandlers(): void {
     const cfg = config.loadConfig()
     const format = cfg.outputFormat
     const segmentMin = cfg.segmentEnabled ? cfg.segmentDuration : 0
-    const { success, pullUrl, nickname } = await getPullUrl(room.enterRoomId)
-    if (!success) throw new Error('无法获取直播流')
+    const result = await getPullUrl(room.enterRoomId)
+    if (!result.success) throw new Error('无法获取直播流')
 
-    const nick = nickname || room.nickname
-    recordingManager.startRecording(room.enterRoomId, pullUrl, nick, format, segmentMin)
+    const pullUrl = pickQualityUrl(result, room.quality || '')
+    const nick = result.nickname || room.nickname
+    recordingManager.startRecording(room.enterRoomId, pullUrl, nick, format, segmentMin, room.quality || '')
     return recordingManager.getState()
   })
 
