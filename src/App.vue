@@ -14,7 +14,6 @@
             <RecordingView v-show="currentRoute === '/recording'" />
             <SettingsView v-show="currentRoute === '/settings'" />
             <QuickReplyView v-show="currentRoute === '/quick-reply'" />
-            <ImageRecognitionView v-show="currentRoute === '/offline'" />
             <AboutView v-show="currentRoute === '/about'" />
           </div>
         </div>
@@ -37,7 +36,6 @@ import DanmuView from './views/DanmuView.vue'
 import RecordingView from './views/RecordingView.vue'
 import SettingsView from './views/SettingsView.vue'
 import QuickReplyView from './views/QuickReplyView.vue'
-import ImageRecognitionView from './views/OfflineDataView.vue'
 import AboutView from './views/AboutView.vue'
 
 const api = () => (window as any).electronAPI

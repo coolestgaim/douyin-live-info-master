@@ -29,21 +29,6 @@
 
       <div class="section-header">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" stroke="#f97316" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <h3 class="section-title">视觉识别 API</h3>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">DashScope API Key（qwen-vl-plus）</label>
-        <n-input v-model:value="settings.dashscopeKey" type="password" show-password-on="click" placeholder="sk-..." />
-        <div class="form-hint">用于「下播数据」截图识别，留空则使用默认 Key</div>
-      </div>
-
-      <div class="form-divider"></div>
-
-      <div class="section-header">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
           <rect x="3" y="11" width="18" height="11" rx="2" stroke="#f97316" stroke-width="1.5"/>
           <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="#f97316" stroke-width="1.5" stroke-linecap="round"/>
           <circle cx="12" cy="16" r="1" fill="#f97316"/>
