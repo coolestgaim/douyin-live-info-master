@@ -63,7 +63,15 @@
         <span class="avail-nick">{{ room.nickname }}</span>
         <span class="avail-id">房间 {{ room.enterRoomId }}</span>
         <span class="avail-status">{{ room.roomStatus === 2 ? '未开播' : '直播中' }}</span>
-        <n-button size="tiny" type="primary" @click="recordStore.startRecording(room)" :disabled="room.roomStatus === 2">录制</n-button>
+        <n-select
+          v-if="getQualities(room.enterRoomId).length > 1"
+          v-model:value="selectedQuality[room.enterRoomId]"
+          :options="getQualities(room.enterRoomId)"
+          size="tiny"
+          style="width: 70px"
+          placeholder="画质"
+        />
+        <n-button size="tiny" type="primary" @click="startWithQuality(room)" :disabled="room.roomStatus === 2">录制</n-button>
       </div>
     </div>
 
@@ -159,8 +167,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { NButton, useDialog } from 'naive-ui'
+import { computed, reactive, onMounted } from 'vue'
+import { NButton, NSelect, useDialog } from 'naive-ui'
 import { useRecordStore } from '../stores/record'
 import { useRoomListStore } from '../stores/room-list'
 import { formatFileSize } from '../utils/format'
@@ -168,6 +176,47 @@ import { formatFileSize } from '../utils/format'
 const recordStore = useRecordStore()
 const roomList = useRoomListStore()
 const dialog = useDialog()
+const api = () => (window as any).electronAPI
+
+// Quality state per room
+const selectedQuality = reactive<Record<string, string>>({})
+const roomQualities = reactive<Record<string, { label: string; value: string }[]>>({})
+
+async function fetchQualities(roomId: string) {
+  if (roomQualities[roomId]) return
+  try {
+    const result = await api().recordGetQualities(roomId)
+    if (result.success && result.qualities?.length > 0) {
+      roomQualities[roomId] = result.qualities.map((q: any) => ({ label: q.label, value: q.value }))
+      selectedQuality[roomId] = result.qualities[0].value
+    }
+  } catch { /* ignore */ }
+}
+
+function getQualities(roomId: string) {
+  return roomQualities[roomId] || []
+}
+
+function startWithQuality(room: any) {
+  recordStore.startRecording({
+    enterRoomId: room.enterRoomId,
+    nickname: room.nickname,
+    quality: selectedQuality[room.enterRoomId] || ''
+  })
+}
+
+// Fetch qualities for all available rooms
+function refreshAllQualities() {
+  for (const room of roomList.results) {
+    if (!room.error && room.roomStatus !== 2) {
+      fetchQualities(room.enterRoomId)
+    }
+  }
+}
+
+onMounted(() => {
+  refreshAllQualities()
+})
 
 function confirmDelete(item: any) {
   dialog.warning({

@@ -24,7 +24,7 @@ export class RecordingManager {
     return this.recorders.has(roomId)
   }
 
-  startRecording(roomId: string, pullUrl: string, nickname: string, format: string, segmentMin: number): boolean {
+  startRecording(roomId: string, pullUrl: string, nickname: string, format: string, segmentMin: number, quality: string): boolean {
     const recorder = new StreamRecorder()
 
     recorder.onStatusChanged = (status) => {
@@ -41,7 +41,7 @@ export class RecordingManager {
       }
     }
 
-    recorder.startRecording(pullUrl, nickname, format, segmentMin)
+    recorder.startRecording(pullUrl, nickname, format, segmentMin, quality)
 
     if (!recorder.isRecording) {
       logger.warn(LOG_MODULE, `录制启动失败 roomId=${roomId}`)
