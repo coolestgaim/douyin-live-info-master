@@ -6,7 +6,8 @@
     </div>
 
     <div class="qr-grid-single" v-if="store.instances.length > 0">
-      <div v-for="inst in store.instances" :key="inst.id" class="card qr-card-full" :class="{ 'qr-card-expanded': inst.expanded }" :style="cardHeightStyle(inst)">
+      <div v-for="inst in store.instances" :key="inst.id" class="card qr-card-full" :class="{ 'qr-card-expanded': inst.expanded }">
+        <!-- Header -->
         <div class="qr-card-header">
           <input v-model="inst.name" class="qr-name-input" placeholder="实例名称" />
           <div class="qr-url-row">
@@ -17,16 +18,18 @@
             <button v-if="inst.status === 'running'" class="qr-btn qr-btn-expand" @click="inst.expanded = !inst.expanded" :title="inst.expanded ? '收起' : '全屏预览'">
               {{ inst.expanded ? '收起' : '全屏' }}
             </button>
-            <button v-if="inst.status === 'running'" class="qr-btn qr-btn-pause" @click="togglePause(inst)">
-              {{ pauseMap[inst.id] ? '恢复' : '暂停' }}
+            <button v-if="inst.status === 'running'" class="qr-btn qr-btn-locate" @click="startSelectorCapture(inst)">
+              {{ selectingId === inst.id ? '请点击页面输入框...' : (inst.inputSelector ? '已定位 ✓' : '定位输入框') }}
             </button>
-            <button v-if="inst.status === 'running'" class="qr-btn qr-btn-clear" @click="clearLogin(inst)">清除登录</button>
-            <button v-if="inst.status === 'running'" class="qr-btn qr-btn-refresh" @click="refreshWebview(inst)">刷新</button>
-            <button v-if="store.instances.length > 1" class="qr-btn qr-btn-remove-inst" @click="doRemoveInstance(inst)" title="删除实例">×</button>
+            <button v-if="inst.inputSelector" class="qr-btn qr-btn-clear-loc" @click="clearSelector(inst)" title="清除定位">✕</button>
+          </div>
+          <div v-if="inst.status === 'running' && inst.inputSelector" class="qr-selector-info" :title="inst.inputSelector">
+            定位: {{ inst.inputSelector.length > 40 ? inst.inputSelector.slice(0, 40) + '...' : inst.inputSelector }}
           </div>
         </div>
 
-        <div class="qr-main" :class="{ 'qr-main-expanded': inst.expanded, 'qr-main-hidden': inst.status !== 'running' }">
+        <!-- Main: webview | sidebar -->
+        <div class="qr-main" v-if="inst.status === 'running'" :class="{ 'qr-main-expanded': inst.expanded }">
           <div class="qr-browser-wrap" :class="{ 'qr-browser-full': inst.expanded }">
             <webview
               :ref="(el: any) => setWebviewRef(inst.id, el)"
@@ -38,31 +41,18 @@
             />
           </div>
 
-          <div class="qr-sidebar" v-show="!inst.expanded" @mousedown="blurWebview(inst.id)">
-
-            <!-- 定位输入框 -->
-            <div class="qr-section-label">
-              输入框定位
-              <button v-if="inst.inputPinState !== 'pinning'" class="qr-pin-btn" @click="pinInput(inst)">定位</button>
-              <span v-if="inst.inputPinState === 'pinning'" class="qr-pin-hint">请点击页面中的输入框...</span>
-              <span v-if="inst.inputPinState === 'ok'" class="qr-pin-ok">已定位 ✓</span>
-              <button v-if="inst.inputSelector" class="qr-pin-clear" @click="store.clearInputSelector(inst.id)">✕</button>
+          <div class="qr-sidebar" v-show="!inst.expanded">
+            <div class="qr-section-label">弹幕监视 <span class="qr-hint">最新</span></div>
+            <div class="qr-danmu-box">
+              <div v-if="inst.lastDanmu.length === 0" class="qr-empty">暂无弹幕</div>
+              <div v-for="(msg, i) in inst.lastDanmu.slice(0, 8)" :key="i" class="qr-danmu-row">
+                <span class="qr-danmu-user">{{ msg.userName }}</span>
+                <span class="qr-danmu-msg">{{ msg.content || msg.type }}</span>
+              </div>
             </div>
-            <div v-if="inst.inputSelector" class="qr-pin-sel" :title="inst.inputSelector">{{ inst.inputSelector }}</div>
 
-            <!-- 定位发送按钮 -->
-            <div class="qr-section-label">
-              发送按钮定位
-              <button v-if="inst.inputPinState !== 'pinning'" class="qr-pin-btn qr-pin-btn-send" @click="pinSend(inst)">定位</button>
-              <span v-if="inst.inputPinState === 'send-ok'" class="qr-pin-ok">已定位 ✓</span>
-              <button v-if="inst.sendSelector" class="qr-pin-clear" @click="store.clearInputSelector(inst.id)">✕</button>
-            </div>
-            <div v-if="inst.sendSelector" class="qr-pin-sel" :title="inst.sendSelector">{{ inst.sendSelector }}</div>
-
-            <div class="qr-section-label">快捷回复 <button class="qr-add-group-btn" @click="store.addGroup(inst.id)">+ 分组</button>
-              <button class="qr-io-btn" @click="doExport" title="导出分组">导出</button>
-              <button class="qr-io-btn" @click="triggerImport" title="导入分组">导入</button>
-            </div>
+            <!-- Groups -->
+            <div class="qr-section-label">快捷回复 <button class="qr-add-group-btn" @click="store.addGroup(inst.id)">+ 分组</button></div>
             <div class="qr-groups">
               <div v-for="(group, gIdx) in inst.quickReplyGroups" :key="gIdx" class="qr-group">
                 <div class="qr-group-header" @click="store.toggleGroup(inst.id, gIdx)">
@@ -72,7 +62,7 @@
                 </div>
                 <div v-if="group.expanded" class="qr-group-body">
                   <div v-for="(_, qi) in group.items" :key="qi" class="qr-quick-field-row">
-                    <input :value="group.items[qi]" @input="store.setQuickReply(inst.id, gIdx, qi, ($event.target as HTMLInputElement).value)" class="qr-quick-input" placeholder="快捷内容..." />
+                    <input v-model="group.items[qi]" class="qr-quick-input" placeholder="快捷内容..." @blur="store.setQuickReply(inst.id, gIdx, qi, group.items[qi])" />
                     <button class="qr-remove-btn" @click="store.removeQuickReply(inst.id, gIdx, qi)">×</button>
                   </div>
                   <button class="qr-add-item-btn" @click="store.addQuickReply(inst.id, gIdx)">+ 添加短语</button>
@@ -80,31 +70,22 @@
               </div>
             </div>
 
+            <!-- Chips -->
             <div class="qr-quick-btns">
               <template v-for="group in inst.quickReplyGroups" :key="'chip-' + group.name">
-                <template v-if="group.expanded">
-                  <button v-for="(qr, qi) in group.items.filter((t: string) => t.trim())" :key="'chip-' + qi" class="qr-chip" @click="quickSend(inst.id, qr)">{{ qr }}</button>
-                </template>
+                <button v-for="(qr, qi) in group.items.filter((t: string) => t.trim())" :key="'chip-' + qi" class="qr-chip" @click="quickSend(inst.id, qr)">{{ qr }}</button>
               </template>
             </div>
 
+            <!-- Send -->
             <div class="qr-send-row">
-              <textarea v-model="inst.sendInput" class="qr-send-input" placeholder="输入..." rows="2" @keyup.enter="manualSend(inst.id)"></textarea>
+              <input v-model="inst.sendInput" class="qr-send-input" placeholder="手动输入..." @keyup.enter="manualSend(inst.id)" />
               <button class="qr-btn qr-btn-fill" @click="manualSend(inst.id)" :disabled="!inst.sendInput.trim()">发送</button>
-              <button class="qr-btn qr-btn-burst" @click="randomBurst(inst)" :disabled="burstMap[inst.id] || !inst.sendInput.trim()">{{ burstMap[inst.id] ? '发送中...' : '三连' }}</button>
             </div>
           </div>
         </div>
-        <div class="qr-resize-handle" @mousedown="startResize($event, inst.id)" v-show="!inst.expanded">
-          <span class="qr-resize-grip">⋮⋮</span>
-          <button v-if="cardHeights[inst.id]" class="qr-resize-reset" @click.stop="resetCardHeight(inst.id)" title="恢复默认高度">↺</button>
-        </div>
       </div>
     </div>
-    <div class="qr-add-inst-wrap">
-      <button class="qr-btn qr-add-inst-btn" @click="store.addInstance()">+ 添加实例</button>
-    </div>
-    <input ref="importInput" type="file" accept=".json" style="display:none" @change="doImport" />
   </div>
 </template>
 
@@ -112,120 +93,13 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useQuickReplyStore } from '../stores/quick-reply'
 
-defineOptions({ name: 'QuickReplyView' })
-
 const store = useQuickReplyStore()
 const webviewRefs = ref<Record<number, HTMLWebViewElement>>({})
-const pauseMap = ref<Record<number, boolean>>({})
-const burstMap = ref<Record<number, boolean>>({})
-const importInput = ref<HTMLInputElement | null>(null)
-
-// ===== 实例高度拖拽 =====
-const cardHeights = ref<Record<number, number>>({})
-const resizing = ref<{ id: number; startY: number; startHeight: number } | null>(null)
-
-function cardHeightStyle(inst: any) {
-  const h = cardHeights.value[inst.id]
-  // 全屏模式下不锁高度，让绝对定位生效
-  if (h && !inst.expanded) return { flex: 'none', height: h + 'px', minHeight: '260px', overflow: 'hidden' }
-  return {}
-}
-
-function resetCardHeight(id: number) {
-  const next = { ...cardHeights.value }
-  delete next[id]
-  cardHeights.value = next
-}
-
-function startResize(e: MouseEvent, id: number) {
-  const card = (e.target as HTMLElement).closest('.qr-card-full') as HTMLElement
-  if (!card) return
-  const rect = card.getBoundingClientRect()
-  resizing.value = { id, startY: e.clientY, startHeight: rect.height }
-  document.addEventListener('mousemove', onResize)
-  document.addEventListener('mouseup', stopResize)
-  document.body.style.cursor = 'ns-resize'
-  document.body.style.userSelect = 'none'
-  e.preventDefault()
-}
-
-function onResize(e: MouseEvent) {
-  if (!resizing.value) return
-  const delta = e.clientY - resizing.value.startY
-  const newHeight = Math.max(260, resizing.value.startHeight + delta)
-  cardHeights.value = { ...cardHeights.value, [resizing.value.id]: newHeight }
-}
-
-function stopResize() {
-  resizing.value = null
-  document.removeEventListener('mousemove', onResize)
-  document.removeEventListener('mouseup', stopResize)
-  document.body.style.cursor = ''
-  document.body.style.userSelect = ''
-}
+const selectingId = ref<number | null>(null)
+let selectPollTimer: ReturnType<typeof setInterval> | null = null
 
 function setWebviewRef(id: number, el: HTMLWebViewElement | null) {
   if (el) webviewRefs.value[id] = el
-}
-
-function togglePause(inst: any) {
-  const paused = !pauseMap.value[inst.id]
-  pauseMap.value[inst.id] = paused
-  const webview = webviewRefs.value[inst.id]
-  if (webview) {
-    try {
-      webview.executeJavaScript(paused
-        ? `(function(){var v=document.querySelector('video');if(v)v.pause();return !!v})()`
-        : `(function(){var v=document.querySelector('video');if(v)v.play();return !!v})()`)
-    } catch (e) {}
-  }
-}
-
-async function clearLogin(inst: any) {
-  if (!confirm('确定要清除此实例的登录状态？')) return
-  const webview = webviewRefs.value[inst.id]
-  try {
-    await (window as any).electronAPI.sessionClear('persist:qr_' + inst.id)
-  } catch (e) {}
-  // 强制刷新 webview 让登录态生效
-  if (webview) {
-    try { webview.reload() } catch {}
-    setTimeout(() => { try { webview.reload() } catch {} }, 500)
-  }
-}
-
-function refreshWebview(inst: any) {
-  const webview = webviewRefs.value[inst.id]
-  if (webview) {
-    try { webview.reload() } catch {}
-  }
-}
-
-function blurWebview(id: number) {
-  const webview = webviewRefs.value[id]
-  if (webview) {
-    try { webview.blur() } catch (e) {}
-  }
-}
-
-async function pinInput(inst: any) {
-  const webview = webviewRefs.value[inst.id]
-  if (!webview) return
-  inst.inputPinState = 'pinning'
-  const result = await store.pinInputSelector(webview, inst.id)
-  if (!result.success) {
-    if (result.error) alert('定位失败: ' + result.error)
-  }
-}
-
-async function pinSend(inst: any) {
-  const webview = webviewRefs.value[inst.id]
-  if (!webview) return
-  inst.inputPinState = 'pinning'
-  const result = await store.pinSendSelector(webview, inst.id)
-  if (!result.success) {
-    if (result.error) alert('定位失败: ' + result.error)
-  }
 }
 
 function resolveUrl(raw: string): string {
@@ -248,25 +122,25 @@ function closeWebview(inst: any) {
   if (!store.instances.some((i: any) => i.status === 'running')) store.stopPolling()
 }
 
-function doRemoveInstance(inst: any) {
-  if (inst.status === 'running') closeWebview(inst)
-  store.removeInstance(inst.id)
-}
-
 function onWebviewReady(id: number) {
   const webview = webviewRefs.value[id]
   if (!webview) return
 
+  // Mute audio
   try { webview.setAudioMuted(true) } catch (e) {}
 
+  // Inject CSS to hide gifts, likes, and other distracting UI
   try {
     webview.insertCSS(`
+      /* Hide gift/like animations and overlays */
       [class*="gift"], [class*="Gift"],
       [class*="like-animation"], [class*="LikeAnimation"],
       [class*="live-room-gift"], [class*="gift-panel"],
       [class*="giftPanel"], [class*="GiftPanel"],
+      /* Hide floating interactive elements */
       [class*="floating"], [class*="Floating"],
       [class*="interact-bar"], [class*="InteractBar"],
+      /* Hide shop/product elements */
       [class*="shop"], [class*="Shop"],
       [class*="product"], [class*="Product"],
       [class*="mall"], [class*="Mall"],
@@ -281,7 +155,7 @@ async function quickSend(id: number, text: string) {
   if (!webview) return
   const inst = store.instances.find(i => i.id === id)
   try {
-    const result = await store.sendViaWebview(webview, text, inst?.inputSelector ?? null, inst?.sendSelector ?? null)
+    const result = await store.sendViaWebview(webview, text, inst?.inputSelector)
     if (!result.success) {
       alert('发送失败: ' + (result.error || '未知错误') + '\n\n请确保已在直播间页面中登录抖音账号')
     }
@@ -290,63 +164,68 @@ async function quickSend(id: number, text: string) {
   }
 }
 
+async function startSelectorCapture(inst: any) {
+  const webview = webviewRefs.value[inst.id]
+  if (!webview) return
+
+  // If already selecting, cancel
+  if (selectingId.value === inst.id) {
+    selectingId.value = null
+    stopPolling()
+    return
+  }
+
+  // Start selection mode
+  selectingId.value = inst.id
+  const ok = await store.injectSelectorCapture(webview)
+  if (!ok) {
+    selectingId.value = null
+    alert('无法注入定位脚本，请刷新页面后重试')
+    return
+  }
+
+  // Poll for selection result
+  let attempts = 0
+  stopPolling()
+  selectPollTimer = setInterval(async () => {
+    attempts++
+    const result = await store.checkSelectorCapture(webview)
+    if (result) {
+      inst.inputSelector = result.selector
+      selectingId.value = null
+      stopPolling()
+      alert(`已定位输入框: ${result.tag} "${result.text}"\n选择器: ${result.selector}`)
+      return
+    }
+    if (attempts > 40) {  // 20 seconds timeout
+      selectingId.value = null
+      stopPolling()
+      alert('定位超时 — 请点击直播间页面中的聊天输入框')
+    }
+  }, 500)
+}
+
+function clearSelector(inst: any) {
+  inst.inputSelector = null
+}
+
+function stopPolling() {
+  if (selectPollTimer) {
+    clearInterval(selectPollTimer)
+    selectPollTimer = null
+  }
+}
+
 async function manualSend(id: number) {
   const inst = store.instances.find(i => i.id === id)
   if (!inst || !inst.sendInput.trim()) return
   const text = inst.sendInput.trim()
+  inst.sendInput = ''
   await quickSend(id, text)
 }
 
-async function randomBurst(inst: any) {
-  if (!inst.sendInput.trim() || burstMap.value[inst.id]) return
-  const text = inst.sendInput.trim()
-  burstMap.value[inst.id] = true
-  for (let i = 0; i < 3; i++) {
-    await quickSend(inst.id, text)
-    if (i < 2) {
-      // 随机间隔 500ms ~ 2500ms
-      await new Promise(r => setTimeout(r, 500 + Math.floor(Math.random() * 2000)))
-    }
-  }
-  burstMap.value[inst.id] = false
-}
-
 onMounted(() => store.startPolling())
-onUnmounted(() => store.stopPolling())
-
-// ===== 导入导出 =====
-
-function doExport() {
-  const json = store.exportGroups()
-  const blob = new Blob([json], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `快捷回复分组_${new Date().toISOString().slice(0, 10)}.json`
-  a.click()
-  URL.revokeObjectURL(url)
-}
-
-function triggerImport() {
-  importInput.value?.click()
-}
-
-function doImport(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0]
-  if (!file) return
-  const reader = new FileReader()
-  reader.onload = () => {
-    const result = store.importGroups(reader.result as string)
-    if (result.success) {
-      alert(`导入成功！覆盖了 ${result.count ?? 0} 个实例的分组`)
-    } else {
-      alert('导入失败: ' + (result.error || '未知错误'))
-    }
-  }
-  reader.readAsText(file)
-  // reset so same file can be re-imported
-  ;(e.target as HTMLInputElement).value = ''
-}
+onUnmounted(() => { store.stopPolling(); stopPolling() })
 </script>
 
 <style scoped>
@@ -354,17 +233,9 @@ function doImport(e: Event) {
 .qr-intro { margin-bottom: 12px; flex-shrink: 0; }
 .qr-title { font-size: 18px; font-weight: 700; color: #e0e2e8; }
 .qr-subtitle { font-size: 12px; color: #6b7080; margin-top: 2px; }
-.qr-btn-burst:disabled { opacity: 0.4; }
+.qr-grid-single { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 
-.qr-btn-remove-inst { background: transparent; border: 1px solid transparent; color: #ef4444; font-size: 14px; padding: 2px 6px; line-height: 1; }
-.qr-btn-remove-inst:hover { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); }
-
-.qr-add-inst-wrap { flex-shrink: 0; padding-top: 8px; }
-.qr-add-inst-btn { background: transparent; border: 1px dashed #2a2d36; color: #5a5e6e; font-size: 12px; padding: 6px 16px; width: 100%; }
-.qr-add-inst-btn:hover { border-color: #f97316; color: #f97316; }
-
-.qr-grid-single { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
-.qr-card-full { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; min-height: 320px; }
+.qr-card-full { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; }
 .qr-card-expanded { position: absolute; top: 38px; left: 200px; right: 0; bottom: 0; z-index: 100; margin: 0; border-radius: 0; }
 
 .qr-card-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex-shrink: 0; }
@@ -380,16 +251,16 @@ function doImport(e: Event) {
 .qr-btn-danger:hover { background: rgba(239,68,68,0.2); }
 .qr-btn-expand { background: rgba(59,130,246,0.1); color: #3b82f6; border: 1px solid rgba(59,130,246,0.3); }
 .qr-btn-expand:hover { background: rgba(59,130,246,0.2); }
+.qr-btn-locate { background: rgba(34,197,94,0.08); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); font-size: 11px; }
+.qr-btn-locate:hover { background: rgba(34,197,94,0.18); }
+.qr-btn-clear-loc { background: transparent; color: #ef4444; border: none; font-size: 14px; padding: 0 4px; cursor: pointer; line-height: 1; }
+.qr-btn-clear-loc:hover { color: #f87171; }
+.qr-selector-info { font-size: 10px; color: #22c55e; opacity: 0.7; padding: 2px 0 0 2px; flex-basis: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .qr-btn-fill { background: rgba(249,115,22,0.1); color: #f97316; border: 1px solid rgba(249,115,22,0.3); }
 .qr-btn-fill:hover { background: rgba(249,115,22,0.2); }
 .qr-btn-fill:disabled { opacity: 0.3; cursor: default; }
-.qr-btn-clear { background: rgba(107,114,128,0.1); color: #6b7280; border: 1px solid rgba(107,114,128,0.3); }
-.qr-btn-clear:hover { background: rgba(107,114,128,0.2); }
-.qr-btn-refresh { background: rgba(34,197,94,0.1); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
-.qr-btn-refresh:hover { background: rgba(34,197,94,0.2); }
 
 .qr-main { display: flex; gap: 12px; flex: 1; min-height: 0; }
-.qr-main-hidden { display: none; }
 .qr-main-expanded { gap: 0; }
 .qr-browser-wrap { flex: 1; min-width: 0; border-radius: 8px; overflow: auto; border: 1px solid #2a2d36; position: relative; }
 .qr-browser-full { border-radius: 0; border: none; }
@@ -398,19 +269,15 @@ function doImport(e: Event) {
 .qr-sidebar { width: 250px; flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
 
 .qr-section-label { font-size: 11px; color: #5a5e6e; font-weight: 600; display: flex; align-items: center; gap: 6px; }
-
-/* 定位按钮 */
-.qr-pin-btn { background: rgba(34,197,94,0.1); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); font-size: 11px; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-family: inherit; }
-.qr-pin-btn:hover { background: rgba(34,197,94,0.2); }
-.qr-pin-hint { font-size: 10px; color: #eab308; font-weight: 400; }
-.qr-pin-ok { font-size: 10px; color: #22c55e; }
-.qr-pin-clear { background: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 12px; padding: 0 2px; line-height: 1; }
-.qr-pin-sel { font-size: 9px; color: #4a4e5e; padding: 2px 6px; background: #111318; border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qr-hint { font-weight: 400; color: #4a4e5e; }
+.qr-danmu-box { background: #111318; border: 1px solid #1e2028; border-radius: 6px; padding: 6px; max-height: 90px; overflow-y: auto; flex-shrink: 0; }
+.qr-danmu-row { display: flex; gap: 6px; padding: 2px 0; font-size: 11px; }
+.qr-danmu-user { color: #f97316; flex-shrink: 0; white-space: nowrap; }
+.qr-danmu-msg { color: #a0a4b0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qr-empty { text-align: center; color: #4a4e5e; padding: 8px; font-size: 11px; }
 
 .qr-add-group-btn { background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.3); color: #fb923c; font-size: 11px; padding: 2px 10px; border-radius: 4px; cursor: pointer; font-family: inherit; margin-left: auto; }
 .qr-add-group-btn:hover { background: rgba(249,115,22,0.18); }
-.qr-io-btn { background: transparent; border: 1px solid #2a2d36; color: #6b7080; font-size: 11px; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-family: inherit; }
-.qr-io-btn:hover { border-color: #5a5e6e; color: #a0a4b0; }
 .qr-groups { display: flex; flex-direction: column; gap: 3px; }
 .qr-group { border: 1px solid #1e2028; border-radius: 6px; overflow: hidden; }
 .qr-group-header { display: flex; align-items: center; gap: 4px; padding: 3px 8px; background: #15171e; cursor: pointer; user-select: none; }
@@ -433,53 +300,6 @@ function doImport(e: Event) {
 .qr-chip:hover { background: rgba(249,115,22,0.18); }
 
 .qr-send-row { display: flex; gap: 6px; margin-top: auto; padding-top: 6px; }
-.qr-send-input { flex: 0 0 100px; background: #111318; border: 1px solid #2a2d36; border-radius: 6px; padding: 4px 6px; color: #e0e2e8; font-size: 11px; font-family: inherit; outline: none; resize: none; overflow-wrap: break-word; }
+.qr-send-input { flex: 1; background: #111318; border: 1px solid #2a2d36; border-radius: 6px; padding: 6px 10px; color: #e0e2e8; font-size: 12px; font-family: inherit; outline: none; }
 .qr-send-input:focus { border-color: #f97316; }
-.qr-btn-burst { background: rgba(168,85,247,0.1); color: #a855f7; border: 1px solid rgba(168,85,247,0.3); }
-.qr-btn-burst:hover:not(:disabled) { background: rgba(168,85,247,0.2); }
-.qr-btn-burst:disabled { opacity: 0.4; }
-
-/* 实例高度拖拽 */
-.qr-resize-handle {
-  height: 12px;
-  cursor: ns-resize;
-  flex-shrink: 0;
-  background: #1a1d26;
-  border-top: 1px solid #3a3d46;
-  border-bottom: 1px solid #3a3d46;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  transition: background 0.15s, border-color 0.15s;
-  user-select: none;
-}
-.qr-resize-grip {
-  color: #5a5e6e;
-  font-size: 10px;
-  letter-spacing: 3px;
-  line-height: 1;
-  pointer-events: none;
-}
-.qr-resize-reset {
-  background: transparent;
-  border: none;
-  color: #6b7080;
-  font-size: 12px;
-  cursor: pointer;
-  padding: 0 4px;
-  line-height: 1;
-  border-radius: 3px;
-}
-.qr-resize-reset:hover {
-  color: #fb923c;
-  background: rgba(249,115,22,0.1);
-}
-.qr-resize-handle:hover {
-  background: rgba(249,115,22,0.15);
-  border-color: rgba(249,115,22,0.4);
-}
-.qr-resize-handle:hover .qr-resize-grip {
-  color: #fb923c;
-}
 </style>
