@@ -167,7 +167,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, onMounted } from 'vue'
+import { computed, reactive, watch, onMounted } from 'vue'
 import { NButton, NSelect, useDialog } from 'naive-ui'
 import { useRecordStore } from '../stores/record'
 import { useRoomListStore } from '../stores/room-list'
@@ -186,11 +186,20 @@ async function fetchQualities(roomId: string) {
   if (roomQualities[roomId]) return
   try {
     const result = await api().recordGetQualities(roomId)
+    console.log(`[qualities] roomId=${roomId}`, JSON.stringify(result))
     if (result.success && result.qualities?.length > 0) {
       roomQualities[roomId] = result.qualities.map((q: any) => ({ label: q.label, value: q.value }))
       selectedQuality[roomId] = result.qualities[0].value
+      return
     }
-  } catch { /* ignore */ }
+  } catch (e) { console.error(`[qualities] fetch error roomId=${roomId}`, e) }
+  // Fallback: always show at least 原画
+  roomQualities[roomId] = [
+    { label: '原画', value: 'OD' },
+    { label: '高清', value: 'HD' },
+    { label: '标清', value: 'SD' },
+  ]
+  selectedQuality[roomId] = 'OD'
 }
 
 function getQualities(roomId: string) {
@@ -217,6 +226,11 @@ function refreshAllQualities() {
 onMounted(() => {
   refreshAllQualities()
 })
+
+// 监听房间列表变化，新加入的房间自动拉取清晰度
+watch(() => roomList.results, () => {
+  refreshAllQualities()
+}, { deep: true })
 
 function confirmDelete(item: any) {
   dialog.warning({
