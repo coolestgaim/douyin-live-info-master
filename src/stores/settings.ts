@@ -7,7 +7,6 @@ export const useSettingsStore = defineStore('settings', () => {
   const outputFormats = ['mp3', 'mp4', 'wav', 'flv']
   const selectedFormat = ref('mp3')
   const outputPath = ref('')
-  const dashscopeKey = ref('')
   const licenseServerUrl = ref('')
   const statusMessage = ref('')
 
@@ -15,7 +14,6 @@ export const useSettingsStore = defineStore('settings', () => {
     const cfg = await api().configLoad()
     selectedFormat.value = cfg.outputFormat || 'mp3'
     outputPath.value = cfg.outputPath || ''
-    dashscopeKey.value = cfg.dashscopeKey || ''
     licenseServerUrl.value = cfg.licenseServerUrl || ''
   }
 
@@ -23,7 +21,6 @@ export const useSettingsStore = defineStore('settings', () => {
     await api().configSave({
       outputFormat: selectedFormat.value,
       outputPath: outputPath.value,
-      dashscopeKey: dashscopeKey.value,
       licenseServerUrl: licenseServerUrl.value,
     })
     statusMessage.value = '已保存'
@@ -35,7 +32,7 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   return {
-    outputFormats, selectedFormat, outputPath, dashscopeKey, statusMessage,
+    outputFormats, selectedFormat, outputPath, statusMessage,
     loadConfig, saveConfig, browsePath
   }
 })
