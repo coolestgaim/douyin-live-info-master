@@ -13,7 +13,7 @@
         </div>
         <div>
           <div class="app-name">抖音直播控场助手</div>
-          <div class="app-version">V 2.7.1 — 实时弹幕监听 · 直播录制 · 快捷控场</div>
+          <div class="app-version">V {{ appVersion }} — 实时弹幕监听 · 直播录制 · 快捷控场</div>
         </div>
       </div>
 
@@ -81,6 +81,8 @@
 </template>
 
 <script setup lang="ts">
+// 版本号：vite define 从 package.json 注入
+const appVersion = __APP_VERSION__
 </script>
 
 <style scoped>

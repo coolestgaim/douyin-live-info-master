@@ -23,7 +23,7 @@
       </button>
     </div>
     <div class="sidebar-footer">
-      <div class="version-tag">V 2.7.1</div>
+      <div class="version-tag">V {{ appVersion }}</div>
     </div>
   </div>
 </template>
@@ -31,6 +31,9 @@
 <script setup lang="ts">
 defineProps<{ current: string }>()
 defineEmits<{ navigate: [path: string] }>()
+
+// 版本号：vite define 从 package.json 注入
+const appVersion = __APP_VERSION__
 
 const navItems = [
   {

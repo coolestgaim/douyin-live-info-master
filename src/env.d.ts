@@ -4,6 +4,9 @@ declare module '*.vue' {
   export default component
 }
 
+// 版本号：由 vite.config.ts 的 define 从 package.json 注入（唯一来源）
+declare const __APP_VERSION__: string
+
 // Webview element (Electron)
 declare interface HTMLWebViewElement extends HTMLElement {
   src: string
