@@ -25,3 +25,6 @@ desktop.ini
 
 server/
 .workbuddy/
+
+# 密钥文件（严禁提交）
+keys/*.pem
