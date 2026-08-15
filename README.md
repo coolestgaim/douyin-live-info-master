@@ -2,7 +2,7 @@
 
 > 抖音直播间信息获取工具 — 实时弹幕监听、数据统计、直播录制、AI 分析
 
-[![Release](https://img.shields.io/badge/Release-v2.7.0-blue?logo=github)](https://github.com/coolestgaim/douyin-live-info-master/releases)
+[![Release](https://img.shields.io/badge/Release-v2.7.1-blue?logo=github)](https://github.com/coolestgaim/douyin-live-info-master/releases)
 ![Electron](https://img.shields.io/badge/Electron-33-47848F?logo=electron)
 ![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)
