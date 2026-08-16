@@ -1,11 +1,10 @@
+/// <reference types="vite/client" />
+
 declare module '*.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, any>
   export default component
 }
-
-// 版本号：由 vite.config.ts 的 define 从 package.json 注入（唯一来源）
-declare const __APP_VERSION__: string
 
 // Webview element (Electron)
 declare interface HTMLWebViewElement extends HTMLElement {
@@ -19,6 +18,7 @@ declare interface HTMLWebViewElement extends HTMLElement {
   goBack(): void
   goForward(): void
   reload(): void
+  reloadIgnoringCache(): void
   stop(): void
   getURL(): string
   getTitle(): string

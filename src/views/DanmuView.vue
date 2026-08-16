@@ -33,22 +33,22 @@
 
       <n-tabs v-model:value="danmuStore.selectedTab" type="line" animated>
         <n-tab-pane name="all" tab="全部">
-          <DanmuList :messages="danmuStore.filteredAllMessages" empty="暂无消息，连接直播间后将实时显示" />
+          <DanmuList :messages="danmuStore.filteredAllMessages" :paused="floatingOpen && !userOverride" empty="暂无消息，连接直播间后将实时显示" />
         </n-tab-pane>
         <n-tab-pane name="chat" tab="弹幕">
-          <DanmuList :messages="danmuStore.filteredChatMessages" empty="暂无弹幕消息" />
+          <DanmuList :messages="danmuStore.filteredChatMessages" :paused="floatingOpen && !userOverride" empty="暂无弹幕消息" />
         </n-tab-pane>
         <n-tab-pane name="gift" tab="礼物">
-          <DanmuList :messages="danmuStore.filteredGiftMessages" empty="暂无礼物消息" />
+          <DanmuList :messages="danmuStore.filteredGiftMessages" :paused="floatingOpen && !userOverride" empty="暂无礼物消息" />
         </n-tab-pane>
         <n-tab-pane name="like" tab="点赞">
-          <DanmuList :messages="danmuStore.filteredLikeMessages" empty="暂无点赞消息" />
+          <DanmuList :messages="danmuStore.filteredLikeMessages" :paused="floatingOpen && !userOverride" empty="暂无点赞消息" />
         </n-tab-pane>
         <n-tab-pane name="member" tab="进入">
-          <DanmuList :messages="danmuStore.filteredMemberMessages" empty="暂无进入消息" />
+          <DanmuList :messages="danmuStore.filteredMemberMessages" :paused="floatingOpen && !userOverride" empty="暂无进入消息" />
         </n-tab-pane>
         <n-tab-pane name="social" tab="关注">
-          <DanmuList :messages="danmuStore.filteredSocialMessages" empty="暂无关注消息" />
+          <DanmuList :messages="danmuStore.filteredSocialMessages" :paused="floatingOpen && !userOverride" empty="暂无关注消息" />
         </n-tab-pane>
         <n-tab-pane name="history" tab="历史">
           <div class="history-header">
@@ -67,6 +67,20 @@
           <div v-else class="empty-inline">暂无历史记录</div>
         </n-tab-pane>
       </n-tabs>
+
+      <!-- 浮窗开启时主窗口弹幕暂停覆盖层 -->
+      <div v-if="floatingOpen" class="floating-pause-overlay">
+        <div class="pause-card">
+          <div class="pause-dot"></div>
+          <div class="pause-title">弹幕浮窗已打开</div>
+          <div class="pause-desc">主窗口已暂停更新，避免两边同时渲染弹幕浪费资源</div>
+          <div class="pause-actions">
+            <button v-if="!userOverride" class="pause-btn primary" @click="userOverride = true">继续在主窗口看</button>
+            <button v-else class="pause-btn primary" @click="userOverride = false">暂停主窗口</button>
+            <button class="pause-btn" @click="toggleFloating">关闭浮窗</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <n-modal v-model:show="showHistory" preset="card" style="width: 90%; max-width: 900px; max-height: 640px;" :title="historyTitle">
@@ -124,6 +138,11 @@ const exporting = ref(false)
 
 const api = () => (window as any).electronAPI
 const floatingOpen = ref(false)
+// 用户手动覆盖：浮窗打开时仍想在主窗口看弹幕（默认浮窗开→主窗口暂停更新）
+const userOverride = ref(false)
+watch(floatingOpen, (open) => {
+  if (open) userOverride.value = false
+})
 
 function toggleFloating() {
   if (floatingOpen.value) {
@@ -232,7 +251,7 @@ async function exportData(format: 'csv' | 'json') {
   box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
 }
 
-.danmu-content { flex: 1; min-height: 0; padding: 0 10px 10px; overflow: hidden; display: flex; flex-direction: column; }
+.danmu-content { flex: 1; min-height: 0; padding: 0 10px 10px; overflow: hidden; display: flex; flex-direction: column; position: relative; }
 
 .danmu-content :deep(.n-tabs) {
   flex: 1;
@@ -360,4 +379,26 @@ async function exportData(format: 'csv' | 'json') {
 .history-info { font-size: 11px; color: #4a4e5e; }
 .history-footer { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; }
 .export-btns { display: flex; gap: 6px; }
+
+/* 浮窗开启时主窗口暂停覆盖层 */
+.floating-pause-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(13, 15, 22, 0.94);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: 12px;
+  backdrop-filter: blur(4px);
+}
+.pause-card { text-align: center; max-width: 360px; padding: 24px; }
+.pause-dot { width: 8px; height: 8px; border-radius: 50%; background: #f97316; margin: 0 auto 14px; box-shadow: 0 0 12px rgba(249, 115, 22, 0.5); }
+.pause-title { font-size: 15px; font-weight: 600; color: #e0e2e8; margin-bottom: 8px; }
+.pause-desc { font-size: 12px; color: #6b7080; line-height: 1.5; margin-bottom: 18px; }
+.pause-actions { display: flex; gap: 8px; justify-content: center; }
+.pause-btn { background: transparent; border: 1px solid #2a2d36; color: #a0a4b0; font-size: 12px; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.pause-btn:hover { border-color: #f97316; color: #fb923c; }
+.pause-btn.primary { background: rgba(249, 115, 22, 0.12); border-color: rgba(249, 115, 22, 0.4); color: #fb923c; }
+.pause-btn.primary:hover { background: rgba(249, 115, 22, 0.2); }
 </style>

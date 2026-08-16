@@ -12,8 +12,8 @@
           </svg>
         </div>
         <div>
-          <div class="app-name">抖音直播控场助手</div>
-          <div class="app-version">V {{ appVersion }} — 实时弹幕监听 · 直播录制 · 快捷控场</div>
+          <div class="app-name">灼灼直播控场</div>
+          <div class="app-version">V 2.7.3 — 实时弹幕监听 · 直播录制 · 快捷控场</div>
         </div>
       </div>
 
@@ -43,19 +43,19 @@
 
       <div class="qr-grid">
         <div class="qr-item">
-          <img src="/wechat.jpg" class="qr-img" alt="微信" />
+          <img :src="wechatImg" class="qr-img" alt="微信" />
           <span class="qr-label">微信</span>
         </div>
         <div class="qr-item">
-          <img src="/douyin.jpg" class="qr-img" alt="抖音" />
+          <img :src="douyinImg" class="qr-img" alt="抖音" />
           <span class="qr-label">抖音</span>
         </div>
         <div class="qr-item">
-          <img src="/qq.jpg" class="qr-img" alt="QQ" />
+          <img :src="qqImg" class="qr-img" alt="QQ" />
           <span class="qr-label">QQ</span>
         </div>
         <div class="qr-item">
-          <img src="/reward.jpg" class="qr-img" alt="赞赏" />
+          <img :src="rewardImg" class="qr-img" alt="赞赏" />
           <span class="qr-label">赞赏支持</span>
         </div>
       </div>
@@ -81,8 +81,10 @@
 </template>
 
 <script setup lang="ts">
-// 版本号：vite define 从 package.json 注入
-const appVersion = __APP_VERSION__
+import wechatImg from '@/assets/wechat.jpg'
+import douyinImg from '@/assets/douyin.jpg'
+import qqImg from '@/assets/qq.jpg'
+import rewardImg from '@/assets/reward.jpg'
 </script>
 
 <style scoped>

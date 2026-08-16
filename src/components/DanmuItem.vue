@@ -108,9 +108,7 @@ function onAvatarError(e: Event) {
   font-size: 12px;
   color: #c0c2c8;
   line-height: 1.5;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-all;
   flex: 1;
   min-width: 0;
 }

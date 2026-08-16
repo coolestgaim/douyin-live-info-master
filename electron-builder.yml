@@ -5,6 +5,7 @@ directories:
 files:
   - dist/**/*
   - dist-electron/**/*
+  - public/**/*
   - sign.js
   - ffmpeg.exe
 extraResources:

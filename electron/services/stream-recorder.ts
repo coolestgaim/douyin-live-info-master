@@ -11,6 +11,7 @@ export class StreamRecorder {
   private process: ChildProcess | null = null
   private startTime: Date | null = null
   private durationTimer: ReturnType<typeof setInterval> | null = null
+  private manualStop = false
 
   public outputPath = ''
   public currentFileSize = 0
@@ -19,6 +20,7 @@ export class StreamRecorder {
   public onStatusChanged: ((status: string) => void) | null = null
 
   startRecording(pullUrl: string, nickname: string, format = 'mp3', segmentMin = 0, quality = ''): void {
+    this.manualStop = false
     const config = loadConfig()
     const dir = getEffectiveOutputPath(config)
     fs.mkdirSync(dir, { recursive: true })
@@ -70,7 +72,33 @@ export class StreamRecorder {
       logger.info(LOG_MODULE, `ffmpeg退出 code=${code} path=${this.outputPath}`)
       if (this.durationTimer) clearInterval(this.durationTimer)
       this.durationTimer = null
-      this.onStatusChanged?.(code !== 0 ? `录制异常退出 (code=${code})` : '录制已停止')
+      // 用户主动停止：不报错，正常提示
+      if (this.manualStop) {
+        this.onStatusChanged?.('录制已停止')
+        return
+      }
+      // 方案A：检查是否真的产出了数据（<1KB 视为拉流失败/URL过期）
+      let produced = false
+      try {
+        if (this.outputPath.includes('%')) {
+          // segment 模式：扫描目录下是否有非空 segment 文件（匹配 _000.mp4 等）
+          const dir = path.dirname(this.outputPath)
+          const extMatch = path.basename(this.outputPath).match(/\.(\w+)$/)
+          const ext = extMatch ? extMatch[1] : 'mp4'
+          const prefix = path.basename(this.outputPath).replace(/_%\d+d\.\w+$/, '')
+          if (fs.existsSync(dir)) {
+            const files = fs.readdirSync(dir).filter(f => f.startsWith(prefix + '_') && f.endsWith('.' + ext))
+            produced = files.some(f => fs.statSync(path.join(dir, f)).size > 1024)
+          }
+        } else if (fs.existsSync(this.outputPath)) {
+          produced = fs.statSync(this.outputPath).size > 1024
+        }
+      } catch { /* ignore */ }
+      if (!produced) {
+        this.onStatusChanged?.(`录制失败：拉流URL可能已过期（${code !== 0 ? `code=${code}` : '无数据'}），请重试`)
+      } else {
+        this.onStatusChanged?.(code !== 0 ? `录制异常退出 (code=${code})` : '录制已停止')
+      }
     })
 
     this.process.on('error', (err) => {
@@ -112,6 +140,7 @@ export class StreamRecorder {
   }
 
   stopRecording(): void {
+    this.manualStop = true
     if (this.durationTimer) clearInterval(this.durationTimer)
     this.durationTimer = null
 
@@ -140,7 +169,18 @@ export class StreamRecorder {
 
   private updateFileSize(): void {
     try {
-      if (fs.existsSync(this.outputPath)) {
+      if (this.outputPath.includes('%')) {
+        // 分段模式：统计目录下所有 segment 文件大小
+        // pattern: baseName_%03d.mp4 → 实际文件 baseName_000.mp4 / _001.mp4
+        const dir = path.dirname(this.outputPath)
+        const extMatch = path.basename(this.outputPath).match(/\.(\w+)$/)
+        const ext = extMatch ? extMatch[1] : 'mp4'
+        const prefix = path.basename(this.outputPath).replace(/_%\d+d\.\w+$/, '')
+        if (fs.existsSync(dir)) {
+          const files = fs.readdirSync(dir).filter(f => f.startsWith(prefix + '_') && f.endsWith('.' + ext))
+          this.currentFileSize = files.reduce((sum, f) => sum + fs.statSync(path.join(dir, f)).size, 0)
+        }
+      } else if (fs.existsSync(this.outputPath)) {
         this.currentFileSize = fs.statSync(this.outputPath).size
       }
     } catch { /* ignore */ }

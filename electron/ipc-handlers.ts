@@ -251,11 +251,23 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('license:clear', () => { license.clearLicense(); return true })
 
   // ===== File Operations =====
-  ipcMain.handle('file:open-location', (_e, filePath: string) => {
-    shell.showItemInFolder(filePath)
-  })
   ipcMain.handle('file:delete', async (_e, filePath: string) => {
     try {
+      if (!filePath) return { success: false, error: '路径为空' }
+      const pathMod = require('path') as typeof import('path')
+      if (filePath.includes('%')) {
+        // 分段模式：删除目录下所有匹配的 segment 文件（xxx_000.mp4 / _001.mp4 ...）
+        const dir = pathMod.dirname(filePath)
+        const extMatch = pathMod.basename(filePath).match(/\.(\w+)$/)
+        const ext = extMatch ? extMatch[1] : 'mp4'
+        const prefix = pathMod.basename(filePath).replace(/_%\d+d\.\w+$/, '')
+        if (fs.existsSync(dir)) {
+          const files = fs.readdirSync(dir).filter(f => f.startsWith(prefix + '_') && f.endsWith('.' + ext))
+          for (const f of files) { try { fs.unlinkSync(pathMod.join(dir, f)) } catch {} }
+          return { success: true, deleted: files.length }
+        }
+        return { success: false, error: '目录不存在' }
+      }
       if (fs.existsSync(filePath)) { fs.unlinkSync(filePath); return { success: true } }
       return { success: false, error: '文件不存在' }
     } catch (ex: any) { return { success: false, error: ex.message } }
@@ -295,6 +307,17 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('deskpins:list', () => deskpins.listWindows())
   ipcMain.handle('deskpins:pin', (_e, hwnd: string) => deskpins.pinWindow(hwnd))
   ipcMain.handle('deskpins:unpin', (_e, hwnd: string) => deskpins.unpinWindow(hwnd))
+
+  // 文件/文件夹：在资源管理器中显示文件（Windows 自动选中）
+  ipcMain.handle('file:open-location', (_e, filePath: string) => {
+    try {
+      if (filePath && fs.existsSync(filePath)) shell.showItemInFolder(filePath)
+      else if (filePath) shell.openPath(require('path').dirname(filePath))
+      return { success: true }
+    } catch (ex: any) {
+      return { success: false, error: ex.message }
+    }
+  })
 }
 
 export async function cleanup(): Promise<void> {

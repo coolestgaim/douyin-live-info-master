@@ -2,6 +2,17 @@ import { app, BrowserWindow } from 'electron'
 
 app.commandLine.appendSwitch('disable-features', 'FontFlash')
 app.commandLine.appendSwitch('font-render-hinting', 'medium')
+// 禁用磁盘缓存：避免 userData 缓存锁/损坏导致渲染黑屏（配合 electron:dev 的 --disk-cache-size=0）
+app.commandLine.appendSwitch('disk-cache-size', '0')
+
+// 兜底：任何主进程未捕获异常都只 console.warn，不再弹窗打断用户
+process.on('uncaughtException', (err) => {
+  console.warn('[main] uncaughtException:', err?.message || err)
+})
+process.on('unhandledRejection', (reason) => {
+  console.warn('[main] unhandledRejection:', reason)
+})
+
 import * as path from 'path'
 import * as fs from 'fs'
 import { registerIpcHandlers, setMainWindow, cleanup } from './ipc-handlers'
@@ -17,6 +28,7 @@ function createWindow(): void {
     frame: false,
     backgroundColor: '#111318',
     resizable: true,
+    title: app.isPackaged ? '灼灼直播控场' : '灼灼直播控场 (开发)',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,

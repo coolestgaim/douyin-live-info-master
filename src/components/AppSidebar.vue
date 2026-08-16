@@ -8,7 +8,7 @@
           <circle cx="12" cy="10" r="3" fill="#f97316" opacity="0.3"/>
         </svg>
       </div>
-      <span class="brand-name">LiveMonitor</span>
+      <span class="brand-name">ZhuoZhuo Live</span>
     </div>
     <div class="nav-items">
       <button
@@ -23,7 +23,7 @@
       </button>
     </div>
     <div class="sidebar-footer">
-      <div class="version-tag">V {{ appVersion }}</div>
+      <div class="version-tag">V 2.7.3</div>
     </div>
   </div>
 </template>
@@ -31,9 +31,6 @@
 <script setup lang="ts">
 defineProps<{ current: string }>()
 defineEmits<{ navigate: [path: string] }>()
-
-// 版本号：vite define 从 package.json 注入
-const appVersion = __APP_VERSION__
 
 const navItems = [
   {
