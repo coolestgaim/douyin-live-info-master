@@ -47,7 +47,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:transparent;font-fam
 .d-room-tag{font-size:9px;color:#3b82f6;padding:1px 5px;border-radius:3px;background:rgba(59,130,246,0.1);flex-shrink:0;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .d-tag{font-size:10px;color:#fff;padding:2px 8px;border-radius:4px;flex-shrink:0;font-weight:500}
 .t-chat{background:#3a3d46}.t-gift{background:linear-gradient(135deg,#f97316,#ea580c)}.t-member{background:#10b981}.t-like{background:#ef4444}.t-social{background:#3b82f6}
-.d-text{font-size:12px;color:#c0c2c8;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.d-text{font-size:12px;color:#c0c2c8;line-height:1.5;word-break:break-all;flex:1;min-width:0}
 .d-user{color:#f97316;font-weight:500}
 
 /* Empty state */
@@ -59,7 +59,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:transparent;font-fam
 <div id="titlebar">
 <span class="title">弹幕浮窗</span>
 <div id="controls">
-<input id="opacity" type="range" min="30" max="100" value="85" title="透明度">
+<input id="opacity" type="range" min="30" max="100" value="100" title="透明度">
 <button id="latestBtn" title="回到最新弹幕">⬇</button>
 <button id="closeBtn">✕</button>
 </div></div>
@@ -196,10 +196,10 @@ export function createFloatingDanmu(): void {
     minWidth: 360,
     minHeight: 240,
     frame: false,
-    transparent: true,
     alwaysOnTop: true,
     resizable: true,
-    backgroundColor: '#00000000',
+    // 说明：禁用 GPU 时 transparent 透明窗口无法合成（不可见），改用半透明深色背景
+    backgroundColor: '#E61E293B',
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -208,7 +208,7 @@ export function createFloatingDanmu(): void {
 
   floatingWindow.setAlwaysOnTop(true, 'screen-saver')
   floatingWindow.setVisibleOnAllWorkspaces(true)
-  floatingWindow.setOpacity(0.85)
+  floatingWindow.setOpacity(1.0)
 
   const tmpPath = path.join(app.getPath('temp'), 'hermes-floating-danmu.html')
   fs.writeFileSync(tmpPath, HTML, 'utf-8')

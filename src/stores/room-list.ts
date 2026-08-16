@@ -107,6 +107,16 @@ export const useRoomListStore = defineStore('room-list', () => {
     roomHistory.value = loadHistory()
   }
 
+  // 长按拖拽排序历史记录
+  function reorderHistory(fromIdx: number, toIdx: number) {
+    const h = loadHistory()
+    if (fromIdx < 0 || fromIdx >= h.length || toIdx < 0 || toIdx >= h.length) return
+    const [item] = h.splice(fromIdx, 1)
+    h.splice(toIdx, 0, item)
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(h))
+    roomHistory.value = loadHistory()
+  }
+
   function clear() {
     results.value = []
     selectedRoom.value = null
@@ -120,6 +130,6 @@ export const useRoomListStore = defineStore('room-list', () => {
 
   return {
     results, selectedRoom, statusMessage, isLoading, urlText, roomHistory,
-    selectRoom, fetchRooms, fillFromHistory, deleteSelected, deleteHistory, clear
+    selectRoom, fetchRooms, fillFromHistory, deleteSelected, deleteHistory, reorderHistory, clear
   }
 })

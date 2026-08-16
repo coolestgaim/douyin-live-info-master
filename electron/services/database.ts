@@ -36,7 +36,21 @@ function saveDb(db: SqlJsDatabase): void {
   const dbPath = getDbPath()
   const dir = path.dirname(dbPath)
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-  fs.writeFileSync(dbPath, Buffer.from(data))
+  // 容错：文件可能被另一个进程/AV 锁定，写入失败时短暂重试
+  const buf = Buffer.from(data)
+  let lastErr: any = null
+  for (let i = 0; i < 3; i++) {
+    try {
+      fs.writeFileSync(dbPath, buf)
+      return
+    } catch (e) {
+      lastErr = e
+      // 短暂等待后重试（给锁释放一点时间）
+      const end = Date.now() + 200
+      while (Date.now() < end) { /* busy wait ~200ms */ }
+    }
+  }
+  console.warn('[database] saveDb 写入失败（已重试 3 次），数据保留在内存中，下次保存再试:', lastErr?.code || lastErr?.message)
 }
 
 function scheduleSave(): void {

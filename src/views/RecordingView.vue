@@ -68,7 +68,7 @@
           v-model:value="selectedQuality[room.enterRoomId]"
           :options="getQualities(room.enterRoomId)"
           size="tiny"
-          style="width: 70px"
+          style="width: 100px"
           placeholder="画质"
         />
         <n-button size="tiny" type="primary" @click="startWithQuality(room)" :disabled="room.roomStatus === 2">录制</n-button>

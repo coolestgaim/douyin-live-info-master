@@ -19,7 +19,16 @@
           class="history-chip"
           @click="roomList.fillFromHistory(h)"
           :title="h.url"
-        >{{ h.nickname || h.url.split('/').pop() }}<button class="chip-del" @click.stop="roomList.deleteHistory(h.url)">×</button></span>
+        >
+          <span class="chip-name">{{ h.nickname || h.url.split('/').pop() }}</span>
+          <button class="chip-copy" @click.stop="copyUrl(h.url)" title="复制直播间链接" aria-label="复制链接">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+              <rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="2"/>
+              <path d="M5 15V5a2 2 0 012-2h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <button class="chip-del" @click.stop="roomList.deleteHistory(h.url)" title="删除" aria-label="删除">×</button>
+        </span>
       </div>
       <div class="input-actions">
         <n-button size="small" @click="importLinks">导入链接</n-button>
@@ -74,13 +83,23 @@
 
 <script setup lang="ts">
 import { h, computed } from 'vue'
-import { NInput, NButton, NDataTable } from 'naive-ui'
+import { NInput, NButton, NDataTable, useMessage } from 'naive-ui'
 import { useRoomListStore } from '../stores/room-list'
 import { useDanmuStore } from '../stores/danmu'
 import type { DataTableColumns } from 'naive-ui'
 
 const roomList = useRoomListStore()
 const danmuStore = useDanmuStore()
+const message = useMessage()
+
+async function copyUrl(url: string) {
+  try {
+    await navigator.clipboard.writeText(url)
+    message.success('已复制直播间链接')
+  } catch {
+    message.error('复制失败')
+  }
+}
 
 const columns: DataTableColumns<any> = [
   { title: '#', key: 'index', width: 40, align: 'center' },
@@ -217,9 +236,11 @@ function exportLinks() {
 
 .history-chips { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
 .chips-label { font-size: 10px; color: #4a4e5e; flex-shrink: 0; }
-.history-chip { font-size: 11px; color: #8b8fa3; background: #1a1d26; border: 1px solid #2a2d36; padding: 2px 6px 2px 8px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 3px; transition: all .15s; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-chip { font-size: 11px; color: #8b8fa3; background: #1a1d26; border: 1px solid #2a2d36; padding: 2px 4px 2px 8px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 3px; transition: all .15s; max-width: 260px; }
 .history-chip:hover { border-color: #f97316; color: #e0e2e8; }
-.chip-del { font-size: 10px; color: #4a4e5e; background: none; border: none; cursor: pointer; padding: 0 2px; line-height: 1; flex-shrink: 0; }
+.chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.chip-del, .chip-copy { font-size: 10px; color: #4a4e5e; background: none; border: none; cursor: pointer; padding: 1px 3px; line-height: 1; flex-shrink: 0; display: flex; align-items: center; }
+.chip-copy:hover { color: #3b82f6; }
 .chip-del:hover { color: #ef4444; }
 
 .empty-state {
