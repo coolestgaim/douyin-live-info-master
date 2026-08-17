@@ -57,12 +57,6 @@
           <div :class="['qr-webview-wrap', { on: inst.status === 'running', 'wv-loading': wvLoading[inst.id] }]">
             <!-- 加载进度条（webview 整页加载时显示） -->
             <div v-if="wvLoading[inst.id]" class="qr-wv-loading"><div class="qr-wv-loading-inner"></div></div>
-            <!-- 屏幕装饰：挖孔 + 状态条（纯装饰，不参与交互） -->
-            <div class="qr-screenbar">
-              <span class="qr-st-time">09:41</span>
-              <div class="qr-notch"></div>
-              <span class="qr-st-sig"></span>
-            </div>
             <webview :ref="(el:any) => setWebviewRef(inst.id, el)" :src="resolveUrl(inst.roomUrl)"
               :partition="'persist:qr_'+inst.id" allowpopups="true" class="qr-wv" @dom-ready="onWebviewReady(inst.id)"
               @did-start-loading="setWvLoading(inst.id, true)" @did-stop-loading="setWvLoading(inst.id, false)" />
@@ -416,12 +410,12 @@ function doImport(e: Event) {
 .qr-add-btn { background: transparent; border: 1px dashed var(--border-strong); color: var(--text-muted); font-size: 11px; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-family: inherit; }
 .qr-add-btn:hover { border-color: var(--primary); color: var(--primary); }
 
-.qr-scroll { flex: 1; min-height: 0; display: flex; gap: 10px; overflow: auto; padding: 4px 0; }
+.qr-scroll { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(340px, 375px)); gap: 12px; overflow: auto; padding: 4px 0; align-content: start; }
 
-/* 手机卡：固定视口高度计算；不再设 min-height 兜底（避免小窗口下溢出整实例） */
+/* 手机卡：固定高度（620px，模拟手机竖屏比例），最多 3 个并排，超出自动换行 */
 /* 手机操作台固定暗色：内部变量重定义为暗色值，模拟手机屏不随应用主题漂移 */
 .qr-phone {
-  width: 375px; min-width: 375px; height: calc(100vh - 90px); display: flex; flex-direction: column; padding: 8px; gap: 6px; flex-shrink: 0; overflow: hidden;
+  width: 100%; height: 620px; display: flex; flex-direction: column; padding: 8px; gap: 6px; overflow: hidden;
   position: relative;
   border-radius: 22px;
   border: 1.5px solid #3a3d46;
@@ -545,25 +539,6 @@ function doImport(e: Event) {
   100% { transform: translateX(250%); }
 }
 .qr-wv { width: 1024px; min-height: 680px; display: flex; }
-/* 屏幕状态条（纯装饰，不参与交互，不随滚动） */
-.qr-screenbar {
-  position: sticky; top: 0; left: 0; right: 0; height: 16px; z-index: 10;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 10px; pointer-events: none;
-  background: linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.25) 70%, transparent);
-  border-radius: 14px 14px 0 0;
-}
-.qr-st-time { font-size: 9px; color: rgba(255,255,255,0.5); letter-spacing: 0.5px; font-variant-numeric: tabular-nums; }
-.qr-notch { width: 34px; height: 7px; border-radius: 4px; background: #000; opacity: 0.85; }
-.qr-st-sig {
-  width: 15px; height: 7px; border: 1px solid rgba(255,255,255,0.45); border-radius: 2px;
-  position: relative;
-}
-.qr-st-sig::after {
-  content: ''; position: absolute; top: 1px; left: 1px; right: 1px; bottom: 1px;
-  background: linear-gradient(90deg, rgba(255,255,255,0.6) 60%, transparent 60%);
-  border-radius: 1px;
-}
 /* Home 指示条（机身底部装饰） */
 .qr-home {
   position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%);

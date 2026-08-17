@@ -13,7 +13,7 @@
         </div>
         <div>
           <div class="app-name">灼灼直播控场</div>
-          <div class="app-version">V 2.9.1 — 实时弹幕监听 · 直播录制 · 快捷控场 · 双主题</div>
+          <div class="app-version">V 2.9.2 — 实时弹幕监听 · 直播录制 · 快捷控场 · 双主题</div>
         </div>
       </div>
 
