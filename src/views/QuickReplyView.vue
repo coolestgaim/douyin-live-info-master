@@ -2,7 +2,7 @@
   <div class="qr-page">
     <div class="qr-header">
       <span class="qr-title">快捷回复</span>
-      <button class="qr-add-btn" @click="store.addInstance()">+ 添加实例</button>
+      <button class="qr-add-btn" @click="addInstance()">+ 添加实例</button>
     </div>
 
     <div class="qr-scroll" v-if="store.instances.length > 0">
@@ -26,11 +26,24 @@
             @click="inst.status === 'running' ? closeWebview(inst) : loadWebview(inst)">
             {{ inst.status === 'running' ? '关闭' : '加载' }}
           </button>
-          <div v-if="inst.status === 'running'" class="qr-sm-group">
-            <button class="qr-sm-btn" @click="toggleStripped(inst)"
-              :title="inst._stripped ? '恢复全部元素' : '精简模式'">{{ inst._stripped ? '恢复' : '精简' }}</button>
-            <button class="qr-sm-btn qr-sm-ref" @click="refreshWebview(inst)">刷新</button>
-            <button class="qr-sm-btn qr-sm-clear" @click="clearLogin(inst)">清登</button>
+          <!-- 更多功能下拉 -->
+          <div class="qr-more" @click.stop>
+            <button v-if="inst.status === 'running'" class="qr-sm-btn qr-more-btn" :class="{ open: moreOpenId === inst.id }"
+              @click="moreOpenId = moreOpenId === inst.id ? null : inst.id" title="更多功能">⚙</button>
+            <div v-if="moreOpenId === inst.id" class="qr-more-panel">
+              <div class="qr-more-row">
+                <button class="qr-sm-btn" @click="zoomOut(inst)" title="缩小页面">−</button>
+                <button class="qr-zoom-val" @click="resetZoom(inst)" :title="'重置缩放 ' + Math.round(inst.zoom * 100) + '%'">{{ Math.round(inst.zoom * 100) }}%</button>
+                <button class="qr-sm-btn" @click="zoomIn(inst)" title="放大页面">+</button>
+              </div>
+              <button class="qr-more-item qr-sm-live" :class="{ on: inst.liveMode }" @click="toggleLive(inst)"
+                :title="inst.liveMode ? '退出直播画面模式，回到快捷回复' : '直播画面精简模式：隐藏聊天区，只看直播'">{{ inst.liveMode ? '✓ 直播模式' : '直播画面模式' }}</button>
+              <button class="qr-more-item" @click="toggleStripped(inst)"
+                :title="inst._stripped ? '恢复全部元素' : '精简模式'">{{ inst._stripped ? '恢复全部元素' : '精简模式' }}</button>
+              <button class="qr-more-item" @click="refreshWebview(inst)">刷新网页</button>
+              <button class="qr-more-item qr-more-danger" @click="clearLogin(inst)">清除登录</button>
+              <button class="qr-more-item qr-more-danger" @click="clearCache(inst)" title="清掉 cookie/缓存，下次重新登录">清空缓存</button>
+            </div>
           </div>
         </div>
 
@@ -164,7 +177,28 @@ const burstMap = reactive<Record<number, boolean>>({})
 const wvLoading = reactive<Record<number, boolean>>({})
 function setWvLoading(id: number, loading: boolean) { wvLoading[id] = loading }
 
+/* 更多功能下拉：当前打开的实例 id，null = 全部关闭 */
+const moreOpenId = ref<number | null>(null)
+onMounted(() => {
+  document.addEventListener('click', () => { moreOpenId.value = null })
+})
+
 const STRIP_RULES = `.webcast-chatroom > :not(.pZzS8QUV):not(.webcast-chatroom___input-container){display:none!important}.LyAdeVIF.sBRqUw32,[class*="gift"],[class*="floating"],[class*="Floating"],[class*="interact-bar"],[class*="VideoPlayer"],video,[class*="player-container"],[class*="Player"],[class*="shop"],[class*="Shop"],[class*="product"],[class*="mall"],[class*="cart"]{display:none!important}`
+/* 直播精简模式：隐藏聊天区/互动区，只留直播画面（与 STRIP_RULES 相反） */
+const LIVE_RULES = `
+[class*="webcast-chatroom"] > :not([class*="player"]):not([class*="Player"]),
+[class*="chatroom___input-container"],
+[class*="chatroom"][class*="container"] > [class*="list"],
+[class*="chatroom"][class*="container"] > [class*="header"],
+[class*="like"][class*="animation"],
+[class*="interact-bar"],[class*="InteractBar"],
+[class*="floating"],[class*="Floating"],
+[class*="gift"],[class*="Gift"],
+[class*="shop"],[class*="Shop"],[class*="mall"],[class*="cart"],
+[class*="webcast-chatroom___"] { display:none !important }
+video,[class*="player-container"],[class*="VideoPlayer"],[class*="video-player"] { display:block !important; opacity:1 !important; visibility:visible !important }
+[class*="webcast-live-layout"] { display:flex !important }
+`
 
 function phoneStyle(id: number) {
   const h = phoneH.value[id]
@@ -268,7 +302,23 @@ function closeWebview(inst: any) {
   delete wvRefs.value[inst.id]
   inst.status = 'idle'
 }
-function doRemoveInstance(inst: any) { if (inst.status === 'running') closeWebview(inst); store.removeInstance(inst.id) }
+function doRemoveInstance(inst: any) {
+  if (inst.status === 'running') closeWebview(inst)
+  // 异步清缓存（不阻塞删除）
+  ;(window as any).electronAPI.sessionClear('persist:qr_' + inst.id).catch(() => {})
+  store.removeInstance(inst.id)
+}
+
+/* 添加实例：复用最小可用 ID；若有历史 partition 缓存先清掉（避免脏登录态） */
+function addInstance() {
+  const before = new Set(store.instances.map(i => i.id))
+  store.addInstance()
+  const added = store.instances.find(i => !before.has(i.id))
+  if (added) {
+    // 复用旧 ID 时清掉历史 partition 缓存
+    ;(window as any).electronAPI.sessionClear('persist:qr_' + added.id).catch(() => {})
+  }
+}
 function refreshWebview(inst: any) {
   // 真刷新：忽略缓存强制重新加载网页（登录 cookie 保留）
   const w = wvRefs.value[inst.id]
@@ -280,6 +330,8 @@ function refreshWebview(inst: any) {
 
 // 精简模式
 const stripKeys = ref<Record<number, string>>({})
+// 直播画面模式
+const liveKeys = ref<Record<number, string>>({})
 
 async function toggleStripped(inst: any) {
   inst._stripped = !inst._stripped
@@ -293,6 +345,44 @@ async function toggleStripped(inst: any) {
       const key = stripKeys.value[inst.id]
       if (key) { try { await (w as any).removeInsertedCSS(key) } catch {} }
       delete stripKeys.value[inst.id]
+    }
+  } catch {}
+}
+
+/* ==== 缩放 + 直播画面模式 ==== */
+function applyZoom(inst: any, f: number) {
+  inst.zoom = Math.min(3, Math.max(0.5, f))
+  const w = wvRefs.value[inst.id]
+  if (!w) return
+  try { (w as any).setZoomFactor(inst.zoom) } catch {}
+}
+function zoomIn(inst: any) { applyZoom(inst, (inst.zoom || 1) + 0.25) }
+function zoomOut(inst: any) { applyZoom(inst, (inst.zoom || 1) - 0.25) }
+function resetZoom(inst: any) { applyZoom(inst, 1) }
+
+async function toggleLive(inst: any) {
+  inst.liveMode = !inst.liveMode
+  const w = wvRefs.value[inst.id]
+  if (!w) return
+  try {
+    // 先移除聊天精简规则，避免与直播规则冲突
+    const stripKey = stripKeys.value[inst.id]
+    if (stripKey) { try { await (w as any).removeInsertedCSS(stripKey) } catch {} }
+    delete stripKeys.value[inst.id]
+    if (inst.liveMode) {
+      // 直播画面模式：隐藏聊天区 + 放大到 180%
+      const key = await (w as any).insertCSS(LIVE_RULES)
+      liveKeys.value[inst.id] = key
+      try { (w as any).setZoomFactor(1.8) } catch {}
+    } else {
+      const liveKey = liveKeys.value[inst.id]
+      if (liveKey) { try { await (w as any).removeInsertedCSS(liveKey) } catch {} }
+      delete liveKeys.value[inst.id]
+      try { (w as any).setZoomFactor(inst.zoom || 1) } catch {}
+      if (inst._stripped) {
+        const key = await (w as any).insertCSS(STRIP_RULES)
+        stripKeys.value[inst.id] = key
+      }
     }
   } catch {}
 }
@@ -312,10 +402,20 @@ function onWebviewReady(id: number) {
   const w = wvRefs.value[id]
   if (!w) return
   try { w.setAudioMuted(true) } catch {}
-  // 默认应用精简模式
   const inst = store.instances.find(i => i.id === id)
-  if (inst && inst._stripped) {
-    (w as any).insertCSS(STRIP_RULES).then((key: any) => { stripKeys.value[id] = key }).catch(() => {})
+  if (!inst) return
+  // 直播画面模式：应用直播规则 + 放大
+  if (inst.liveMode) {
+    ;(w as any).insertCSS(LIVE_RULES).then((key: any) => { liveKeys.value[id] = key }).catch(() => {})
+    try { (w as any).setZoomFactor(1.8) } catch {}
+  } else {
+    // 默认应用聊天精简模式
+    if (inst._stripped) {
+      ;(w as any).insertCSS(STRIP_RULES).then((key: any) => { stripKeys.value[id] = key }).catch(() => {})
+    }
+    if (inst.zoom && inst.zoom !== 1) {
+      try { (w as any).setZoomFactor(inst.zoom) } catch {}
+    }
   }
   // 默认滚到底部（抖音 SPA 异步渲染，多次尝试覆盖；之后用户可自由滚动）
   if (inst) {
@@ -374,6 +474,18 @@ async function clearLogin(inst: any) {
   if (w) { try { w.reload() } catch {}; setTimeout(() => { try { w.reload() } catch {} }, 500) }
 }
 
+/* 清缓存：清 storage（cookie/IndexedDB/localStorage），比清登更彻底——重置整个会话 */
+async function clearCache(inst: any) {
+  if (!confirm('清空该实例的 cookie/缓存？下次需要重新登录抖音')) return
+  try { await (window as any).electronAPI.sessionClear('persist:qr_' + inst.id) } catch {}
+  // 清缓存后强制刷新（连续 reload 多次，抖音 SPA 有时需要）
+  const w = wvRefs.value[inst.id]
+  if (w) {
+    try { w.reload() } catch {}
+    setTimeout(() => { try { w.reload() } catch {} }, 800)
+  }
+}
+
 onMounted(() => {})
 
 function doExportGroup(instId: number, gIdx: number) {
@@ -415,7 +527,7 @@ function doImport(e: Event) {
 /* 手机卡：固定高度（620px，模拟手机竖屏比例），最多 3 个并排，超出自动换行 */
 /* 手机操作台固定暗色：内部变量重定义为暗色值，模拟手机屏不随应用主题漂移 */
 .qr-phone {
-  width: 100%; height: 620px; display: flex; flex-direction: column; padding: 8px; gap: 6px; overflow: hidden;
+  width: 100%; height: 540px; display: flex; flex-direction: column; padding: 8px; gap: 6px; overflow: hidden;
   position: relative;
   border-radius: 22px;
   border: 1.5px solid #3a3d46;
@@ -467,9 +579,28 @@ function doImport(e: Event) {
 .qr-phone:hover .qr-del-i { opacity: 1; }
 
 .qr-urlbar { display: flex; gap: 4px; flex-shrink: 0; align-items: center; }
-/* 次要操作（精简/刷新/清登）：整卡 hover 时浮现 */
-.qr-sm-group { display: flex; gap: 4px; opacity: 0; transform: translateX(2px); transition: opacity .18s ease, transform .18s ease; }
-.qr-phone:hover .qr-sm-group { opacity: 1; transform: translateX(0); }
+/* 更多功能下拉 */
+.qr-more { position: relative; flex-shrink: 0; }
+.qr-more-btn { font-size: 13px; padding: 3px 8px; }
+.qr-more-btn.open { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
+.qr-more-panel {
+  position: absolute; top: calc(100% + 4px); right: 0; z-index: 30;
+  display: flex; flex-direction: column; gap: 3px; min-width: 130px;
+  padding: 6px; background: var(--bg-card); border: 1px solid var(--border-strong);
+  border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+}
+.qr-more-row { display: flex; gap: 4px; align-items: center; justify-content: center; }
+.qr-more-item {
+  padding: 5px 8px; border-radius: 6px; font-size: 11px; font-family: inherit; cursor: pointer;
+  border: 1px solid var(--border-strong); background: transparent; color: var(--text-secondary);
+  text-align: left; white-space: nowrap; transition: all .15s;
+}
+.qr-more-item:hover { border-color: var(--primary); color: var(--text-primary); background: var(--bg-hover); }
+.qr-more-item.qr-more-danger { color: var(--danger); }
+.qr-more-item.qr-more-danger:hover { border-color: var(--danger); background: var(--danger-soft); }
+.qr-more-item.qr-sm-live { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+.qr-more-item.qr-sm-live:hover { background: var(--accent-cyan-soft); }
+.qr-more-item.qr-sm-live.on { background: var(--accent-cyan-soft); font-weight: 600; }
 
 /* 历史直播间快捷填入 */
 .qr-history { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; flex-shrink: 0; }
@@ -491,6 +622,12 @@ function doImport(e: Event) {
 .qr-url:focus { border-color: var(--primary); }
 .qr-sm-btn { padding: 3px 8px; border-radius: 6px; font-size: 10px; font-family: inherit; cursor: pointer; border: 1px solid var(--border-strong); background: transparent; color: var(--text-muted); white-space: nowrap; }
 .qr-sm-btn:hover { border-color: var(--primary); color: var(--text-secondary); }
+/* 缩放档位显示 + 直播模式切换 */
+.qr-zoom-val { padding: 3px 5px; border-radius: 6px; font-size: 10px; font-family: inherit; border: 1px solid transparent; background: transparent; color: var(--text-faint); cursor: pointer; min-width: 34px; text-align: center; font-variant-numeric: tabular-nums; }
+.qr-zoom-val:hover { border-color: var(--primary); color: var(--text-secondary); }
+.qr-sm-btn.qr-sm-live { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+.qr-sm-btn.qr-sm-live:hover { background: var(--accent-cyan-soft); }
+.qr-sm-btn.qr-sm-live.on { background: var(--accent-cyan-soft); color: var(--accent-cyan); font-weight: 600; }
 .qr-sm-pri { background: var(--primary); color: #fff; border-color: var(--primary); }
 .qr-sm-pri:hover { background: var(--primary-hover); color: #fff; }
 .qr-sm-danger { background: rgba(239,68,68,0.12); color: var(--danger); border-color: var(--danger-border); }

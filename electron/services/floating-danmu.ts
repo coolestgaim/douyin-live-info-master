@@ -51,9 +51,8 @@ export function setFloatingTheme(mode: 'dark' | 'light') {
 }
 
 function resolveHtmlPath(): string {
-  // 开发模式：dist-electron/../src/floating-danmu.html
-  // 打包后：resources 目录（由 electron-builder.yml extraResources 复制）
-  const devPath = path.join(__dirname, '..', 'src', 'floating-danmu.html')
+  // dev 模式：app.getAppPath() 返回项目根；打包后是 resources/app（不含 src/），fallback 到 resources
+  const devPath = path.join(app.getAppPath(), 'src', 'floating-danmu.html')
   if (fs.existsSync(devPath)) return devPath
   return path.join(process.resourcesPath, 'floating-danmu.html')
 }
