@@ -1,6 +1,5 @@
 <template>
-  <LicenseView v-if="!hasLicense" @verified="onVerified" />
-  <n-config-provider v-else :theme="darkTheme" :theme-overrides="themeOverrides">
+  <n-config-provider :theme="darkTheme" :theme-overrides="themeOverrides">
     <n-message-provider>
       <n-dialog-provider>
       <div class="app-frame">
@@ -24,12 +23,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { darkTheme, NConfigProvider, NMessageProvider, NDialogProvider, type GlobalThemeOverrides } from 'naive-ui'
 import AppTitlebar from './components/AppTitlebar.vue'
 import AppSidebar from './components/AppSidebar.vue'
-import LicenseView from './views/LicenseView.vue'
 import DashboardView from './views/DashboardView.vue'
 import LiveRoomsView from './views/LiveRoomsView.vue'
 import DanmuView from './views/DanmuView.vue'
@@ -37,15 +35,6 @@ import RecordingView from './views/RecordingView.vue'
 import SettingsView from './views/SettingsView.vue'
 import QuickReplyView from './views/QuickReplyView.vue'
 import AboutView from './views/AboutView.vue'
-
-const api = () => (window as any).electronAPI
-const hasLicense = ref(false)
-
-onMounted(async () => {
-  try { const lic = await api().licenseCheck(); if (lic) hasLicense.value = true } catch {}
-})
-
-function onVerified() { hasLicense.value = true }
 
 const router = useRouter()
 const route = useRoute()

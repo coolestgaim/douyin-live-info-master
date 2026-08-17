@@ -7,8 +7,6 @@ import * as db from './services/database'
 import * as config from './services/record-config'
 import * as floatingDanmu from './services/floating-danmu'
 import * as ffmpegInstaller from './services/ffmpeg-installer'
-import * as license from './services/license'
-import { getMachineCode, stopHeartbeat, deactivateOnline } from './services/license-online'
 import * as logger from './services/logger'
 import * as fs from 'fs'
 
@@ -239,17 +237,6 @@ export function registerIpcHandlers(): void {
     catch (e: any) { return false }
   })
 
-  // ===== License =====
-  ipcMain.handle('license:check', () => license.loadLicense())
-  ipcMain.handle('license:verify', async (_e, key: string) => license.verifyKeyOnline(key))
-  ipcMain.handle('license:get-machine-code', () => getMachineCode())
-
-  ipcMain.handle('license:done', () => {
-    safeSend('license:passed')
-    return true
-  })
-  ipcMain.handle('license:clear', () => { license.clearLicense(); return true })
-
   // ===== File Operations =====
   ipcMain.handle('file:delete', async (_e, filePath: string) => {
     try {
@@ -322,13 +309,6 @@ export function registerIpcHandlers(): void {
 
 export async function cleanup(): Promise<void> {
   try {
-    // 通知在线卡密下线
-    if (license.lastVerifiedKey) {
-      try {
-        await deactivateOnline(license.lastVerifiedKey, getMachineCode())
-      } catch {}
-      stopHeartbeat()
-    }
     for (const [, service] of danmuConnections) { try { service.disconnect() } catch {} }
     danmuConnections.clear()
     try { recordingManager.stopAll() } catch {}

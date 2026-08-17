@@ -61,12 +61,6 @@ const api = {
   // Session
   sessionClear: (partition: string) => ipcRenderer.invoke('session:clear', partition),
 
-  // License
-  licenseCheck: () => ipcRenderer.invoke('license:check'),
-  licenseVerify: (key: string) => ipcRenderer.invoke('license:verify', key),
-  licenseDone: () => ipcRenderer.invoke('license:done'),
-  licenseClear: () => ipcRenderer.invoke('license:clear'),
-
   // File
   fileOpenLocation: (filePath: string) => ipcRenderer.invoke('file:open-location', filePath),
   fileDelete: (filePath: string) => ipcRenderer.invoke('file:delete', filePath),
