@@ -20,11 +20,16 @@ export interface QuickReplyInstance {
   sendSelector: string | null
   inputPinState: string
   _stripped: boolean
+  /** 网页缩放（1 = 100%） */
+  zoom: number
+  /** 直播精简模式：隐藏聊天区只留直播画面 */
+  liveMode: boolean
 }
 
 function defaultInstance(id: number): QuickReplyInstance {
   return {
     id, name: `实例 ${id}`, roomUrl: '', status: 'idle', expanded: false, _stripped: true,
+    zoom: 1, liveMode: false,
     quickReplyGroups: [{ name: '默认分组', expanded: true, items: ['欢迎来到直播间！', '谢谢关注~', '点点赞支持一下'], _tab: 'send' }],
     sendInput: '', inputSelector: null, sendSelector: null, inputPinState: ''
   }
@@ -287,10 +292,12 @@ export const useQuickReplyStore = defineStore('quickReply', () => {
   }
 
   function addInstance() {
-    const maxId = instances.value.reduce((max, i) => Math.max(max, i.id), 0)
-    const nextId = Math.max(getNextId(), maxId + 1)
-    saveNextId(nextId + 1)
-    instances.value.push(defaultInstance(nextId))
+    // 复用最小可用 ID：删掉的实例编号回收（如删了 3/4，下次新建回到 3）
+    let id = 1
+    const used = new Set(instances.value.map(i => i.id))
+    while (used.has(id)) id++
+    saveNextId(Math.max(getNextId(), id + 1))
+    instances.value.push(defaultInstance(id))
     persist()
   }
   function removeInstance(id: number) {
