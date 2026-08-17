@@ -38,22 +38,6 @@
 
       <div class="form-divider"></div>
 
-      <div class="section-header">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <rect x="3" y="11" width="18" height="11" rx="2" stroke="#f97316" stroke-width="1.5"/>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="#f97316" stroke-width="1.5" stroke-linecap="round"/>
-          <circle cx="12" cy="16" r="1" fill="#f97316"/>
-        </svg>
-        <h3 class="section-title">授权管理</h3>
-      </div>
-      <div class="form-group">
-        <p class="license-info" v-if="licenseInfo">{{ licenseInfo }}</p>
-        <p class="license-info muted" v-else>未检测到授权信息</p>
-        <n-button size="small" quaternary type="error" @click="clearLicense">清除卡密（下次启动需重新输入）</n-button>
-      </div>
-
-      <div class="form-divider"></div>
-
       <div class="form-actions">
         <n-button type="primary" @click="settings.saveConfig()">保存设置</n-button>
         <span v-if="settings.statusMessage" class="success-text">{{ settings.statusMessage }}</span>
@@ -68,8 +52,6 @@ import { NInput, NButton, NSelect, NSwitch, NInputNumber } from 'naive-ui'
 import { useSettingsStore } from '../stores/settings'
 
 const settings = useSettingsStore()
-const api = () => (window as any).electronAPI
-const licenseInfo = ref('')
 
 const formatOptions = [
   { label: 'MP3', value: 'mp3' },
@@ -78,18 +60,9 @@ const formatOptions = [
   { label: 'FLV', value: 'flv' }
 ]
 
-onMounted(async () => {
+onMounted(() => {
   settings.loadConfig()
-  try {
-    const lic = await api().licenseCheck()
-    if (lic) licenseInfo.value = `已授权至 ${lic.expires}`
-  } catch {}
 })
-
-async function clearLicense() {
-  await api().licenseClear()
-  licenseInfo.value = ''
-}
 </script>
 
 <style scoped>
@@ -128,6 +101,4 @@ async function clearLicense() {
 
 .form-actions { display: flex; align-items: center; gap: 12px; }
 .success-text { font-size: 12px; color: #10b981; font-weight: 500; }
-.license-info { font-size: 12px; color: #10b981; margin-bottom: 8px; }
-.license-info.muted { color: #4a4e5e; }
 </style>

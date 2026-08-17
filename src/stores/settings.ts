@@ -9,7 +9,6 @@ export const useSettingsStore = defineStore('settings', () => {
   const outputPath = ref('')
   const segmentEnabled = ref(false)
   const segmentDuration = ref(30)
-  const licenseServerUrl = ref('')
   const statusMessage = ref('')
 
   async function loadConfig() {
@@ -18,7 +17,6 @@ export const useSettingsStore = defineStore('settings', () => {
     outputPath.value = cfg.outputPath || ''
     segmentEnabled.value = cfg.segmentEnabled || false
     segmentDuration.value = cfg.segmentDuration || 30
-    licenseServerUrl.value = cfg.licenseServerUrl || ''
   }
 
   async function saveConfig() {
@@ -28,7 +26,6 @@ export const useSettingsStore = defineStore('settings', () => {
       outputPath: outputPath.value,
       segmentEnabled: segmentEnabled.value,
       segmentDuration: segmentDuration.value,
-      licenseServerUrl: licenseServerUrl.value,
     })
     statusMessage.value = '已保存'
   }

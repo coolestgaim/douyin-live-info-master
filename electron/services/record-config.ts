@@ -9,7 +9,6 @@ export interface RecordConfig {
   recordQuality: string
   segmentEnabled: boolean
   segmentDuration: number
-  licenseServerUrl: string
 }
 
 const DEFAULT_KEY = ''
@@ -20,7 +19,7 @@ function getConfigPath(): string {
 
 export function loadConfig(): RecordConfig {
   const configPath = getConfigPath()
-  const defaults: RecordConfig = { outputFormat: 'mp3', outputPath: '', recordQuality: 'OD', segmentEnabled: false, segmentDuration: 30, licenseServerUrl: '' }
+  const defaults: RecordConfig = { outputFormat: 'mp3', outputPath: '', recordQuality: 'OD', segmentEnabled: false, segmentDuration: 30 }
   if (!fs.existsSync(configPath)) return { ...defaults }
   try {
     const cfg = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
@@ -29,8 +28,7 @@ export function loadConfig(): RecordConfig {
       outputPath: cfg.outputPath || defaults.outputPath,
       recordQuality: cfg.recordQuality || defaults.recordQuality,
       segmentEnabled: cfg.segmentEnabled ?? defaults.segmentEnabled,
-      segmentDuration: cfg.segmentDuration || defaults.segmentDuration,
-      licenseServerUrl: cfg.licenseServerUrl || defaults.licenseServerUrl
+      segmentDuration: cfg.segmentDuration || defaults.segmentDuration
     }
   } catch {
     return { ...defaults }
