@@ -8,7 +8,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import type { DanmuMessage } from '../types'
 import DanmuItem from './DanmuItem.vue'
 
@@ -19,17 +19,26 @@ const props = defineProps<{
   paused?: boolean
 }>()
 
-const listRef = ref<HTMLElement | null>(null)
-const localMessages = ref<DanmuMessage[]>([...props.messages])
+/** 渲染上限：只渲染最近 N 条，避免 2000 条全量 diff 导致卡顿 */
+const RENDER_LIMIT = 300
 
-// paused 时不响应 prop 变化（保持冻结快照），否则正常更新
-watch(() => props.messages, (newMsgs) => {
-  if (!props.paused) localMessages.value = newMsgs
-}, { deep: true })
-// paused 状态变化时，如果切到非 paused 立即同步
+const listRef = ref<HTMLElement | null>(null)
+const localMessages = ref<DanmuMessage[]>([])
+let rafId = 0
+
+// 高频弹幕合并渲染：同一帧内的多条消息只渲染一次（去掉 deep watch，避免整树 diff）
+function syncMessages() {
+  cancelAnimationFrame(rafId)
+  rafId = requestAnimationFrame(() => {
+    localMessages.value = props.paused ? localMessages.value : props.messages.slice(-RENDER_LIMIT)
+  })
+}
+watch(() => props.messages, syncMessages, { immediate: true })
 watch(() => props.paused, (p) => {
-  if (!p) localMessages.value = props.messages
+  if (!p) syncMessages()
 })
+
+onUnmounted(() => cancelAnimationFrame(rafId))
 </script>
 
 <style scoped>

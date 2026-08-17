@@ -31,9 +31,17 @@
             <button v-if="inst.status === 'running'" class="qr-sm-btn qr-more-btn" :class="{ open: moreOpenId === inst.id }"
               @click="moreOpenId = moreOpenId === inst.id ? null : inst.id" title="更多功能">⚙</button>
             <div v-if="moreOpenId === inst.id" class="qr-more-panel">
+              <div class="qr-zoom-row">
+                <span class="qr-zoom-label">缩放</span>
+                <input type="range" class="qr-zoom-slider" min="50" max="300" step="10"
+                  :value="Math.round(inst.zoom * 100)"
+                  @input="onZoomSlider(inst, ($event.target as HTMLInputElement).value)"
+                  title="拖动调整网页缩放" />
+                <span class="qr-zoom-val">{{ Math.round(inst.zoom * 100) }}%</span>
+                <button class="qr-sm-btn" @click="resetZoom(inst)" title="重置为 100%">重置</button>
+              </div>
               <div class="qr-more-row">
                 <button class="qr-sm-btn" @click="zoomOut(inst)" title="缩小页面">−</button>
-                <button class="qr-zoom-val" @click="resetZoom(inst)" :title="'重置缩放 ' + Math.round(inst.zoom * 100) + '%'">{{ Math.round(inst.zoom * 100) }}%</button>
                 <button class="qr-sm-btn" @click="zoomIn(inst)" title="放大页面">+</button>
               </div>
               <button class="qr-more-item qr-sm-live" :class="{ on: inst.liveMode }" @click="toggleLive(inst)"
@@ -360,6 +368,18 @@ function zoomIn(inst: any) { applyZoom(inst, (inst.zoom || 1) + 0.25) }
 function zoomOut(inst: any) { applyZoom(inst, (inst.zoom || 1) - 0.25) }
 function resetZoom(inst: any) { applyZoom(inst, 1) }
 
+/* 缩放滑块：实时更新显示 + 防抖应用（拖动时 60ms 合并） */
+let zoomSliderTimer: ReturnType<typeof setTimeout> | null = null
+function onZoomSlider(inst: any, v: string) {
+  const pct = Math.min(300, Math.max(50, parseInt(v, 10) || 100))
+  inst.zoom = pct / 100
+  if (zoomSliderTimer) clearTimeout(zoomSliderTimer)
+  zoomSliderTimer = setTimeout(() => {
+    const w = wvRefs.value[inst.id]
+    if (w) { try { (w as any).setZoomFactor(inst.zoom) } catch {} }
+  }, 60)
+}
+
 async function toggleLive(inst: any) {
   inst.liveMode = !inst.liveMode
   const w = wvRefs.value[inst.id]
@@ -590,6 +610,12 @@ function doImport(e: Event) {
   border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.4);
 }
 .qr-more-row { display: flex; gap: 4px; align-items: center; justify-content: center; }
+/* 缩放滑块行 */
+.qr-zoom-row { display: flex; align-items: center; gap: 6px; padding: 2px 4px 6px; border-bottom: 1px dashed var(--border-default); margin-bottom: 4px; }
+.qr-zoom-label { font-size: 10px; color: var(--text-faint); flex-shrink: 0; }
+.qr-zoom-slider { flex: 1; min-width: 0; height: 4px; -webkit-appearance: none; appearance: none; background: var(--border-strong); border-radius: 2px; outline: none; cursor: pointer; }
+.qr-zoom-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--primary); cursor: pointer; box-shadow: 0 0 4px var(--primary-border); }
+.qr-zoom-slider::-webkit-slider-thumb:hover { background: var(--primary-hover); }
 .qr-more-item {
   padding: 5px 8px; border-radius: 6px; font-size: 11px; font-family: inherit; cursor: pointer;
   border: 1px solid var(--border-strong); background: transparent; color: var(--text-secondary);
