@@ -204,7 +204,15 @@ const LIVE_RULES = `
 [class*="gift"],[class*="Gift"],
 [class*="shop"],[class*="Shop"],[class*="mall"],[class*="cart"],
 [class*="webcast-chatroom___"] { display:none !important }
-video,[class*="player-container"],[class*="VideoPlayer"],[class*="video-player"] { display:block !important; opacity:1 !important; visibility:visible !important }
+/* 播放器容器铺满整个 webview：固定定位 + 全屏尺寸，视频 contain 完整显示 */
+[class*="player-container"],[class*="webcast-player"],[class*="VideoPlayer"],[class*="video-player"] {
+  position: fixed !important; inset: 0 !important;
+  width: 100% !important; height: 100% !important;
+  max-width: none !important; max-height: none !important;
+  z-index: 99999 !important; background: #000 !important;
+}
+video { object-fit: contain !important; width: 100% !important; height: 100% !important; }
+body { overflow: hidden !important; }
 [class*="webcast-live-layout"] { display:flex !important }
 `
 
@@ -393,7 +401,7 @@ async function toggleLive(inst: any) {
       // 直播画面模式：隐藏聊天区 + 放大到 180%
       const key = await (w as any).insertCSS(LIVE_RULES)
       liveKeys.value[inst.id] = key
-      try { (w as any).setZoomFactor(1.8) } catch {}
+      try { (w as any).setZoomFactor(1) } catch {}
     } else {
       const liveKey = liveKeys.value[inst.id]
       if (liveKey) { try { await (w as any).removeInsertedCSS(liveKey) } catch {} }
@@ -427,7 +435,7 @@ function onWebviewReady(id: number) {
   // 直播画面模式：应用直播规则 + 放大
   if (inst.liveMode) {
     ;(w as any).insertCSS(LIVE_RULES).then((key: any) => { liveKeys.value[id] = key }).catch(() => {})
-    try { (w as any).setZoomFactor(1.8) } catch {}
+    try { (w as any).setZoomFactor(1) } catch {}
   } else {
     // 默认应用聊天精简模式
     if (inst._stripped) {
