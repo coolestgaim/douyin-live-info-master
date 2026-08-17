@@ -51,6 +51,9 @@ const api = {
   onWindowMaximizeChange: (cb: (isMax: boolean) => void) => ipcRenderer.on('window:maximize-change', (_e, isMax) => cb(isMax)),
   offWindowMaximizeChange: () => ipcRenderer.removeAllListeners('window:maximize-change'),
 
+  // 主题切换：通知主进程转发给浮窗等子窗口
+  setThemeMode: (mode: 'dark' | 'light') => ipcRenderer.send('window:set-theme', mode),
+
   // DeskPins
   deskpinsList: () => ipcRenderer.invoke('deskpins:list'),
   deskpinsPin: (hwnd: string) => ipcRenderer.invoke('deskpins:pin', hwnd),

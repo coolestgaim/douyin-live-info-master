@@ -1,5 +1,5 @@
 <template>
-  <n-config-provider :theme="naiveTheme" :theme-overrides="themeOverrides">
+  <n-config-provider :key="themeMode" :theme="naiveTheme" :theme-overrides="themeOverrides">
     <n-message-provider>
       <n-dialog-provider>
       <div class="app-frame">
@@ -48,6 +48,7 @@ function navigate(path: string) {
 }
 
 /* ===== 双主题 ===== */
+const themeMode = computed(() => settingsStore.themeMode)
 const isDark = computed(() => settingsStore.themeMode === 'dark')
 const naiveTheme = computed(() => (isDark.value ? darkTheme : lightTheme))
 
@@ -55,6 +56,8 @@ const naiveTheme = computed(() => (isDark.value ? darkTheme : lightTheme))
 watch(isDark, (dark) => {
   document.documentElement.classList.toggle('theme-dark', dark)
   document.documentElement.classList.toggle('theme-light', !dark)
+  // 同步通知主进程，让浮窗跟随切换
+  ;(window as any).electronAPI?.setThemeMode?.(dark ? 'dark' : 'light')
 }, { immediate: true })
 
 const themeOverrides = computed<GlobalThemeOverrides>(() => {
@@ -71,23 +74,23 @@ const themeOverrides = computed<GlobalThemeOverrides>(() => {
         errorColor: '#e5484d',
         borderRadius: '10px',
         fontFamily: 'Microsoft YaHei UI, system-ui, sans-serif',
-        borderColor: 'var(--border-strong)',
-        dividerColor: 'var(--border-default)'
+        borderColor: '#2a2d36',
+        dividerColor: '#1e2028'
       },
       DataTable: {
-        tdColor: 'var(--bg-card)',
-        thColor: 'var(--bg-elevated)',
-        borderColor: 'var(--border-default)',
-        thTextColor: 'var(--text-secondary)',
-        tdTextColor: 'var(--text-secondary)'
+        tdColor: '#1a1d26',
+        thColor: '#15171e',
+        borderColor: '#1e2028',
+        thTextColor: '#8b8fa3',
+        tdTextColor: '#c8cad0'
       },
       Input: {
-        color: 'var(--bg-card)',
-        borderColor: 'var(--border-strong)',
-        colorFocus: 'var(--bg-card)'
+        color: '#1a1d26',
+        borderColor: '#2a2d36',
+        colorFocus: '#1a1d26'
       },
       Tabs: {
-        tabTextColorLine: 'var(--text-muted)',
+        tabTextColorLine: '#5a5e6e',
         tabTextColorActiveLine: '#f0506e',
         barColor: '#f0506e'
       },
@@ -96,8 +99,8 @@ const themeOverrides = computed<GlobalThemeOverrides>(() => {
         borderRadiusSmall: '6px'
       },
       InternalSelection: {
-        color: 'var(--bg-card)',
-        borderColor: 'var(--border-strong)'
+        color: '#1a1d26',
+        borderColor: '#2a2d36'
       }
     }
   }
