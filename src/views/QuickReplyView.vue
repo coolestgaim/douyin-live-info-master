@@ -33,7 +33,7 @@
             <div v-if="moreOpenId === inst.id" class="qr-more-panel">
               <div class="qr-zoom-row">
                 <span class="qr-zoom-label">缩放</span>
-                <input type="range" class="qr-zoom-slider" min="50" max="300" step="10"
+                <input type="range" class="qr-zoom-slider" min="10" max="300" step="10"
                   :value="Math.round(inst.zoom * 100)"
                   @input="onZoomSlider(inst, ($event.target as HTMLInputElement).value)"
                   title="拖动调整网页缩放" />
@@ -359,7 +359,7 @@ async function toggleStripped(inst: any) {
 
 /* ==== 缩放 + 直播画面模式 ==== */
 function applyZoom(inst: any, f: number) {
-  inst.zoom = Math.min(3, Math.max(0.5, f))
+  inst.zoom = Math.min(3, Math.max(0.1, f))
   const w = wvRefs.value[inst.id]
   if (!w) return
   try { (w as any).setZoomFactor(inst.zoom) } catch {}
@@ -371,7 +371,7 @@ function resetZoom(inst: any) { applyZoom(inst, 1) }
 /* 缩放滑块：实时更新显示 + 防抖应用（拖动时 60ms 合并） */
 let zoomSliderTimer: ReturnType<typeof setTimeout> | null = null
 function onZoomSlider(inst: any, v: string) {
-  const pct = Math.min(300, Math.max(50, parseInt(v, 10) || 100))
+  const pct = Math.min(300, Math.max(10, parseInt(v, 10) || 100))
   inst.zoom = pct / 100
   if (zoomSliderTimer) clearTimeout(zoomSliderTimer)
   zoomSliderTimer = setTimeout(() => {
