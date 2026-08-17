@@ -13,6 +13,8 @@ extraResources:
     to: sign.js
   - from: ffmpeg.exe
     to: ffmpeg.exe
+  - from: src/floating-danmu.html
+    to: floating-danmu.html
 win:
   target:
     - nsis

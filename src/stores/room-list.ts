@@ -53,8 +53,16 @@ export const useRoomListStore = defineStore('room-list', () => {
     }
   }
 
-  async function fetchRooms() {
-    const lines = urlText.value
+  /* 状态消息：成功/失败汇总 + 失败原因（去重） */
+  function buildStatusMessage(success: number, total: number, allCount: number, fetched: any[]) {
+    const failed = fetched.filter(f => f.error)
+    const base = `完成！本次成功 ${success}/${total}，共 ${allCount} 个直播间`
+    if (failed.length === 0) return base
+    const reasons = Array.from(new Set(failed.map(f => f.error))).slice(0, 2)
+    return `${base} | 失败原因：${reasons.join('；')}`
+  }
+
+  async function fetchRooms() {    const lines = urlText.value
       .split(/[\r\n]/)
       .map(l => l.trim())
       .filter(l => l.includes('live.douyin.com'))
@@ -84,7 +92,7 @@ export const useRoomListStore = defineStore('room-list', () => {
         if (!info.error) { addedSuccess++; newRooms.push(info as LiveRoomInfo) }
       }
 
-      statusMessage.value = `完成！本次成功 ${addedSuccess}/${lines.length}，共 ${results.value.length} 个直播间`
+      statusMessage.value = buildStatusMessage(addedSuccess, lines.length, results.value.length, fetched)
       saveHistory(newRooms)
       roomHistory.value = loadHistory()
     } catch (ex: any) {

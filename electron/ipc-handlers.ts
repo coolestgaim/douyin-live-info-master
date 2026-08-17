@@ -51,8 +51,17 @@ export function registerIpcHandlers(): void {
     for (const url of urls) {
       try {
         const info = await douyinLive.fetchLiveRoomInfo(url)
+        // data 为空时（风控/接口变化）明确报错，不再静默返回全空数据
+        if (!info || (!info.nickname && !info.title && !info.roomStatus)) {
+          const msg = '接口返回空数据（可能触发抖音反爬风控）'
+          console.error(`[RoomFetch] ${msg} url=${url}`)
+          logger.error(LOG_MODULE, `roomFetch空数据 url=${url}`)
+          results.push({ url, error: msg, enterRoomId: '', nickname: '', title: '', roomStatus: 0, likeCount: 0, viewCount: 0 })
+          continue
+        }
         results.push({ ...info, url })
       } catch (ex: any) {
+        console.error(`[RoomFetch] 失败 url=${url}`, ex?.message || ex)
         logger.error(LOG_MODULE, `roomFetch失败 url=${url}`, ex)
         results.push({ url, error: ex.message, enterRoomId: '', nickname: '', title: '', roomStatus: 0, likeCount: 0, viewCount: 0 })
       }
@@ -289,6 +298,11 @@ export function registerIpcHandlers(): void {
     return pinned
   })
   ipcMain.handle('window:isPinned', () => mainWindow?.isAlwaysOnTop() || false)
+
+  // 主题切换：主进程转发给浮窗（不阻塞主窗口）
+  ipcMain.on('window:set-theme', (_e, mode: 'dark' | 'light') => {
+    floatingDanmu.setFloatingTheme(mode)
+  })
 
   // ===== 外部窗口置顶（DeskPins） =====
   const deskpins = require('./services/deskpins')

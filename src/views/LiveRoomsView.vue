@@ -53,10 +53,11 @@
       </div>
     </div>
 
-    <div class="card room-list" v-if="roomList.results.length > 0">
+    <div class="card room-list" v-show="roomList.results.length > 0">
       <n-data-table
         :columns="columns"
         :data="roomList.results"
+        :row-key="(row: any) => row.enterRoomId"
         :row-props="rowProps"
         :bordered="false"
         size="small"
@@ -64,7 +65,7 @@
       />
     </div>
 
-    <div class="empty-state" v-else>
+    <div class="empty-state" v-if="roomList.results.length === 0">
       <div class="empty-icon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
           <rect x="2" y="4" width="20" height="13" rx="3" stroke="var(--border-strong)" stroke-width="1.5"/>
