@@ -16,27 +16,27 @@
 
     <div v-if="recordStore.isDurationVisible" class="stats-row">
       <div class="stat-card">
-        <div class="stat-glow" style="background: radial-gradient(circle at 50% 0%, rgba(249,115,22,0.12), transparent 70%)"></div>
+        <div class="stat-glow" style="background: radial-gradient(circle at 50% 0%, var(--primary-soft), transparent 70%)"></div>
         <div class="stat-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#f97316" stroke-width="1.8"/><circle cx="12" cy="12" r="4" fill="#f97316"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="var(--primary)" stroke-width="1.8"/><circle cx="12" cy="12" r="4" fill="var(--primary)"/></svg>
         </div>
-        <div class="stat-value" style="color: #f97316">{{ recordStore.recordingCount }}</div>
+        <div class="stat-value" style="color: var(--primary)">{{ recordStore.recordingCount }}</div>
         <div class="stat-label">活跃任务</div>
       </div>
       <div class="stat-card">
         <div class="stat-glow" style="background: radial-gradient(circle at 50% 0%, rgba(34,211,238,0.12), transparent 70%)"></div>
         <div class="stat-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="#22d3ee" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="var(--accent-cyan)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
-        <div class="stat-value" style="color: #22d3ee">{{ totalSize }}</div>
+        <div class="stat-value" style="color: var(--accent-cyan)">{{ totalSize }}</div>
         <div class="stat-label">总文件大小</div>
       </div>
       <div class="stat-card">
         <div class="stat-glow" style="background: radial-gradient(circle at 50% 0%, rgba(16,185,129,0.12), transparent 70%)"></div>
         <div class="stat-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#10b981" stroke-width="1.8"/><path d="M12 6v6l4 2" stroke="#10b981" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="var(--success)" stroke-width="1.8"/><path d="M12 6v6l4 2" stroke="var(--success)" stroke-width="1.8" stroke-linecap="round"/></svg>
         </div>
-        <div class="stat-value" style="color: #10b981">{{ activeCount }} / {{ recordStore.recordingItems.length }}</div>
+        <div class="stat-value" style="color: var(--success)">{{ activeCount }} / {{ recordStore.recordingItems.length }}</div>
         <div class="stat-label">进行 / 总计</div>
       </div>
     </div>
@@ -122,13 +122,13 @@
           <n-button v-if="item.isActive" size="tiny" type="error" quaternary @click="recordStore.stopOne(item.roomId)">停止</n-button>
           <template v-if="!item.isActive">
             <n-button size="tiny" type="primary" quaternary @click="retryRecording(item)" title="新开录制">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polygon points="5,3 19,12 5,21" fill="#f97316"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polygon points="5,3 19,12 5,21" fill="var(--primary)"/></svg>
             </n-button>
             <n-button size="tiny" quaternary @click="openFileLocation(item.outputPath)" title="打开文件夹">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="#6b7080" stroke-width="1.8" fill="none"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="var(--text-muted)" stroke-width="1.8" fill="none"/></svg>
             </n-button>
             <n-button size="tiny" type="error" quaternary @click="confirmDelete(item)" title="删除">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="3 6 5 6 21 6" stroke="#ef4444" stroke-width="1.8"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="#ef4444" stroke-width="1.8"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="3 6 5 6 21 6" stroke="var(--danger)" stroke-width="1.8"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="var(--danger)" stroke-width="1.8"/></svg>
             </n-button>
           </template>
         </div>
@@ -138,8 +138,8 @@
     <div v-else class="empty-state">
       <div class="empty-icon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="10" stroke="#2a2d36" stroke-width="1.5"/>
-          <circle cx="12" cy="12" r="4" fill="#2a2d36"/>
+          <circle cx="12" cy="12" r="10" stroke="var(--border-strong)" stroke-width="1.5"/>
+          <circle cx="12" cy="12" r="4" fill="var(--border-strong)"/>
         </svg>
       </div>
       <div class="empty-title">暂无录制任务</div>
@@ -155,10 +155,10 @@
         <span class="hist-time">{{ formatTime(h.timestamp) }}</span>
         <div class="hist-actions">
           <n-button size="tiny" quaternary @click="openFileLocation(h.outputPath)" title="打开文件夹">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="#6b7080" stroke-width="1.8" fill="none"/></svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="var(--text-muted)" stroke-width="1.8" fill="none"/></svg>
           </n-button>
           <n-button size="tiny" type="error" quaternary @click="confirmDeleteHistory(h.roomId)" title="删除">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="3 6 5 6 21 6" stroke="#ef4444" stroke-width="1.8"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="#ef4444" stroke-width="1.8"/></svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="3 6 5 6 21 6" stroke="var(--danger)" stroke-width="1.8"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="var(--danger)" stroke-width="1.8"/></svg>
           </n-button>
         </div>
       </div>
@@ -291,11 +291,11 @@ const totalSize = computed(() => {
 
 function avatarGradient(roomId: string): string {
   const colors = [
-    'linear-gradient(135deg, #f97316, #ef4444)',
-    'linear-gradient(135deg, #fbbf24, #f97316)',
-    'linear-gradient(135deg, #ef4444, #ec4899)',
-    'linear-gradient(135deg, #22d3ee, #3b82f6)',
-    'linear-gradient(135deg, #10b981, #06b6d4)'
+    'linear-gradient(135deg, var(--primary), var(--danger))',
+    'linear-gradient(135deg, var(--warning), var(--primary))',
+    'linear-gradient(135deg, var(--danger), #ec4899)',
+    'linear-gradient(135deg, var(--accent-cyan), var(--info))',
+    'linear-gradient(135deg, var(--success), #06b6d4)'
   ]
   let hash = 0
   for (let i = 0; i < roomId.length; i++) hash = roomId.charCodeAt(i) + ((hash << 5) - hash)
@@ -313,7 +313,7 @@ function avatarGradient(roomId: string): string {
   margin-bottom: 24px;
 }
 
-.rec-title { font-size: 20px; font-weight: 700; color: #e0e2e8; }
+.rec-title { font-size: 20px; font-weight: 700; color: var(--text-primary); }
 
 .rec-subtitle {
   display: flex;
@@ -321,12 +321,12 @@ function avatarGradient(roomId: string): string {
   margin-top: 4px;
 }
 
-.subtitle-text { font-size: 12px; color: #4a4e5e; }
-.subtitle-highlight { font-size: 12px; color: #f97316; }
+.subtitle-text { font-size: 12px; color: var(--text-faint); }
+.subtitle-highlight { font-size: 12px; color: var(--primary); }
 
 .rec-badge {
-  background: #1a1d26;
-  border: 1px solid #2a2d36;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
   padding: 8px 16px;
   display: flex;
@@ -338,11 +338,11 @@ function avatarGradient(roomId: string): string {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #3a3d46;
+  background: var(--text-dim);
 }
 
 .rec-badge-dot.active {
-  background: #ef4444;
+  background: var(--danger);
   box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
   animation: badge-pulse 2s ease-in-out infinite;
 }
@@ -352,7 +352,7 @@ function avatarGradient(roomId: string): string {
   50% { opacity: 0.5; }
 }
 
-.rec-badge-text { font-size: 12px; font-weight: 500; color: #6b7080; }
+.rec-badge-text { font-size: 12px; font-weight: 500; color: var(--text-muted); }
 
 .stats-row {
   display: grid;
@@ -362,8 +362,8 @@ function avatarGradient(roomId: string): string {
 }
 
 .stat-card {
-  background: #1a1d26;
-  border: 1px solid #1e2028;
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
   border-radius: 10px;
   padding: 20px 16px;
   text-align: center;
@@ -406,7 +406,7 @@ function avatarGradient(roomId: string): string {
   position: relative;
   z-index: 1;
   font-size: 11px;
-  color: #4a4e5e;
+  color: var(--text-faint);
   margin-top: 4px;
   font-weight: 500;
 }
@@ -419,7 +419,7 @@ function avatarGradient(roomId: string): string {
   margin-bottom: 12px;
 }
 
-.status-text { font-size: 11px; color: #4a4e5e; }
+.status-text { font-size: 11px; color: var(--text-faint); }
 
 .recording-list { display: flex; flex-direction: column; gap: 8px; }
 
@@ -439,7 +439,7 @@ function avatarGradient(roomId: string): string {
 }
 
 .rec-item-active {
-  border-color: rgba(249, 115, 22, 0.15);
+  border-color: var(--primary-border);
 }
 
 .rec-stripe {
@@ -448,16 +448,16 @@ function avatarGradient(roomId: string): string {
   top: 0;
   bottom: 0;
   width: 3px;
-  background: #2a2d36;
+  background: var(--border-strong);
 }
 
 .rec-stripe.active {
-  background: linear-gradient(180deg, #f97316, #ef4444);
-  box-shadow: 0 0 8px rgba(249, 115, 22, 0.3);
+  background: linear-gradient(180deg, var(--primary), var(--danger));
+  box-shadow: 0 0 8px var(--primary-border);
 }
 
 .rec-stripe.stopped {
-  background: #2a2d36;
+  background: var(--border-strong);
 }
 
 .rec-avatar {
@@ -478,7 +478,7 @@ function avatarGradient(roomId: string): string {
 .rec-name {
   font-size: 14px;
   font-weight: 600;
-  color: #e0e2e8;
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -486,15 +486,15 @@ function avatarGradient(roomId: string): string {
 
 .rec-room-id {
   font-size: 11px;
-  color: #4a4e5e;
+  color: var(--text-faint);
   margin-top: 2px;
 }
 
 .rec-stat-group { display: flex; gap: 8px; }
 
 .rec-stat {
-  background: #111318;
-  border: 1px solid #1e2028;
+  background: var(--bg-track);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   padding: 8px 14px;
   text-align: center;
@@ -503,15 +503,15 @@ function avatarGradient(roomId: string): string {
 
 .stat-label {
   font-size: 9px;
-  color: #4a4e5e;
+  color: var(--text-faint);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 500;
 }
 
 .stat-value { font-size: 15px; font-weight: 700; margin-top: 2px; }
-.stat-accent { color: #f97316; }
-.stat-info { color: #22d3ee; }
+.stat-accent { color: var(--primary); }
+.stat-info { color: var(--accent-cyan); }
 
 .rec-status-area {
   display: flex;
@@ -524,7 +524,7 @@ function avatarGradient(roomId: string): string {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #10b981;
+  background: var(--success);
   animation: rec-pulse 1.5s ease-in-out infinite;
 }
 
@@ -533,40 +533,40 @@ function avatarGradient(roomId: string): string {
   50% { opacity: 0.3; box-shadow: none; }
 }
 
-.rec-status-text { font-size: 11px; font-weight: 500; color: #6b7080; }
-.rec-status-text.active { color: #10b981; }
-.rec-status-text.error { color: #ef4444; }
+.rec-status-text { font-size: 11px; font-weight: 500; color: var(--text-muted); }
+.rec-status-text.active { color: var(--success); }
+.rec-status-text.error { color: var(--danger); }
 
 .empty-state { padding: 60px 0; }
 
 .empty-icon { margin-bottom: 8px; }
 
-.empty-title { font-size: 14px; color: #4a4e5e; font-weight: 500; }
-.empty-hint { font-size: 12px; color: #3a3d46; margin-top: 4px; }
+.empty-title { font-size: 14px; color: var(--text-faint); font-weight: 500; }
+.empty-hint { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
 
 .ffmpeg-dialog-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
-.ffmpeg-dialog { background: #1a1d26; border: 1px solid #2a2d36; border-radius: 12px; padding: 24px; max-width: 400px; width: 90%; }
-.ffmpeg-dialog-title { font-size: 16px; font-weight: 700; color: #e0e2e8; margin-bottom: 8px; }
-.ffmpeg-dialog-body { font-size: 13px; color: #8b8fa3; margin-bottom: 16px; line-height: 1.5; }
+.ffmpeg-dialog { background: var(--bg-card); border: 1px solid var(--border-strong); border-radius: 12px; padding: 24px; max-width: 400px; width: 90%; }
+.ffmpeg-dialog-title { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+.ffmpeg-dialog-body { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5; }
 .ffmpeg-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .ffmpeg-progress { margin-top: 12px; }
-.ffmpeg-progress-bar { height: 4px; background: #2a2d36; border-radius: 2px; overflow: hidden; }
-.ffmpeg-progress-fill { height: 100%; background: #f97316; transition: width 0.3s; }
-.ffmpeg-progress-text { font-size: 11px; color: #6b7080; margin-top: 4px; }
+.ffmpeg-progress-bar { height: 4px; background: var(--border-strong); border-radius: 2px; overflow: hidden; }
+.ffmpeg-progress-fill { height: 100%; background: var(--primary); transition: width 0.3s; }
+.ffmpeg-progress-text { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
 
 .available-section { padding: 12px 18px; margin-bottom: 12px; }
-.section-title { font-size: 12px; font-weight: 600; color: #6b7080; margin-bottom: 8px; }
-.avail-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #1e2028; }
+.section-title { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; }
+.avail-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border-default); }
 .avail-row:last-child { border-bottom: none; }
-.avail-nick { font-size: 13px; color: #e0e2e8; font-weight: 500; }
-.avail-id { font-size: 11px; color: #4a4e5e; }
-.avail-status { font-size: 11px; color: #10b981; margin-left: auto; }
+.avail-nick { font-size: 13px; color: var(--text-primary); font-weight: 500; }
+.avail-id { font-size: 11px; color: var(--text-faint); }
+.avail-status { font-size: 11px; color: var(--success); margin-left: auto; }
 
 /* History */
 .history-section {
   margin-top: 24px;
   padding-top: 16px;
-  border-top: 1px solid #1e2028;
+  border-top: 1px solid var(--border-default);
 }
 .history-row {
   display: flex;
@@ -575,8 +575,8 @@ function avatarGradient(roomId: string): string {
   gap: 12px;
   margin-top: 6px;
 }
-.hist-nick { font-size: 13px; font-weight: 500; color: #e0e2e8; min-width: 80px; }
-.hist-detail { font-size: 11px; color: #4a4e5e; flex: 1; }
-.hist-time { font-size: 11px; color: #3a3d46; }
+.hist-nick { font-size: 13px; font-weight: 500; color: var(--text-primary); min-width: 80px; }
+.hist-detail { font-size: 11px; color: var(--text-faint); flex: 1; }
+.hist-time { font-size: 11px; color: var(--text-dim); }
 .hist-actions { display: flex; gap: 6px; }
 </style>

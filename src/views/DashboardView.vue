@@ -64,10 +64,10 @@
     <div v-else class="empty-state">
       <div class="empty-icon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-          <rect x="3" y="3" width="7" height="7" rx="2" stroke="#2a2d36" stroke-width="1.5"/>
-          <rect x="14" y="3" width="7" height="7" rx="2" stroke="#2a2d36" stroke-width="1.5"/>
-          <rect x="3" y="14" width="7" height="7" rx="2" stroke="#2a2d36" stroke-width="1.5"/>
-          <rect x="14" y="14" width="7" height="7" rx="2" stroke="#2a2d36" stroke-width="1.5"/>
+          <rect x="3" y="3" width="7" height="7" rx="2" stroke="var(--border-strong)" stroke-width="1.5"/>
+          <rect x="14" y="3" width="7" height="7" rx="2" stroke="var(--border-strong)" stroke-width="1.5"/>
+          <rect x="3" y="14" width="7" height="7" rx="2" stroke="var(--border-strong)" stroke-width="1.5"/>
+          <rect x="14" y="14" width="7" height="7" rx="2" stroke="var(--border-strong)" stroke-width="1.5"/>
         </svg>
       </div>
       <div class="empty-title">暂无监控中的直播间</div>
@@ -85,20 +85,20 @@ const store = useDashboardStore()
 const roomListStore = useRoomListStore()
 
 const aggregateStats = computed(() => [
-  { icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="#f97316" stroke-width="1.8"/></svg>', label: '弹幕', value: store.totalDanmu.toLocaleString(), color: '#f97316', glowColor: 'radial-gradient(circle at 50% 0%, rgba(249,115,22,0.12), transparent 70%)' },
-  { icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5c0-2 1.5-3.5 4.5-3.5s4.5 1.5 4.5 3.5" stroke="#fbbf24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>', label: '礼物', value: store.totalGift.toLocaleString(), color: '#fbbf24', glowColor: 'radial-gradient(circle at 50% 0%, rgba(251,191,36,0.12), transparent 70%)' },
-  { icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="#ef4444" stroke-width="1.8"/></svg>', label: '点赞', value: store.totalLike.toLocaleString(), color: '#ef4444', glowColor: 'radial-gradient(circle at 50% 0%, rgba(239,68,68,0.12), transparent 70%)' },
-  { icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM20 8v6M23 11h-6" stroke="#22d3ee" stroke-width="1.8" stroke-linecap="round"/></svg>', label: '进入', value: store.totalMember.toLocaleString(), color: '#22d3ee', glowColor: 'radial-gradient(circle at 50% 0%, rgba(34,211,238,0.12), transparent 70%)' },
-  { icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#10b981" stroke-width="1.8" stroke-linecap="round"/></svg>', label: '关注', value: store.totalFollow.toLocaleString(), color: '#10b981', glowColor: 'radial-gradient(circle at 50% 0%, rgba(16,185,129,0.12), transparent 70%)' }
+  { icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="var(--primary)" stroke-width="1.8"/></svg>', label: '弹幕', value: store.totalDanmu.toLocaleString(), color: 'var(--primary)', glowColor: 'radial-gradient(circle at 50% 0%, var(--primary-soft), transparent 70%)' },
+  { icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5c0-2 1.5-3.5 4.5-3.5s4.5 1.5 4.5 3.5" stroke="var(--warning)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>', label: '礼物', value: store.totalGift.toLocaleString(), color: 'var(--warning)', glowColor: 'radial-gradient(circle at 50% 0%, rgba(251,191,36,0.12), transparent 70%)' },
+  { icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="var(--danger)" stroke-width="1.8"/></svg>', label: '点赞', value: store.totalLike.toLocaleString(), color: 'var(--danger)', glowColor: 'radial-gradient(circle at 50% 0%, rgba(239,68,68,0.12), transparent 70%)' },
+  { icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM20 8v6M23 11h-6" stroke="var(--accent-cyan)" stroke-width="1.8" stroke-linecap="round"/></svg>', label: '进入', value: store.totalMember.toLocaleString(), color: 'var(--accent-cyan)', glowColor: 'radial-gradient(circle at 50% 0%, rgba(34,211,238,0.12), transparent 70%)' },
+  { icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="var(--success)" stroke-width="1.8" stroke-linecap="round"/></svg>', label: '关注', value: store.totalFollow.toLocaleString(), color: 'var(--success)', glowColor: 'radial-gradient(circle at 50% 0%, rgba(16,185,129,0.12), transparent 70%)' }
 ])
 
 function avatarGradient(roomId: string) {
   const colors = [
-    'linear-gradient(135deg, #f97316, #ef4444)',
-    'linear-gradient(135deg, #fbbf24, #f97316)',
-    'linear-gradient(135deg, #ef4444, #ec4899)',
-    'linear-gradient(135deg, #22d3ee, #3b82f6)',
-    'linear-gradient(135deg, #10b981, #06b6d4)'
+    'linear-gradient(135deg, var(--primary), var(--danger))',
+    'linear-gradient(135deg, var(--warning), var(--primary))',
+    'linear-gradient(135deg, var(--danger), #ec4899)',
+    'linear-gradient(135deg, var(--accent-cyan), var(--info))',
+    'linear-gradient(135deg, var(--success), #06b6d4)'
   ]
   let hash = 0
   for (let i = 0; i < roomId.length; i++) hash = roomId.charCodeAt(i) + ((hash << 5) - hash)
@@ -108,11 +108,11 @@ function avatarGradient(roomId: string) {
 function getBars(stats: RoomStatsData) {
   const max = Math.max(1, stats.danmuCount, stats.giftCount, stats.likeCount, stats.memberCount, stats.followCount)
   return [
-    { label: '弹幕', count: stats.danmuCount, ratio: stats.danmuCount / max * 100, color: '#f97316', gradient: 'linear-gradient(90deg, #f97316, #fb923c)' },
-    { label: '礼物', count: stats.giftCount, ratio: stats.giftCount / max * 100, color: '#fbbf24', gradient: 'linear-gradient(90deg, #fbbf24, #fcd34d)' },
-    { label: '点赞', count: stats.likeCount, ratio: stats.likeCount / max * 100, color: '#ef4444', gradient: 'linear-gradient(90deg, #ef4444, #f87171)' },
-    { label: '进入', count: stats.memberCount, ratio: stats.memberCount / max * 100, color: '#22d3ee', gradient: 'linear-gradient(90deg, #22d3ee, #67e8f9)' },
-    { label: '关注', count: stats.followCount, ratio: stats.followCount / max * 100, color: '#10b981', gradient: 'linear-gradient(90deg, #10b981, #34d399)' }
+    { label: '弹幕', count: stats.danmuCount, ratio: stats.danmuCount / max * 100, color: 'var(--primary)', gradient: 'linear-gradient(90deg, var(--primary), var(--primary-hover))' },
+    { label: '礼物', count: stats.giftCount, ratio: stats.giftCount / max * 100, color: 'var(--warning)', gradient: 'linear-gradient(90deg, var(--warning), var(--warning))' },
+    { label: '点赞', count: stats.likeCount, ratio: stats.likeCount / max * 100, color: 'var(--danger)', gradient: 'linear-gradient(90deg, var(--danger), var(--danger))' },
+    { label: '进入', count: stats.memberCount, ratio: stats.memberCount / max * 100, color: 'var(--accent-cyan)', gradient: 'linear-gradient(90deg, var(--accent-cyan), var(--accent-cyan))' },
+    { label: '关注', count: stats.followCount, ratio: stats.followCount / max * 100, color: 'var(--success)', gradient: 'linear-gradient(90deg, var(--success), #34d399)' }
   ]
 }
 
@@ -153,7 +153,7 @@ onUnmounted(() => {
 .dash-title {
   font-size: 20px;
   font-weight: 700;
-  color: #e0e2e8;
+  color: var(--text-primary);
 }
 
 .dash-subtitle {
@@ -162,12 +162,12 @@ onUnmounted(() => {
   margin-top: 4px;
 }
 
-.subtitle-text { font-size: 12px; color: #4a4e5e; }
-.subtitle-highlight { font-size: 12px; color: #f97316; }
+.subtitle-text { font-size: 12px; color: var(--text-faint); }
+.subtitle-highlight { font-size: 12px; color: var(--primary); }
 
 .monitor-badge {
-  background: #1a1d26;
-  border: 1px solid #2a2d36;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
   padding: 8px 16px;
   display: flex;
@@ -179,18 +179,18 @@ onUnmounted(() => {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #3a3d46;
+  background: var(--text-dim);
 }
 
 .monitor-dot.active {
-  background: #10b981;
+  background: var(--success);
   box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
 }
 
 .monitor-text {
   font-size: 12px;
   font-weight: 500;
-  color: #6b7080;
+  color: var(--text-muted);
 }
 
 .stats-row {
@@ -201,8 +201,8 @@ onUnmounted(() => {
 }
 
 .stat-card {
-  background: #1a1d26;
-  border: 1px solid #1e2028;
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
   border-radius: 10px;
   padding: 20px 16px;
   text-align: center;
@@ -245,7 +245,7 @@ onUnmounted(() => {
   position: relative;
   z-index: 1;
   font-size: 11px;
-  color: #4a4e5e;
+  color: var(--text-faint);
   margin-top: 4px;
   font-weight: 500;
 }
@@ -258,9 +258,9 @@ onUnmounted(() => {
 
 .room-card {
   display: flex;
-  background: #1a1d26;
+  background: var(--bg-card);
   border-radius: 10px;
-  border: 1px solid #1e2028;
+  border: 1px solid var(--border-default);
   overflow: hidden;
   transition: transform 0.2s, box-shadow 0.2s;
 }
@@ -272,13 +272,13 @@ onUnmounted(() => {
 
 .room-stripe {
   width: 3px;
-  background: #2a2d36;
+  background: var(--border-strong);
   flex-shrink: 0;
 }
 
 .room-stripe.connected {
-  background: linear-gradient(180deg, #10b981, #059669);
-  box-shadow: 0 0 6px rgba(16, 185, 129, 0.3);
+  background: linear-gradient(180deg, var(--success), var(--success));
+  box-shadow: 0 0 6px var(--success-border);
 }
 
 .room-card-body { flex: 1; padding: 16px 18px; }
@@ -300,17 +300,17 @@ onUnmounted(() => {
 .room-name {
   font-size: 14px;
   font-weight: 600;
-  color: #e0e2e8;
+  color: var(--text-primary);
 }
 
 .rec-badge {
   margin-left: auto;
-  background: rgba(251, 191, 36, 0.08);
-  border: 1px solid rgba(251, 191, 36, 0.2);
+  background: var(--warning-soft);
+  border: 1px solid var(--warning-border);
   border-radius: 6px;
   padding: 3px 10px;
   font-size: 10px;
-  color: #fbbf24;
+  color: var(--warning);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -321,7 +321,7 @@ onUnmounted(() => {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #fbbf24;
+  background: var(--warning);
   animation: rec-pulse 1.5s ease-in-out infinite;
 }
 
@@ -338,24 +338,24 @@ onUnmounted(() => {
 }
 
 .live-badge {
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  background: var(--success-soft);
+  border: 1px solid var(--success-border);
   border-radius: 6px;
   padding: 2px 8px;
   font-size: 10px;
   font-weight: 600;
-  color: #10b981;
+  color: var(--success);
 }
 
 .live-badge.offline {
-  background: rgba(107, 112, 128, 0.1);
-  border-color: rgba(107, 112, 128, 0.2);
-  color: #6b7080;
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+  color: var(--text-muted);
 }
 
 .room-stats-text {
   font-size: 11px;
-  color: #4a4e5e;
+  color: var(--text-faint);
 }
 
 .bars { display: flex; flex-direction: column; gap: 6px; }
@@ -373,14 +373,14 @@ onUnmounted(() => {
   gap: 6px;
   font-size: 10px;
   font-weight: 500;
-  color: #6b7080;
+  color: var(--text-muted);
 }
 
 .bar-dot { width: 5px; height: 5px; border-radius: 50%; }
 
 .bar-track {
   height: 5px;
-  background: #111318;
+  background: var(--bg-track);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -394,7 +394,7 @@ onUnmounted(() => {
 .bar-value {
   font-size: 11px;
   font-weight: 600;
-  color: #c0c2c8;
+  color: var(--text-secondary);
   text-align: right;
 }
 
@@ -409,13 +409,13 @@ onUnmounted(() => {
 
 .empty-title {
   font-size: 14px;
-  color: #4a4e5e;
+  color: var(--text-faint);
   font-weight: 500;
 }
 
 .empty-hint {
   font-size: 12px;
-  color: #3a3d46;
+  color: var(--text-dim);
   margin-top: 4px;
 }
 </style>

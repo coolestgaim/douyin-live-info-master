@@ -22,6 +22,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:transparent;font-fam
 #closeBtn:hover{background:rgba(239,68,68,0.25)}
 #latestBtn{background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.3);color:#fb923c;font-size:12px;width:22px;height:22px;border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 #latestBtn:hover{background:rgba(249,115,22,0.2)}
+#lockBtn{background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.3);color:#fb923c;font-size:12px;width:22px;height:22px;border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+#lockBtn:hover{background:rgba(249,115,22,0.2)}
+#lockBtn.locked{background:rgba(249,115,22,0.3);border-color:#f97316;color:#fff}
 
 /* Tab bar — matches n-tabs line style */
 #tab-bar{display:flex;gap:0;padding:0 10px;flex-shrink:0;border-bottom:1px solid #1e2028}
@@ -61,6 +64,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:transparent;font-fam
 <div id="controls">
 <input id="opacity" type="range" min="30" max="100" value="100" title="透明度">
 <button id="latestBtn" title="回到最新弹幕">⬇</button>
+<button id="lockBtn" title="锁定（点击穿透）">🔒</button>
 <button id="closeBtn">✕</button>
 </div></div>
 <div id="tab-bar">
@@ -182,6 +186,23 @@ ipcRenderer.on('floating:rooms', (_e, newRooms) => {
 document.getElementById('closeBtn').onclick = () => ipcRenderer.send('floating:action', 'close')
 document.getElementById('opacity').oninput = (e) => ipcRenderer.send('floating:action', 'opacity', e.target.value/100)
 document.getElementById('latestBtn').onclick = () => goLatest()
+// 锁定（桌面歌词式）：点击穿透，鼠标移到锁定按钮附近时临时恢复交互
+const lockBtn = document.getElementById('lockBtn')
+let locked = false
+let hoverUnlocked = false
+lockBtn.onclick = () => {
+  locked = !locked
+  lockBtn.classList.toggle('locked', locked)
+  lockBtn.title = locked ? '已锁定（鼠标移到此处可解锁）' : '锁定（点击穿透）'
+  ipcRenderer.send('floating:action', locked ? 'lock' : 'unlock')
+}
+document.addEventListener('mousemove', (e) => {
+  if (!locked) return
+  const r = lockBtn.getBoundingClientRect()
+  const near = e.clientX >= r.left - 30 && e.clientX <= r.right + 30 && e.clientY >= r.top - 30 && e.clientY <= r.bottom + 30
+  if (near && !hoverUnlocked) { hoverUnlocked = true; ipcRenderer.send('floating:action', 'hover-unlock') }
+  else if (!near && hoverUnlocked) { hoverUnlocked = false; ipcRenderer.send('floating:action', 'hover-lock') }
+})
 </script></body></html>`
 
 export function createFloatingDanmu(): void {
@@ -198,6 +219,10 @@ export function createFloatingDanmu(): void {
     frame: false,
     alwaysOnTop: true,
     resizable: true,
+    // 桌面歌词式：不出现在任务栏、不抢焦点
+    skipTaskbar: true,
+    type: 'toolbar',
+    focusable: false,
     // 说明：禁用 GPU 时 transparent 透明窗口无法合成（不可见），改用半透明深色背景
     backgroundColor: '#E61E293B',
     webPreferences: {
@@ -248,6 +273,16 @@ export function registerFloatingIPC(): void {
       closeFloatingDanmu()
     } else if (action === 'opacity' && floatingWindow && !floatingWindow.isDestroyed()) {
       floatingWindow.setOpacity(Math.max(0.3, Math.min(1, value || 0.85)))
+    } else if (action === 'lock' && floatingWindow && !floatingWindow.isDestroyed()) {
+      // 锁定：鼠标点击穿透（桌面歌词式），forward 保留移动事件用于解锁热区检测
+      floatingWindow.setIgnoreMouseEvents(true, { forward: true })
+    } else if (action === 'unlock' && floatingWindow && !floatingWindow.isDestroyed()) {
+      floatingWindow.setIgnoreMouseEvents(false)
+    } else if (action === 'hover-unlock' && floatingWindow && !floatingWindow.isDestroyed()) {
+      // 鼠标悬停在锁定按钮附近 → 临时恢复交互，便于点击解锁
+      floatingWindow.setIgnoreMouseEvents(false)
+    } else if (action === 'hover-lock' && floatingWindow && !floatingWindow.isDestroyed()) {
+      floatingWindow.setIgnoreMouseEvents(true, { forward: true })
     }
   })
 }

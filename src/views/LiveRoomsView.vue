@@ -41,8 +41,8 @@
     <div class="card list-header">
       <span class="list-title">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="vertical-align: middle; margin-right: 6px;">
-          <rect x="2" y="4" width="20" height="13" rx="3" stroke="#6b7080" stroke-width="1.8"/>
-          <path d="M8 21h8M12 17v4" stroke="#6b7080" stroke-width="1.8" stroke-linecap="round"/>
+          <rect x="2" y="4" width="20" height="13" rx="3" stroke="var(--text-muted)" stroke-width="1.8"/>
+          <path d="M8 21h8M12 17v4" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round"/>
         </svg>
         直播间列表
       </span>
@@ -67,8 +67,8 @@
     <div class="empty-state" v-else>
       <div class="empty-icon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-          <rect x="2" y="4" width="20" height="13" rx="3" stroke="#2a2d36" stroke-width="1.5"/>
-          <path d="M8 21h8M12 17v4" stroke="#2a2d36" stroke-width="1.5" stroke-linecap="round"/>
+          <rect x="2" y="4" width="20" height="13" rx="3" stroke="var(--border-strong)" stroke-width="1.5"/>
+          <path d="M8 21h8M12 17v4" stroke="var(--border-strong)" stroke-width="1.5" stroke-linecap="round"/>
         </svg>
       </div>
       <div class="empty-title">在上方输入直播间链接，点击「获取信息」</div>
@@ -105,18 +105,18 @@ const columns: DataTableColumns<any> = [
   { title: '#', key: 'index', width: 40, align: 'center' },
   { title: '主播', key: 'nickname', width: 100 },
   { title: '标题', key: 'title', width: 160, ellipsis: { tooltip: true } },
-  { title: '点赞', key: 'likeCount', width: 70, align: 'right', render: (row) => h('span', { style: 'color: #f97316; font-weight: 600' }, row.error ? '-' : row.likeCount?.toLocaleString()) },
-  { title: '观看', key: 'viewCount', width: 70, align: 'right', render: (row) => h('span', { style: 'color: #4a4e5e' }, row.error ? '-' : row.viewCount?.toLocaleString()) },
+  { title: '点赞', key: 'likeCount', width: 70, align: 'right', render: (row) => h('span', { style: 'color: var(--primary); font-weight: 600' }, row.error ? '-' : row.likeCount?.toLocaleString()) },
+  { title: '观看', key: 'viewCount', width: 70, align: 'right', render: (row) => h('span', { style: 'color: var(--text-faint)' }, row.error ? '-' : row.viewCount?.toLocaleString()) },
   {
     title: '直播', key: 'roomStatus', width: 60, align: 'center',
     render: (row) => h('span', {
-      style: `color: ${row.error ? '#ef4444' : '#10b981'}; font-weight: 600; font-size: 11px`
+      style: `color: ${row.error ? 'var(--danger)' : 'var(--success)'}; font-weight: 600; font-size: 11px`
     }, row.error ? '失败' : row.roomStatus === 2 ? '未开播' : '直播中')
   },
   {
     title: '弹幕', key: 'connectionState', width: 60, align: 'center',
     render: (row) => h('span', {
-      style: 'color: #22d3ee; font-weight: 600; font-size: 11px'
+      style: 'color: var(--accent-cyan); font-weight: 600; font-size: 11px'
     }, row.connectionState === 'Connected' ? '已连接' : row.connectionState === 'Connecting' ? '连接中' : '')
   },
   {
@@ -125,8 +125,8 @@ const columns: DataTableColumns<any> = [
       const connected = row.connectionState === 'Connected'
       return h('button', {
         style: connected
-          ? 'background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;font-size:10px;padding:2px 8px;border-radius:4px;cursor:pointer;font-family:inherit'
-          : 'background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);color:#f97316;font-size:10px;padding:2px 8px;border-radius:4px;cursor:pointer;font-family:inherit',
+          ? 'background:var(--danger-soft);border:1px solid var(--danger-border);color:var(--danger);font-size:10px;padding:2px 8px;border-radius:4px;cursor:pointer;font-family:inherit'
+          : 'background:var(--bg-active);border:1px solid var(--primary-border);color:var(--primary);font-size:10px;padding:2px 8px;border-radius:4px;cursor:pointer;font-family:inherit',
         onClick: (e: Event) => { e.stopPropagation(); connected ? danmuStore.disconnectRoom(row.enterRoomId) : danmuStore.connectRoom(row.enterRoomId, row.nickname) }
       }, connected ? '断开' : '连接')
     }
@@ -136,7 +136,7 @@ const columns: DataTableColumns<any> = [
 const rowProps = computed(() => {
   const selId = roomList.selectedRoom?.enterRoomId ?? ''
   return (row: any) => ({
-    style: { background: row.enterRoomId === selId ? 'rgba(249,115,22,0.08)' : undefined, cursor: 'pointer' },
+    style: { background: row.enterRoomId === selId ? 'var(--bg-selected)' : undefined, cursor: 'pointer' },
     onClick: () => {
       roomList.selectRoom(row)
       danmuStore.selectRoom(row)
@@ -187,7 +187,7 @@ function exportLinks() {
 
 .input-label {
   font-size: 12px;
-  color: #6b7080;
+  color: var(--text-muted);
   margin-bottom: 8px;
   font-weight: 500;
 }
@@ -209,7 +209,7 @@ function exportLinks() {
 .list-title {
   font-size: 12px;
   font-weight: 600;
-  color: #6b7080;
+  color: var(--text-muted);
   display: flex;
   align-items: center;
 }
@@ -230,18 +230,18 @@ function exportLinks() {
 
 .status-text {
   font-size: 11px;
-  color: #3a3d46;
+  color: var(--text-dim);
   margin-left: auto;
 }
 
 .history-chips { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-.chips-label { font-size: 10px; color: #4a4e5e; flex-shrink: 0; }
-.history-chip { font-size: 11px; color: #8b8fa3; background: #1a1d26; border: 1px solid #2a2d36; padding: 2px 4px 2px 8px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 3px; transition: all .15s; max-width: 260px; }
-.history-chip:hover { border-color: #f97316; color: #e0e2e8; }
+.chips-label { font-size: 10px; color: var(--text-faint); flex-shrink: 0; }
+.history-chip { font-size: 11px; color: var(--text-secondary); background: var(--bg-card); border: 1px solid var(--border-strong); padding: 2px 4px 2px 8px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 3px; transition: all .15s; max-width: 260px; }
+.history-chip:hover { border-color: var(--primary); color: var(--text-primary); }
 .chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
-.chip-del, .chip-copy { font-size: 10px; color: #4a4e5e; background: none; border: none; cursor: pointer; padding: 1px 3px; line-height: 1; flex-shrink: 0; display: flex; align-items: center; }
-.chip-copy:hover { color: #3b82f6; }
-.chip-del:hover { color: #ef4444; }
+.chip-del, .chip-copy { font-size: 10px; color: var(--text-faint); background: none; border: none; cursor: pointer; padding: 1px 3px; line-height: 1; flex-shrink: 0; display: flex; align-items: center; }
+.chip-copy:hover { color: var(--info); }
+.chip-del:hover { color: var(--danger); }
 
 .empty-state {
   padding: 40px 0;
@@ -249,6 +249,6 @@ function exportLinks() {
 
 .empty-title {
   font-size: 13px;
-  color: #4a4e5e;
+  color: var(--text-faint);
 }
 </style>

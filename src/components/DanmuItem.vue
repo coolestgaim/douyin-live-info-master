@@ -64,26 +64,26 @@ function onAvatarError(e: Event) {
 }
 
 .danmu-item:hover {
-  background: rgba(249, 115, 22, 0.04);
+  background: var(--primary-softer);
 }
 
 .danmu-gift {
-  background: rgba(249, 115, 22, 0.06);
-  border: 1px solid rgba(249, 115, 22, 0.15);
+  background: var(--bg-hover);
+  border: 1px solid var(--primary-border);
 }
 
 .danmu-gift:hover {
-  background: rgba(249, 115, 22, 0.1);
+  background: var(--bg-active);
 }
 
 .danmu-social {
-  background: rgba(59, 130, 246, 0.06);
-  border: 1px solid rgba(59, 130, 246, 0.15);
+  background: var(--info-soft);
+  border: 1px solid var(--info-border);
 }
 
 .danmu-time {
   font-size: 10px;
-  color: #3a3d46;
+  color: var(--text-dim);
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
 }
@@ -97,16 +97,16 @@ function onAvatarError(e: Event) {
   font-weight: 500;
 }
 
-.danmu-tag-chat { background: #3a3d46; }
-.danmu-tag-gift { background: linear-gradient(135deg, #f97316, #ea580c); }
-.danmu-tag-member { background: #10b981; }
-.danmu-tag-like { background: #ef4444; }
-.danmu-tag-social { background: #3b82f6; }
-.danmu-tag-stats { background: #6b7080; }
+.danmu-tag-chat { background: var(--text-dim); }
+.danmu-tag-gift { background: linear-gradient(135deg, var(--primary), var(--primary-pressed)); }
+.danmu-tag-member { background: var(--success); }
+.danmu-tag-like { background: var(--danger); }
+.danmu-tag-social { background: var(--info); }
+.danmu-tag-stats { background: var(--text-muted); }
 
 .danmu-text {
   font-size: 12px;
-  color: #c0c2c8;
+  color: var(--text-secondary);
   line-height: 1.5;
   word-break: break-all;
   flex: 1;
@@ -124,18 +124,18 @@ function onAvatarError(e: Event) {
   height: 22px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid #2a2d36;
+  border: 1px solid var(--border-strong);
 }
 
 .danmu-username {
-  color: #f97316;
+  color: var(--primary);
   text-decoration: none;
   font-weight: 500;
   cursor: pointer;
 }
 
 .danmu-username:hover {
-  color: #fb923c;
+  color: var(--primary-hover);
   text-decoration: underline;
 }
 </style>
