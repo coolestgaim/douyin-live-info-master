@@ -18,7 +18,7 @@
       <div v-for="s in aggregateStats" :key="s.label" class="stat-card">
         <div class="stat-glow" :style="{ background: s.glowColor }"></div>
         <div class="stat-icon" v-html="s.icon"></div>
-        <div class="stat-value" :style="{ color: s.color }">{{ s.value }}</div>
+        <div class="stat-value"><AnimatedNumber :value="s.raw" :color="s.color" /></div>
         <div class="stat-label">{{ s.label }}</div>
       </div>
     </div>
@@ -80,16 +80,17 @@
 import { computed, onMounted, onUnmounted } from 'vue'
 import { useDashboardStore, type RoomStatsData } from '../stores/dashboard'
 import { useRoomListStore } from '../stores/room-list'
+import AnimatedNumber from '../components/AnimatedNumber.vue'
 
 const store = useDashboardStore()
 const roomListStore = useRoomListStore()
 
 const aggregateStats = computed(() => [
-  { icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="var(--primary)" stroke-width="1.8"/></svg>', label: '弹幕', value: store.totalDanmu.toLocaleString(), color: 'var(--primary)', glowColor: 'radial-gradient(circle at 50% 0%, var(--primary-soft), transparent 70%)' },
-  { icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5c0-2 1.5-3.5 4.5-3.5s4.5 1.5 4.5 3.5" stroke="var(--warning)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>', label: '礼物', value: store.totalGift.toLocaleString(), color: 'var(--warning)', glowColor: 'radial-gradient(circle at 50% 0%, rgba(251,191,36,0.12), transparent 70%)' },
-  { icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="var(--danger)" stroke-width="1.8"/></svg>', label: '点赞', value: store.totalLike.toLocaleString(), color: 'var(--danger)', glowColor: 'radial-gradient(circle at 50% 0%, rgba(239,68,68,0.12), transparent 70%)' },
-  { icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM20 8v6M23 11h-6" stroke="var(--accent-cyan)" stroke-width="1.8" stroke-linecap="round"/></svg>', label: '进入', value: store.totalMember.toLocaleString(), color: 'var(--accent-cyan)', glowColor: 'radial-gradient(circle at 50% 0%, rgba(34,211,238,0.12), transparent 70%)' },
-  { icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="var(--success)" stroke-width="1.8" stroke-linecap="round"/></svg>', label: '关注', value: store.totalFollow.toLocaleString(), color: 'var(--success)', glowColor: 'radial-gradient(circle at 50% 0%, rgba(16,185,129,0.12), transparent 70%)' }
+  { icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="var(--primary)" stroke-width="1.8"/></svg>', label: '弹幕', raw: store.totalDanmu, color: 'var(--primary)', glowColor: 'radial-gradient(circle at 50% 0%, var(--primary-soft), transparent 70%)' },
+  { icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5c0-2 1.5-3.5 4.5-3.5s4.5 1.5 4.5 3.5" stroke="var(--warning)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>', label: '礼物', raw: store.totalGift, color: 'var(--warning)', glowColor: 'radial-gradient(circle at 50% 0%, rgba(251,191,36,0.12), transparent 70%)' },
+  { icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="var(--danger)" stroke-width="1.8"/></svg>', label: '点赞', raw: store.totalLike, color: 'var(--danger)', glowColor: 'radial-gradient(circle at 50% 0%, rgba(239,68,68,0.12), transparent 70%)' },
+  { icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM20 8v6M23 11h-6" stroke="var(--accent-cyan)" stroke-width="1.8" stroke-linecap="round"/></svg>', label: '进入', raw: store.totalMember, color: 'var(--accent-cyan)', glowColor: 'radial-gradient(circle at 50% 0%, rgba(34,211,238,0.12), transparent 70%)' },
+  { icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="var(--success)" stroke-width="1.8" stroke-linecap="round"/></svg>', label: '关注', raw: store.totalFollow, color: 'var(--success)', glowColor: 'radial-gradient(circle at 50% 0%, rgba(16,185,129,0.12), transparent 70%)' }
 ])
 
 function avatarGradient(roomId: string) {
