@@ -54,6 +54,14 @@ function createWindow(): void {
     mainWindow = null
   })
 
+  // 最大化状态变化推送给渲染进程（标题栏图标联动）
+  mainWindow.on('maximize', () => {
+    if (mainWindow) mainWindow.webContents.send('window:maximize-change', true)
+  })
+  mainWindow.on('unmaximize', () => {
+    if (mainWindow) mainWindow.webContents.send('window:maximize-change', false)
+  })
+
   mainWindow.on('close', (e) => {
     e.preventDefault()
     cleanup().catch(() => {}).finally(() => {
@@ -69,9 +77,4 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
-})
-
-app.on('window-all-closed', async () => {
-  await cleanup()
-  app.quit()
 })

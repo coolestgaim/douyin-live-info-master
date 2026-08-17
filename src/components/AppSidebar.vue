@@ -2,17 +2,22 @@
   <div class="sidebar">
     <div class="sidebar-brand">
       <div class="brand-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <rect x="2" y="3" width="20" height="14" rx="3" stroke="#f97316" stroke-width="2"/>
-          <path d="M8 21h8M12 17v4" stroke="#f97316" stroke-width="2" stroke-linecap="round"/>
-          <circle cx="12" cy="10" r="3" fill="#f97316" opacity="0.3"/>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <rect x="2" y="3" width="20" height="14" rx="3" stroke="var(--primary)" stroke-width="2"/>
+          <path d="M8 21h8M12 17v4" stroke="var(--accent-cyan)" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="12" cy="10" r="3" fill="var(--primary)" opacity="0.35"/>
         </svg>
       </div>
-      <span class="brand-name">ZhuoZhuo Live</span>
+      <div class="brand-text">
+        <span class="brand-name">灼灼直播控场</span>
+        <span class="brand-sub">直播中控台</span>
+      </div>
     </div>
-    <div class="nav-items">
+
+    <div class="nav-group">
+      <div class="nav-group-label">直播</div>
       <button
-        v-for="item in navItems"
+        v-for="item in liveNavItems"
         :key="item.path"
         :class="['nav-item', { active: current === item.path }]"
         @click="$emit('navigate', item.path)"
@@ -22,17 +27,49 @@
         <span class="nav-label">{{ item.label }}</span>
       </button>
     </div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">工具</div>
+      <button
+        v-for="item in toolNavItems"
+        :key="item.path"
+        :class="['nav-item', { active: current === item.path }]"
+        @click="$emit('navigate', item.path)"
+      >
+        <div :class="['nav-indicator', { visible: current === item.path }]"></div>
+        <span class="nav-icon" v-html="item.icon"></span>
+        <span class="nav-label">{{ item.label }}</span>
+      </button>
+    </div>
+
     <div class="sidebar-footer">
-      <div class="version-tag">V 2.8.0</div>
+      <button class="theme-switch" @click="settingsStore.toggleTheme()" :title="isDark ? '切换到亮色主题' : '切换到暗色主题'">
+        <svg v-if="isDark" width="13" height="13" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <svg v-else width="13" height="13" viewBox="0 0 24 24" fill="none">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+        </svg>
+        <span class="theme-switch-text">{{ isDark ? '亮色主题' : '暗色主题' }}</span>
+      </button>
+      <div class="version-tag">V {{ version }}</div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useSettingsStore } from '../stores/settings'
+
 defineProps<{ current: string }>()
 defineEmits<{ navigate: [path: string] }>()
 
-const navItems = [
+const settingsStore = useSettingsStore()
+const isDark = computed(() => settingsStore.themeMode === 'dark')
+const version = '2.9.0'
+
+const liveNavItems = [
   {
     path: '/dashboard',
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="2" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="3" width="7" height="7" rx="2" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="14" width="7" height="7" rx="2" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="14" width="7" height="7" rx="2" stroke="currentColor" stroke-width="1.8"/></svg>',
@@ -52,11 +89,14 @@ const navItems = [
     path: '/recording',
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>',
     label: '录制'
-  },
+  }
+]
+
+const toolNavItems = [
   {
     path: '/quick-reply',
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2 L2 7 L12 12 L22 7 L12 2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M2 17 L12 22 L22 17" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M2 12 L12 17 L22 12" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
-    label: '回复'
+    label: '快捷回复'
   },
   {
     path: '/settings',
@@ -73,20 +113,21 @@ const navItems = [
 
 <style scoped>
 .sidebar {
-  background: #0d0f14;
+  background: var(--bg-sidebar);
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #1a1d26;
-  padding: 20px 8px 12px;
+  border-right: 1px solid var(--border-default);
+  padding: 16px 8px 12px;
+  transition: background-color 0.25s ease;
 }
 
 .sidebar-brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 12px 20px;
-  border-bottom: 1px solid #1a1d26;
-  margin-bottom: 16px;
+  padding: 0 10px 16px;
+  border-bottom: 1px solid var(--border-default);
+  margin-bottom: 12px;
 }
 
 .brand-icon {
@@ -95,29 +136,50 @@ const navItems = [
   justify-content: center;
 }
 
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
 .brand-name {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
-  color: #e0e2e8;
+  color: var(--text-primary);
   letter-spacing: 0.5px;
 }
 
-.nav-items {
+.brand-sub {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+
+.nav-group {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  margin-bottom: 10px;
+}
+
+.nav-group-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  padding: 4px 12px 4px;
+  user-select: none;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 9px 12px;
   border: none;
   background: transparent;
-  color: #5a5e6e;
+  color: var(--text-muted);
   font-size: 13px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   text-align: left;
   font-family: inherit;
@@ -126,13 +188,13 @@ const navItems = [
 }
 
 .nav-item:hover {
-  background: rgba(249, 115, 22, 0.06);
-  color: #a0a4b0;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
 }
 
 .nav-item.active {
-  background: rgba(249, 115, 22, 0.1);
-  color: #f97316;
+  background: var(--bg-active);
+  color: var(--primary);
   font-weight: 600;
 }
 
@@ -143,7 +205,7 @@ const navItems = [
   transform: translateY(-50%);
   width: 3px;
   height: 0;
-  background: linear-gradient(180deg, #f97316, #ef4444);
+  background: linear-gradient(180deg, var(--primary), var(--accent-cyan));
   border-radius: 0 3px 3px 0;
   transition: height 0.2s ease;
 }
@@ -164,13 +226,44 @@ const navItems = [
 .sidebar-footer {
   margin-top: auto;
   padding-top: 12px;
-  border-top: 1px solid #1a1d26;
+  border-top: 1px solid var(--border-default);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.theme-switch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.theme-switch:hover {
+  border-color: var(--primary-border);
+  color: var(--primary);
+  background: var(--bg-hover);
+}
+
+.theme-switch-text {
+  flex: 1;
+  text-align: left;
 }
 
 .version-tag {
   text-align: center;
   font-size: 10px;
-  color: #3a3d46;
+  color: var(--text-dim);
   letter-spacing: 1px;
   font-weight: 500;
 }

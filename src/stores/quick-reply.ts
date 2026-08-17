@@ -163,7 +163,7 @@ export const useQuickReplyStore = defineStore('quickReply', () => {
                 }
                 return path.join(' > ');
               }
-              el.style.outline = '3px solid #f97316';
+              el.style.outline = '3px solid var(--primary)';
               setTimeout(function() { el.style.outline = '' }, 3000);
               window.__hermesPinned = { selector: buildSelector(el), tag: el.tagName, text: (el.textContent||'').substring(0, 50) };
             }, { once: true, capture: true });

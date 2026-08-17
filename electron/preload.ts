@@ -47,6 +47,9 @@ const api = {
   windowClose: () => ipcRenderer.invoke('window:close'),
   windowPin: () => ipcRenderer.invoke('window:pin'),
   windowIsPinned: () => ipcRenderer.invoke('window:isPinned'),
+  windowIsMaximized: () => ipcRenderer.invoke('window:isMaximized'),
+  onWindowMaximizeChange: (cb: (isMax: boolean) => void) => ipcRenderer.on('window:maximize-change', (_e, isMax) => cb(isMax)),
+  offWindowMaximizeChange: () => ipcRenderer.removeAllListeners('window:maximize-change'),
 
   // DeskPins
   deskpinsList: () => ipcRenderer.invoke('deskpins:list'),

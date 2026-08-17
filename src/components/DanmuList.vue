@@ -41,7 +41,7 @@ watch(() => props.paused, (p) => {
 
 .danmu-empty {
   text-align: center;
-  color: #5A5A5A;
+  color: var(--text-faint);
   font-size: 13px;
   padding: 40px 0;
 }

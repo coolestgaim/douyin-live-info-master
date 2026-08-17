@@ -280,6 +280,7 @@ export function registerIpcHandlers(): void {
     if (!mainWindow) return
     mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize()
   })
+  ipcMain.handle('window:isMaximized', () => mainWindow?.isMaximized() || false)
   ipcMain.handle('window:close', () => { mainWindow?.close() })
   ipcMain.handle('window:pin', () => {
     if (!mainWindow) return false

@@ -6,14 +6,14 @@
       <div class="app-info">
         <div class="app-logo">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
-            <rect x="2" y="3" width="20" height="14" rx="3" stroke="#f97316" stroke-width="2"/>
-            <path d="M8 21h8M12 17v4" stroke="#f97316" stroke-width="2" stroke-linecap="round"/>
-            <circle cx="12" cy="10" r="3" fill="#f97316" opacity="0.3"/>
+            <rect x="2" y="3" width="20" height="14" rx="3" stroke="var(--primary)" stroke-width="2"/>
+            <path d="M8 21h8M12 17v4" stroke="var(--primary)" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="12" cy="10" r="3" fill="var(--primary)" opacity="0.3"/>
           </svg>
         </div>
         <div>
           <div class="app-name">灼灼直播控场</div>
-          <div class="app-version">V 2.8.0 — 实时弹幕监听 · 直播录制 · 快捷控场</div>
+          <div class="app-version">V 2.9.0 — 实时弹幕监听 · 直播录制 · 快捷控场 · 双主题</div>
         </div>
       </div>
 
@@ -21,7 +21,7 @@
 
       <div class="section-header">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 3a4 4 0 100 8 4 4 0 000-8z" stroke="#f97316" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 3a4 4 0 100 8 4 4 0 000-8z" stroke="var(--primary)" stroke-width="1.8" stroke-linecap="round"/>
         </svg>
         <h3 class="section-title">联系方式</h3>
       </div>
@@ -35,8 +35,8 @@
 
       <div class="section-header">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <rect x="1" y="3" width="22" height="14" rx="2" stroke="#f97316" stroke-width="1.8"/>
-          <path d="M23 7l-11 7L1 7" stroke="#f97316" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <rect x="1" y="3" width="22" height="14" rx="2" stroke="var(--primary)" stroke-width="1.8"/>
+          <path d="M23 7l-11 7L1 7" stroke="var(--primary)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <h3 class="section-title">扫码关注</h3>
       </div>
@@ -64,7 +64,7 @@
 
       <div class="section-header">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#f97316" stroke-width="1.8" fill="none"/>
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="var(--primary)" stroke-width="1.8" fill="none"/>
         </svg>
         <h3 class="section-title">免责声明</h3>
       </div>
@@ -101,19 +101,19 @@ import rewardImg from '@/assets/reward.jpg'
 .app-logo {
   width: 56px;
   height: 56px;
-  background: rgba(249, 115, 22, 0.1);
+  background: var(--bg-active);
   border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.app-name { font-size: 18px; font-weight: 700; color: #e0e2e8; }
-.app-version { font-size: 12px; color: #6b7080; margin-top: 4px; }
+.app-name { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+.app-version { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
 
 .section-divider {
   height: 1px;
-  background: #1e2028;
+  background: var(--border-default);
   margin: 20px 0;
 }
 
@@ -124,7 +124,7 @@ import rewardImg from '@/assets/reward.jpg'
   margin-bottom: 16px;
 }
 
-.section-title { font-size: 15px; font-weight: 700; color: #e0e2e8; }
+.section-title { font-size: 15px; font-weight: 700; color: var(--text-primary); }
 
 .contact-row {
   display: flex;
@@ -135,13 +135,13 @@ import rewardImg from '@/assets/reward.jpg'
 
 .contact-label {
   font-size: 12px;
-  color: #6b7080;
+  color: var(--text-muted);
   min-width: 48px;
 }
 
 .contact-value {
   font-size: 13px;
-  color: #f97316;
+  color: var(--primary);
   font-weight: 500;
 }
 
@@ -163,19 +163,19 @@ import rewardImg from '@/assets/reward.jpg'
   height: 120px;
   object-fit: cover;
   border-radius: 8px;
-  border: 1px solid #2a2d36;
-  background: #fff;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-card);
 }
 
 .qr-label {
   font-size: 12px;
-  color: #6b7080;
+  color: var(--text-muted);
   font-weight: 500;
 }
 
 .disclaimer-text {
   font-size: 12px;
-  color: #6b7080;
+  color: var(--text-muted);
   line-height: 1.8;
 }
 

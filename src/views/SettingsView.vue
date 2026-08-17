@@ -5,8 +5,27 @@
     <div class="card settings-card">
       <div class="section-header">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="3" stroke="#f97316" stroke-width="1.8"/>
-          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="#f97316" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="12" cy="12" r="4.5" stroke="var(--primary)" stroke-width="1.8"/>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41" stroke="var(--primary)" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <h3 class="section-title">界面主题</h3>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">主题模式</label>
+        <n-radio-group v-model:value="settings.themeMode" @update:value="(v: any) => settings.setThemeMode(v)">
+          <n-radio-button value="dark">暗色（默认）</n-radio-button>
+          <n-radio-button value="light">亮色</n-radio-button>
+        </n-radio-group>
+        <div class="form-hint">暗色适合直播盯屏，亮色适合白天办公环境，选择立即生效并自动保存</div>
+      </div>
+    </div>
+
+    <div class="card settings-card">
+      <div class="section-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="3" stroke="var(--primary)" stroke-width="1.8"/>
+          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="var(--primary)" stroke-width="1.8" stroke-linecap="round"/>
         </svg>
         <h3 class="section-title">录制设置</h3>
       </div>
@@ -48,7 +67,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { NInput, NButton, NSelect, NSwitch, NInputNumber } from 'naive-ui'
+import { NInput, NButton, NSelect, NSwitch, NInputNumber, NRadioGroup, NRadioButton } from 'naive-ui'
 import { useSettingsStore } from '../stores/settings'
 
 const settings = useSettingsStore()
@@ -78,27 +97,27 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
-.section-title { font-size: 15px; font-weight: 700; color: #e0e2e8; }
+.section-title { font-size: 15px; font-weight: 700; color: var(--text-primary); }
 
 .form-group { margin-bottom: 18px; }
 .form-label {
   font-size: 11px;
-  color: #6b7080;
+  color: var(--text-muted);
   display: block;
   margin-bottom: 6px;
   font-weight: 500;
 }
-.switch-label { font-size: 12px; color: #8b8fa3; margin-left: 8px; vertical-align: middle; }
+.switch-label { font-size: 12px; color: var(--text-secondary); margin-left: 8px; vertical-align: middle; }
 
 .path-row { display: flex; gap: 8px; }
-.form-hint { font-size: 10px; color: #3a3d46; margin-top: 6px; }
+.form-hint { font-size: 10px; color: var(--text-dim); margin-top: 6px; }
 
 .form-divider {
   height: 1px;
-  background: #1e2028;
+  background: var(--border-default);
   margin: 20px 0;
 }
 
 .form-actions { display: flex; align-items: center; gap: 12px; }
-.success-text { font-size: 12px; color: #10b981; font-weight: 500; }
+.success-text { font-size: 12px; color: var(--success); font-weight: 500; }
 </style>
