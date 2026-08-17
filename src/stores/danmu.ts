@@ -106,13 +106,14 @@ export const useDanmuStore = defineStore('danmu', () => {
   }
 
   function addMessage(msg: DanmuMessage) {
+    // 高频消息（点赞/进入）大幅降低存储上限，减少内存占用；其余保留 2000
     allMessages.value = [msg, ...allMessages.value].slice(0, 2000)
 
     switch (msg.type) {
       case 'Chat': chatMessages.value = [msg, ...chatMessages.value].slice(0, 2000); break
-      case 'Gift': giftMessages.value = [msg, ...giftMessages.value].slice(0, 2000); break
-      case 'Like': likeMessages.value = [msg, ...likeMessages.value].slice(0, 2000); break
-      case 'Member': memberMessages.value = [msg, ...memberMessages.value].slice(0, 2000); break
+      case 'Gift': giftMessages.value = [msg, ...giftMessages.value].slice(0, 1000); break
+      case 'Like': likeMessages.value = [msg, ...likeMessages.value].slice(0, 500); break
+      case 'Member': memberMessages.value = [msg, ...memberMessages.value].slice(0, 800); break
       case 'Social': socialMessages.value = [msg, ...socialMessages.value].slice(0, 2000); break
     }
 
