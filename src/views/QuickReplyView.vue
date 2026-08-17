@@ -10,6 +10,10 @@
         <!-- 实例顶栏 -->
         <div class="qr-topbar">
           <input v-model="inst.name" class="qr-name" placeholder="实例名称" />
+          <span :class="['qr-inst-status', { on: inst.status === 'running' }]">
+            <span class="qr-inst-dot"></span>
+            {{ inst.status === 'running' ? '运行中' : '已停止' }}
+          </span>
           <div class="qr-top-actions">
             <button v-if="store.instances.length > 1" class="qr-top-btn qr-del-i" @click="doRemoveInstance(inst)">×</button>
           </div>
@@ -22,10 +26,12 @@
             @click="inst.status === 'running' ? closeWebview(inst) : loadWebview(inst)">
             {{ inst.status === 'running' ? '关闭' : '加载' }}
           </button>
-          <button v-if="inst.status === 'running'" class="qr-sm-btn" @click="toggleStripped(inst)"
-            :title="inst._stripped ? '恢复全部元素' : '精简模式'">{{ inst._stripped ? '恢复' : '精简' }}</button>
-          <button v-if="inst.status === 'running'" class="qr-sm-btn qr-sm-ref" @click="refreshWebview(inst)">刷新</button>
-          <button v-if="inst.status === 'running'" class="qr-sm-btn qr-sm-clear" @click="clearLogin(inst)">清登</button>
+          <div v-if="inst.status === 'running'" class="qr-sm-group">
+            <button class="qr-sm-btn" @click="toggleStripped(inst)"
+              :title="inst._stripped ? '恢复全部元素' : '精简模式'">{{ inst._stripped ? '恢复' : '精简' }}</button>
+            <button class="qr-sm-btn qr-sm-ref" @click="refreshWebview(inst)">刷新</button>
+            <button class="qr-sm-btn qr-sm-clear" @click="clearLogin(inst)">清登</button>
+          </div>
         </div>
 
         <!-- 历史直播间快捷填入（长按拖拽排序） -->
@@ -48,9 +54,18 @@
 
         <!-- 手机主体：v-show 假关闭（保登录态，重开秒显示） -->
         <div class="qr-body" v-show="inst.status === 'running'">
-          <div class="qr-webview-wrap">
+          <div :class="['qr-webview-wrap', { on: inst.status === 'running', 'wv-loading': wvLoading[inst.id] }]">
+            <!-- 加载进度条（webview 整页加载时显示） -->
+            <div v-if="wvLoading[inst.id]" class="qr-wv-loading"><div class="qr-wv-loading-inner"></div></div>
+            <!-- 屏幕装饰：挖孔 + 状态条（纯装饰，不参与交互） -->
+            <div class="qr-screenbar">
+              <span class="qr-st-time">09:41</span>
+              <div class="qr-notch"></div>
+              <span class="qr-st-sig"></span>
+            </div>
             <webview :ref="(el:any) => setWebviewRef(inst.id, el)" :src="resolveUrl(inst.roomUrl)"
-              :partition="'persist:qr_'+inst.id" allowpopups="true" class="qr-wv" @dom-ready="onWebviewReady(inst.id)" />
+              :partition="'persist:qr_'+inst.id" allowpopups="true" class="qr-wv" @dom-ready="onWebviewReady(inst.id)"
+              @did-start-loading="setWvLoading(inst.id, true)" @did-stop-loading="setWvLoading(inst.id, false)" />
           </div>
 
           <!-- 回复面板 -->
@@ -77,15 +92,16 @@
                 </div>
               </div>
               <div class="qr-g-list">
-                <div v-for="(g, gi) in inst.quickReplyGroups" :key="gi" class="qr-g">
+                <div v-for="(g, gi) in inst.quickReplyGroups" :key="gi" :class="['qr-g', { editing: g._tab === 'edit' }]">
                   <div class="qr-g-title" @click="store.toggleGroup(inst.id, gi)">
-                    <span class="qr-g-arr">{{ g.expanded ? '▾' : '▸' }}</span>
+                    <span :class="['qr-g-arr', { open: g.expanded }]">▸</span>
                     <input :value="g.name" @input="store.setGroupName(inst.id, gi, ($event.target as HTMLInputElement).value)"
                       class="qr-g-name" placeholder="分组名" @click.stop />
                     <button v-if="inst.quickReplyGroups.length>1" class="qr-g-del" @click.stop="store.removeGroup(inst.id, gi)">×</button>
                     <button :class="['qr-g-btn', 'qr-g-edit', { on: g._tab === 'edit' }]" @click.stop="g._tab = g._tab === 'edit' ? 'send' : 'edit'">{{ g._tab === 'edit' ? '完成' : '编辑' }}</button>
-                    <button class="qr-g-btn" @click.stop="doExportGroup(inst.id, gi)" title="导出此分组">导出</button>
+                    <button class="qr-g-btn qr-g-export" @click.stop="doExportGroup(inst.id, gi)" title="导出此分组">导出</button>
                   </div>
+                  <transition name="qr-grow">
                   <div v-if="g.expanded" class="qr-g-body">
                     <!-- 发送模式：chip 内嵌复制按钮（紧凑、参考「鸽子神 ×」样式） -->
                     <div v-if="g._tab === 'send'">
@@ -113,6 +129,7 @@
                       <button class="qr-g-add" @click="store.addQuickReply(inst.id, gi)">+ 添加短语</button>
                     </div>
                   </div>
+                  </transition>
                 </div>
               </div>
             </div>
@@ -127,6 +144,9 @@
             </div>
           </div>
         </div>
+
+        <!-- 机身 Home 指示条（纯装饰） -->
+        <div class="qr-home"></div>
       </div>
     </div>
 
@@ -146,6 +166,9 @@ const wvRefs = ref<Record<number, HTMLWebViewElement>>({})
 const importInput = ref<HTMLInputElement | null>(null)
 const phoneH = ref<Record<number, number>>({})
 const burstMap = reactive<Record<number, boolean>>({})
+/* webview 整页加载状态（驱动加载进度条 + 屏幕微光） */
+const wvLoading = reactive<Record<number, boolean>>({})
+function setWvLoading(id: number, loading: boolean) { wvLoading[id] = loading }
 
 const STRIP_RULES = `.webcast-chatroom > :not(.pZzS8QUV):not(.webcast-chatroom___input-container){display:none!important}.LyAdeVIF.sBRqUw32,[class*="gift"],[class*="floating"],[class*="Floating"],[class*="interact-bar"],[class*="VideoPlayer"],video,[class*="player-container"],[class*="Player"],[class*="shop"],[class*="Shop"],[class*="product"],[class*="mall"],[class*="cart"]{display:none!important}`
 
@@ -399,9 +422,13 @@ function doImport(e: Event) {
 /* 手机操作台固定暗色：内部变量重定义为暗色值，模拟手机屏不随应用主题漂移 */
 .qr-phone {
   width: 375px; min-width: 375px; height: calc(100vh - 90px); display: flex; flex-direction: column; padding: 8px; gap: 6px; flex-shrink: 0; overflow: hidden;
+  position: relative;
+  border-radius: 22px;
+  border: 1.5px solid #3a3d46;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.35);
   --bg-card: #1a1d26;
   --bg-elevated: #15171e;
-  --bg-track: var(--bg-track);
+  --bg-track: #111318;
   --bg-hover: rgba(240, 80, 110, 0.06);
   --bg-active: rgba(240, 80, 110, 0.1);
   --bg-selected: rgba(240, 80, 110, 0.08);
@@ -430,11 +457,25 @@ function doImport(e: Event) {
 }
 .qr-topbar { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .qr-name { flex: 1; background: transparent; border: none; color: var(--text-primary); font-size: 13px; font-weight: 600; font-family: inherit; outline: none; padding: 2px 4px; }
+/* 实例运行状态胶囊 */
+.qr-inst-status {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 9px; color: var(--text-faint); padding: 1px 8px; border-radius: 8px;
+  border: 1px solid var(--border-strong); background: var(--bg-card);
+  white-space: nowrap; flex-shrink: 0;
+}
+.qr-inst-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--text-dim); }
+.qr-inst-status.on { color: var(--success); border-color: var(--success-border); background: var(--success-soft); }
+.qr-inst-status.on .qr-inst-dot { background: var(--success); box-shadow: 0 0 5px var(--success-border); }
 .qr-top-actions { display: flex; gap: 4px; }
 .qr-top-btn { background: transparent; border: none; color: var(--text-muted); font-size: 14px; cursor: pointer; padding: 0 4px; line-height: 1; }
-.qr-del-i { color: var(--danger); }
+.qr-del-i { color: var(--danger); opacity: 0; transition: opacity .15s; }
+.qr-phone:hover .qr-del-i { opacity: 1; }
 
-.qr-urlbar { display: flex; gap: 4px; flex-shrink: 0; }
+.qr-urlbar { display: flex; gap: 4px; flex-shrink: 0; align-items: center; }
+/* 次要操作（精简/刷新/清登）：整卡 hover 时浮现 */
+.qr-sm-group { display: flex; gap: 4px; opacity: 0; transform: translateX(2px); transition: opacity .18s ease, transform .18s ease; }
+.qr-phone:hover .qr-sm-group { opacity: 1; transform: translateX(0); }
 
 /* 历史直播间快捷填入 */
 .qr-history { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; flex-shrink: 0; }
@@ -452,12 +493,12 @@ function doImport(e: Event) {
   box-shadow: 0 4px 14px rgba(249,115,22,0.25);
   cursor: grabbing; position: relative;
 }
-.qr-url { flex: 1; background: var(--bg-track); border: 1px solid var(--border-strong); border-radius: 4px; padding: 4px 8px; color: var(--text-secondary); font-size: 10px; font-family: inherit; outline: none; min-width: 0; }
+.qr-url { flex: 1; background: var(--bg-track); border: 1px solid var(--border-strong); border-radius: 8px; padding: 4px 10px; color: var(--text-secondary); font-size: 10px; font-family: inherit; outline: none; min-width: 0; transition: border-color .15s; }
 .qr-url:focus { border-color: var(--primary); }
-.qr-sm-btn { padding: 3px 8px; border-radius: 4px; font-size: 10px; font-family: inherit; cursor: pointer; border: 1px solid var(--border-strong); background: transparent; color: var(--text-muted); white-space: nowrap; }
+.qr-sm-btn { padding: 3px 8px; border-radius: 6px; font-size: 10px; font-family: inherit; cursor: pointer; border: 1px solid var(--border-strong); background: transparent; color: var(--text-muted); white-space: nowrap; }
 .qr-sm-btn:hover { border-color: var(--primary); color: var(--text-secondary); }
 .qr-sm-pri { background: var(--primary); color: #fff; border-color: var(--primary); }
-.qr-sm-pri:hover { background: var(--primary-hover); }
+.qr-sm-pri:hover { background: var(--primary-hover); color: #fff; }
 .qr-sm-danger { background: rgba(239,68,68,0.12); color: var(--danger); border-color: var(--danger-border); }
 .qr-sm-danger:hover { background: var(--danger-border); }
 .qr-sm-ref { border-color: var(--success-border); color: var(--success); }
@@ -466,8 +507,69 @@ function doImport(e: Event) {
 .qr-sm-clear:hover { background: rgba(107,114,128,0.1); }
 
 .qr-body { flex: 1; display: flex; flex-direction: column; min-height: 0; gap: 6px; }
-.qr-webview-wrap { flex: 0 1 240px; min-height: 120px; border-radius: 8px; overflow: auto; border: 1px solid var(--border-strong); position: relative; }
+/* 手机屏幕：圆角大屏 + 内阴影 + 顶部屏幕装饰条 */
+.qr-webview-wrap {
+  flex: 0 1 240px; min-height: 120px; border-radius: 14px; overflow: auto;
+  border: 1px solid #2a2d36; position: relative;
+  background: #0d0f14;
+  box-shadow: inset 0 0 12px rgba(0,0,0,0.45);
+  transition: border-color .3s ease, box-shadow .3s ease;
+}
+/* 运行中：青色微光描边 */
+.qr-webview-wrap.on {
+  border-color: var(--success-border);
+  box-shadow: 0 0 0 1px var(--success-border), inset 0 0 12px rgba(0,0,0,0.45);
+}
+/* 加载中：主红呼吸 */
+.qr-webview-wrap.wv-loading {
+  border-color: var(--primary-border);
+  animation: qr-wv-pulse 1.2s ease-in-out infinite;
+}
+@keyframes qr-wv-pulse {
+  0%, 100% { box-shadow: 0 0 4px var(--primary-border), inset 0 0 12px rgba(0,0,0,0.45); }
+  50% { box-shadow: 0 0 14px var(--primary-border), inset 0 0 12px rgba(0,0,0,0.45); }
+}
+/* 加载进度条：屏幕顶部细条 */
+.qr-wv-loading {
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  overflow: hidden; z-index: 12; border-radius: 14px 14px 0 0;
+}
+.qr-wv-loading-inner {
+  height: 100%; width: 40%;
+  background: linear-gradient(90deg, var(--primary), var(--accent-cyan));
+  border-radius: 2px;
+  animation: qr-wv-loading-slide 1s ease-in-out infinite;
+}
+@keyframes qr-wv-loading-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}
 .qr-wv { width: 1024px; min-height: 680px; display: flex; }
+/* 屏幕状态条（纯装饰，不参与交互，不随滚动） */
+.qr-screenbar {
+  position: sticky; top: 0; left: 0; right: 0; height: 16px; z-index: 10;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 10px; pointer-events: none;
+  background: linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.25) 70%, transparent);
+  border-radius: 14px 14px 0 0;
+}
+.qr-st-time { font-size: 9px; color: rgba(255,255,255,0.5); letter-spacing: 0.5px; font-variant-numeric: tabular-nums; }
+.qr-notch { width: 34px; height: 7px; border-radius: 4px; background: #000; opacity: 0.85; }
+.qr-st-sig {
+  width: 15px; height: 7px; border: 1px solid rgba(255,255,255,0.45); border-radius: 2px;
+  position: relative;
+}
+.qr-st-sig::after {
+  content: ''; position: absolute; top: 1px; left: 1px; right: 1px; bottom: 1px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.6) 60%, transparent 60%);
+  border-radius: 1px;
+}
+/* Home 指示条（机身底部装饰） */
+.qr-home {
+  position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%);
+  width: 42px; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.22);
+  pointer-events: none;
+}
 
 /* 回复面板：flex 自适应占剩余空间（qr-phone 高度确定，flex 链可算）；
    pin-row/send 固定，groups 独立滚动 → send 永远可见 */
@@ -476,8 +578,8 @@ function doImport(e: Event) {
 .qr-panel::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); border-radius: 4px; }
 .qr-panel::-webkit-scrollbar-thumb { background: var(--primary-border); border-radius: 4px; }
 .qr-panel::-webkit-scrollbar-thumb:hover { background: rgba(249,115,22,0.7); }
-.qr-pin-row { font-size: 10px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; flex-shrink: 0; }
-.qr-pin { background: var(--success-soft); border: 1px solid var(--success-border); color: var(--success); font-size: 9px; padding: 1px 6px; border-radius: 3px; cursor: pointer; font-family: inherit; }
+.qr-pin-row { font-size: 10px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; flex-shrink: 0; padding: 1px 2px; }
+.qr-pin { background: var(--success-soft); border: 1px solid var(--success-border); color: var(--success); font-size: 9px; padding: 1px 6px; border-radius: 5px; cursor: pointer; font-family: inherit; }
 .qr-pin:hover { background: var(--success-soft); }
 .qr-pin-s { border-color: var(--primary-border); color: var(--primary); }
 .qr-pin-s:hover { background: var(--primary-border); }
@@ -491,21 +593,30 @@ function doImport(e: Event) {
 .qr-groups::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); border-radius: 4px; }
 .qr-groups::-webkit-scrollbar-thumb { background: var(--primary-border); border-radius: 4px; }
 .qr-groups::-webkit-scrollbar-thumb:hover { background: rgba(249,115,22,0.7); }
-.qr-g-hd { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; background: var(--bg-elevated); font-size: 10px; color: var(--text-muted); }
+.qr-g-hd { display: flex; align-items: center; justify-content: space-between; padding: 5px 9px; background: var(--bg-elevated); font-size: 10px; color: var(--text-muted); border-bottom: 1px solid var(--border-default); }
 .qr-g-actions { display: flex; gap: 3px; }
-.qr-g-btn { background: transparent; border: 1px solid var(--border-strong); color: var(--text-muted); font-size: 9px; padding: 1px 6px; border-radius: 3px; cursor: pointer; font-family: inherit; }
+.qr-g-btn { background: transparent; border: 1px solid var(--border-strong); color: var(--text-muted); font-size: 9px; padding: 2px 7px; border-radius: 5px; cursor: pointer; font-family: inherit; }
 .qr-g-btn:hover { border-color: var(--primary); color: var(--primary); }
 .qr-g-io { color: var(--text-muted); }
 .qr-g-io:hover { border-color: var(--text-muted); color: var(--text-secondary); }
-.qr-g-list { display: flex; flex-direction: column; gap: 2px; padding: 2px; }
-.qr-g { border: 1px solid var(--border-default); border-radius: 4px; overflow: hidden; }
-.qr-g-title { display: flex; align-items: center; gap: 3px; padding: 2px 6px; background: var(--bg-elevated); cursor: pointer; user-select: none; font-size: 10px; }
+.qr-g-list { display: flex; flex-direction: column; gap: 3px; padding: 3px; }
+.qr-g { border: 1px solid var(--border-default); border-radius: 7px; overflow: hidden; transition: border-color .2s, box-shadow .2s; }
+/* 编辑中的分组：青绿描边提示 */
+.qr-g.editing { border-color: var(--success-border); box-shadow: 0 0 0 1px var(--success-border); }
+.qr-g-title { display: flex; align-items: center; gap: 3px; padding: 3px 7px; background: var(--bg-elevated); cursor: pointer; user-select: none; font-size: 10px; }
 .qr-g-title:hover { background: var(--bg-card); }
-.qr-g-arr { color: var(--text-muted); font-size: 10px; width: 12px; text-align: center; flex-shrink: 0; }
+.qr-g-arr { color: var(--text-muted); font-size: 10px; width: 12px; text-align: center; flex-shrink: 0; display: inline-block; transition: transform .2s ease; }
+.qr-g-arr.open { transform: rotate(90deg); color: var(--primary); }
 .qr-g-name { flex: 1; background: transparent; border: none; color: var(--text-secondary); font-size: 10px; font-weight: 600; font-family: inherit; outline: none; min-width: 0; }
 .qr-g-name:focus { color: var(--text-primary); }
-.qr-g-del { background: transparent; border: none; color: var(--danger); cursor: pointer; font-size: 12px; padding: 0 2px; line-height: 1; }
+.qr-g-del { background: transparent; border: none; color: var(--danger); cursor: pointer; font-size: 12px; padding: 0 2px; line-height: 1; opacity: 0; transition: opacity .15s; }
+.qr-g-title:hover .qr-g-del { opacity: 1; }
+.qr-g-export { opacity: 0; transition: opacity .15s; }
+.qr-g-title:hover .qr-g-export { opacity: 1; }
 .qr-g-body { padding: 2px 6px 4px; display: flex; flex-direction: column; gap: 2px; max-height: 200px; overflow-y: auto; }
+/* 分组展开/收起过渡 */
+.qr-grow-enter-active, .qr-grow-leave-active { transition: opacity .16s ease, transform .16s ease; }
+.qr-grow-enter-from, .qr-grow-leave-to { opacity: 0; transform: translateY(-4px); }
 /* 紧凑 chip：内嵌文本 + 动作按钮（参考「鸽子神 ×」chip 样式） */
 .qr-g-btn.on { border-color: var(--success-border); color: var(--success); }
 .qr-g-add { background: transparent; border: 1px dashed var(--border-strong); color: var(--text-muted); font-size: 9px; padding: 1px 6px; border-radius: 3px; cursor: pointer; font-family: inherit; width: fit-content; }
@@ -542,9 +653,9 @@ function doImport(e: Event) {
 .qr-chip-del:hover { color: var(--danger); background: var(--danger-soft); }
 
 .qr-send { display: flex; gap: 4px; flex-shrink: 0; }
-.qr-ta { flex: 1; background: var(--bg-track); border: 1px solid var(--border-strong); border-radius: 4px; padding: 3px 6px; color: var(--text-primary); font-size: 10px; font-family: inherit; outline: none; resize: none; }
+.qr-ta { flex: 1; background: var(--bg-track); border: 1px solid var(--border-strong); border-radius: 8px; padding: 4px 10px; color: var(--text-primary); font-size: 10px; font-family: inherit; outline: none; resize: none; transition: border-color .15s; }
 .qr-ta:focus { border-color: var(--primary); }
-.qr-send-btn { padding: 3px 10px; border-radius: 4px; font-size: 10px; font-family: inherit; cursor: pointer; border: none; background: var(--bg-active); color: var(--primary); border: 1px solid var(--primary-border); white-space: nowrap; }
+.qr-send-btn { padding: 4px 12px; border-radius: 8px; font-size: 10px; font-family: inherit; cursor: pointer; border: none; background: var(--bg-active); color: var(--primary); border: 1px solid var(--primary-border); white-space: nowrap; }
 .qr-send-btn:hover { background: var(--primary-soft); }
 .qr-send-btn:disabled { opacity: 0.3; cursor: default; }
 .qr-send-burst { border-color: rgba(168,85,247,0.3); color: #a855f7; }
