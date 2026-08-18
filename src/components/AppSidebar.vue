@@ -67,7 +67,7 @@ defineEmits<{ navigate: [path: string] }>()
 
 const settingsStore = useSettingsStore()
 const isDark = computed(() => settingsStore.themeMode === 'dark')
-const version = '2.9.7'
+const version = '2.9.9'
 
 const liveNavItems = [
   {

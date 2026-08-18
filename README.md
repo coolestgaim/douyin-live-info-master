@@ -2,7 +2,7 @@
 
 > 抖音直播间控场桌面工具 — 实时弹幕监听、数据统计、直播录制、快捷回复
 
-[![Release](https://img.shields.io/badge/Release-v2.9.7-blue?logo=github)](https://github.com/coolestgaim/douyin-live-info-master/releases)
+[![Release](https://img.shields.io/badge/Release-v2.9.9-blue?logo=github)](https://github.com/coolestgaim/douyin-live-info-master/releases)
 ![Electron](https://img.shields.io/badge/Electron-33-47848F?logo=electron)
 ![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)
@@ -20,14 +20,14 @@
 | **🔍 弹幕过滤** | 按消息类型和房间筛选，历史弹幕搜索，导出 CSV/JSON |
 | **🎥 直播录制** | 内置 ffmpeg 录制直播流，支持 MP3/MP4/WAV/FLV 格式，支持分段录制 |
 | **📁 录制管理** | 历史录制记录面板，单房间多次录制不覆盖，一键打开文件夹/删除 |
-| **📱 快捷回复** | 手机卡片布局，多分组管理，单区域编辑/发送，Hover 浮出复制按钮 |
+| **📱 快捷回复** | 手机卡片布局，多分组管理，单区域编辑/发送，长按拖拽排序，长句自动省略号截断 |
 | **🪟 弹幕浮窗** | 透明可筛选的悬浮窗，直播时浮在桌面上实时查看弹幕 |
 | **💾 本地存储** | SQLite 本地存储所有弹幕记录，无需联网即可查看历史 |
 | **🌙 暗色主题** | 深色 UI，基于 Naive UI 组件库，护眼设计 |
 
 ---
 
-## 📸 截图（v2.9.7 实拍）
+## 📸 截图（v2.9.9 实拍）
 
 | 仪表盘 | 直播间 |
 | ------------------------------------ | ------------------------------------ |

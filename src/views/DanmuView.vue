@@ -393,7 +393,7 @@ async function exportData(format: 'csv' | 'json') {
   backdrop-filter: blur(4px);
 }
 .pause-card { text-align: center; max-width: 360px; padding: 24px; }
-.pause-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); margin: 0 auto 14px; box-shadow: 0 0 12px rgba(249, 115, 22, 0.5); }
+.pause-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); margin: 0 auto 14px; box-shadow: 0 0 12px rgba(240, 80, 110, 0.5); }
 .pause-title { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
 .pause-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 18px; }
 .pause-actions { display: flex; gap: 8px; justify-content: center; }

@@ -118,16 +118,22 @@
                   </div>
                   <transition name="qr-grow">
                   <div v-if="g.expanded" class="qr-g-body">
-                    <!-- 发送模式：chip 内嵌复制按钮（紧凑、参考「鸽子神 ×」样式） -->
+                    <!-- 发送模式：点击 chip 发送，长按拖拽排序（像手机桌面图标） -->
                     <div v-if="g._tab === 'send'">
                       <div class="qr-chips" v-if="g.items.filter(t=>t.trim()).length">
-<span v-for="(qr, qi) in g.items.filter((t:string)=>t.trim())" :key="qi" class="qr-chip">
-                            <span class="qr-chip-text" @click="quickSend(inst.id, qr)">{{ qr }}</span>
-                            <button class="qr-chip-act" :class="{ ok: copiedText === qr }" @click.stop="copyText(qr)" :title="copiedText === qr ? '已复制' : '复制短语'">
-                              <svg v-if="copiedText !== qr" class="qr-chip-icon" viewBox="0 0 24 24" fill="none" width="11" height="11"><rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="2"/><path d="M5 15V5a2 2 0 012-2h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                              <svg v-else class="qr-chip-icon" viewBox="0 0 24 24" fill="none" width="11" height="11"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            </button>
+                        <template v-for="(raw, rawIdx) in g.items" :key="rawIdx">
+                          <span v-if="raw.trim()" class="qr-chip"
+                            :class="{ dragging: qrDrag.active && qrDrag.idx === rawIdx }"
+                            :data-g="gi"
+                            :style="qrDrag.active && qrDrag.idx === rawIdx ? { transform: `translate(${qrDrag.x}px, ${qrDrag.y}px) scale(1.05)`, zIndex: 20 } : {}"
+                            @pointerdown="qrChipDown($event, inst.id, gi, rawIdx)"
+                            @pointermove="qrChipMove($event, gi)"
+                            @pointerup="qrChipUp()"
+                            @pointercancel="qrChipUp()"
+                            @click="qrChipClick(inst.id, raw)">
+                            <span class="qr-chip-text">{{ raw }}</span>
                           </span>
+                        </template>
                       </div>
                       <div v-else class="qr-g-empty">暂无短语，点「编辑」添加</div>
                     </div>
@@ -138,7 +144,7 @@
                           <input :value="g.items[qi]"
                             @input="store.setQuickReply(inst.id, gi, qi, ($event.target as HTMLInputElement).value)"
                             class="qr-chip-input" placeholder="内容..." />
-                          <button class="qr-chip-act qr-chip-del" @click="store.removeQuickReply(inst.id, gi, qi)" title="删除">×</button>
+                          <button class="qr-chip-del" @click="store.removeQuickReply(inst.id, gi, qi)" title="删除">×</button>
                         </span>
                       </div>
                       <button class="qr-g-add" @click="store.addQuickReply(inst.id, gi)">+ 添加短语</button>
@@ -267,11 +273,12 @@ function chipMove(e: PointerEvent, idx: number) {
   // 长按后跟随移动：chip 位移 = 指针位移（相对按下点，避免 rect 漂移）
   dragPos.x = e.clientX - startPos.x
   dragPos.y = e.clientY - startPos.y
-  // 计算目标位置：只统计当前实例卡片内的 chips
+  // 计算目标位置：只统计当前实例卡片内的 chips（排除自己，否则自己跟随指针会永远盖住目标）
   const card = (e.currentTarget as HTMLElement).closest('.qr-phone')
   const chips = card ? Array.from(card.querySelectorAll('.qr-history-chip')) : []
   let target = idx
   chips.forEach((c, i) => {
+    if (i === idx) return
     const r = c.getBoundingClientRect()
     if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
       target = i
@@ -300,17 +307,79 @@ function chipClick(inst: any, url: string) {
   fillHistory(inst, url)
 }
 
-// 复制快捷短语
-const copiedText = ref('')
-let copyTimer: any = null
-async function copyText(text: string) {
-  try {
-    await navigator.clipboard.writeText(text)
-    copiedText.value = text
-    clearTimeout(copyTimer)
-    copyTimer = setTimeout(() => { copiedText.value = '' }, 1500)
-  } catch {}
+// ==== 快捷回复 chip 长按拖拽排序（发送模式下，仿手机桌面图标） ====
+// qrDrag.idx = items 原始索引（模板里 rawIdx 对应）；visIdx = 可见顺序索引（排除自己）；toIdx = 目标可见顺序索引
+const qrDrag = reactive({ active: false, longPress: false, instId: 0, gIdx: 0, idx: -1, visIdx: -1, toIdx: -1, x: 0, y: 0, sx: 0, sy: 0 })
+let qrDragTimer: any = null
+let qrSuppressClick = false
+
+function qrChipDown(e: PointerEvent, instId: number, gIdx: number, idx: number) {
+  qrDrag.active = true
+  qrDrag.longPress = false
+  qrDrag.instId = instId
+  qrDrag.gIdx = gIdx
+  qrDrag.idx = idx
+  qrDrag.toIdx = idx
+  qrDrag.x = 0
+  qrDrag.y = 0
+  qrDrag.sx = e.clientX
+  qrDrag.sy = e.clientY
+  // 记录被拖 chip 的可见顺序索引（跳过空项），目标计算时排除自己
+  const card = (e.currentTarget as HTMLElement).closest('.qr-phone')
+  const chips = card ? Array.from(card.querySelectorAll('.qr-chip[data-g="' + gIdx + '"]')) : []
+  qrDrag.visIdx = chips.indexOf(e.currentTarget as HTMLElement)
+  clearTimeout(qrDragTimer)
+  qrDragTimer = setTimeout(() => { qrDrag.longPress = true }, 300)
 }
+
+function qrChipMove(e: PointerEvent, gIdx: number) {
+  if (!qrDrag.active || qrDrag.idx < 0 || qrDrag.gIdx !== gIdx) return
+  // 未长按前快速移动则取消（视为普通点击）
+  if (!qrDrag.longPress) {
+    if (Math.abs(e.clientX - qrDrag.sx) > 6 || Math.abs(e.clientY - qrDrag.sy) > 6) {
+      clearTimeout(qrDragTimer)
+      qrDrag.active = false
+      qrDrag.idx = -1
+    }
+    return
+  }
+  // 长按后跟随移动：chip 位移 = 指针位移（相对按下点）
+  qrDrag.x = e.clientX - qrDrag.sx
+  qrDrag.y = e.clientY - qrDrag.sy
+  // 目标位置 = 指针落在的可见 chip（排除自己：自己跟随指针移动会一直盖住指针）
+  const card = (e.currentTarget as HTMLElement).closest('.qr-phone')
+  const chips = card ? Array.from(card.querySelectorAll('.qr-chip[data-g="' + gIdx + '"]')) : []
+  let target = qrDrag.toIdx
+  chips.forEach((c, i) => {
+    if (i === qrDrag.visIdx) return
+    const r = c.getBoundingClientRect()
+    if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
+      target = i
+    }
+  })
+  qrDrag.toIdx = target
+}
+
+function qrChipUp() {
+  clearTimeout(qrDragTimer)
+  if (qrDrag.active && qrDrag.longPress) {
+    if (qrDrag.toIdx >= 0 && qrDrag.toIdx !== qrDrag.idx) {
+      store.moveQuickReply(qrDrag.instId, qrDrag.gIdx, qrDrag.idx, qrDrag.toIdx)
+    }
+    qrSuppressClick = true
+  }
+  qrDrag.active = false
+  qrDrag.longPress = false
+  qrDrag.idx = -1
+  qrDrag.x = 0
+  qrDrag.y = 0
+}
+
+function qrChipClick(instId: number, text: string) {
+  if (qrSuppressClick) { qrSuppressClick = false; return }
+  quickSend(instId, text)
+}
+
 function closeWebview(inst: any) {
   // 假关闭：保留 webview（保登录态），静音 + 隐藏，重开秒显示
   const w = wvRefs.value[inst.id]
@@ -649,7 +718,7 @@ function doImport(e: Event) {
 .qr-history-chip:hover { border-color: var(--primary); color: var(--primary-hover); }
 .qr-history-chip.dragging {
   border-color: var(--primary); color: var(--primary-hover); background: #1f2430;
-  box-shadow: 0 4px 14px rgba(249,115,22,0.25);
+  box-shadow: 0 4px 14px rgba(240,80,110,0.3);
   cursor: grabbing; position: relative;
 }
 .qr-url { flex: 1; background: var(--bg-track); border: 1px solid var(--border-strong); border-radius: 8px; padding: 4px 10px; color: var(--text-secondary); font-size: 10px; font-family: inherit; outline: none; min-width: 0; transition: border-color .15s; }
@@ -723,7 +792,7 @@ function doImport(e: Event) {
 .qr-panel::-webkit-scrollbar { width: 8px; }
 .qr-panel::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); border-radius: 4px; }
 .qr-panel::-webkit-scrollbar-thumb { background: var(--primary-border); border-radius: 4px; }
-.qr-panel::-webkit-scrollbar-thumb:hover { background: rgba(249,115,22,0.7); }
+.qr-panel::-webkit-scrollbar-thumb:hover { background: rgba(240,80,110,0.7); }
 .qr-pin-row { font-size: 10px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; flex-shrink: 0; padding: 1px 2px; }
 .qr-pin { background: var(--success-soft); border: 1px solid var(--success-border); color: var(--success); font-size: 9px; padding: 1px 6px; border-radius: 5px; cursor: pointer; font-family: inherit; }
 .qr-pin:hover { background: var(--success-soft); }
@@ -738,7 +807,7 @@ function doImport(e: Event) {
 .qr-groups::-webkit-scrollbar { width: 8px; }
 .qr-groups::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); border-radius: 4px; }
 .qr-groups::-webkit-scrollbar-thumb { background: var(--primary-border); border-radius: 4px; }
-.qr-groups::-webkit-scrollbar-thumb:hover { background: rgba(249,115,22,0.7); }
+.qr-groups::-webkit-scrollbar-thumb:hover { background: rgba(240,80,110,0.7); }
 .qr-g-hd { display: flex; align-items: center; justify-content: space-between; padding: 5px 9px; background: var(--bg-elevated); font-size: 10px; color: var(--text-muted); border-bottom: 1px solid var(--border-default); }
 .qr-g-actions { display: flex; gap: 3px; }
 .qr-g-btn { background: transparent; border: 1px solid var(--border-strong); color: var(--text-muted); font-size: 9px; padding: 2px 7px; border-radius: 5px; cursor: pointer; font-family: inherit; }
@@ -763,7 +832,7 @@ function doImport(e: Event) {
 /* 分组展开/收起过渡 */
 .qr-grow-enter-active, .qr-grow-leave-active { transition: opacity .16s ease, transform .16s ease; }
 .qr-grow-enter-from, .qr-grow-leave-to { opacity: 0; transform: translateY(-4px); }
-/* 紧凑 chip：内嵌文本 + 动作按钮（参考「鸽子神 ×」chip 样式） */
+/* 紧凑 chip：点击发送，长按拖拽排序 */
 .qr-g-btn.on { border-color: var(--success-border); color: var(--success); }
 .qr-g-add { background: transparent; border: 1px dashed var(--border-strong); color: var(--text-muted); font-size: 9px; padding: 1px 6px; border-radius: 3px; cursor: pointer; font-family: inherit; width: fit-content; }
 .qr-g-add:hover { border-color: var(--primary); color: var(--primary); }
@@ -773,29 +842,35 @@ function doImport(e: Event) {
   display: inline-flex; align-items: center; gap: 0;
   background: var(--bg-selected); border: 1px solid var(--primary-soft);
   color: var(--primary-hover); font-size: 10px; padding: 0; border-radius: 10px;
-  max-width: 200px; min-height: 20px; overflow: hidden;
+  max-width: 180px; min-width: 0; min-height: 20px; overflow: hidden;
+  cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none;
+  transition: border-color .15s, box-shadow .15s;
 }
+.qr-chip:hover { border-color: var(--primary); }
 .qr-chip-text {
-  cursor: pointer; padding: 2px 4px 2px 8px; overflow: hidden; text-overflow: ellipsis;
-  white-space: nowrap; flex: 1; min-width: 0; max-width: 160px;
+  cursor: pointer; padding: 2px 8px; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; flex: 1; min-width: 0;
 }
-.qr-chip-text:hover { color: #fdba74; }
-.qr-chip-act {
-  background: transparent; border: none; color: var(--text-muted); cursor: pointer;
-  padding: 0 4px; line-height: 20px; flex-shrink: 0; opacity: 0;
-  transition: opacity .15s, color .15s;
+.qr-chip-text:hover { color: #ff8ba0; }
+/* 拖拽浮起效果 */
+.qr-chip.dragging {
+  position: relative;
+  border-color: var(--primary); color: var(--primary-hover); background: var(--primary-soft);
+  box-shadow: 0 4px 14px rgba(240, 80, 110, 0.35);
+  cursor: grabbing;
 }
-.qr-chip:hover .qr-chip-act { opacity: 1; }
-.qr-chip-act:hover { color: var(--info); background: var(--info-soft); border-radius: 0 9px 9px 0; }
-.qr-chip-act.ok { opacity: 1; color: var(--success); background: var(--success-soft); border-radius: 0 9px 9px 0; }
 
 /* 编辑模式：chip 同位置变 input + × */
-.qr-chip-editing { background: var(--success-soft); border-color: var(--success-border); }
+.qr-chip-editing { background: var(--success-soft); border-color: var(--success-border); user-select: text; -webkit-user-select: text; touch-action: auto; cursor: default; }
 .qr-chip-input {
   background: var(--bg-track); border: none; padding: 2px 6px; color: var(--text-primary);
   font-size: 10px; font-family: inherit; outline: none; flex: 1; min-width: 0; max-width: 150px;
 }
 .qr-chip-input:focus { background: var(--bg-card); }
+.qr-chip-del {
+  background: transparent; border: none; color: var(--text-muted); cursor: pointer;
+  padding: 0 5px; line-height: 20px; flex-shrink: 0;
+}
 .qr-chip-del:hover { color: var(--danger); background: var(--danger-soft); }
 
 .qr-send { display: flex; gap: 4px; flex-shrink: 0; }
