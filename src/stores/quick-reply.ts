@@ -290,6 +290,23 @@ export const useQuickReplyStore = defineStore('quickReply', () => {
     const inst = instances.value.find(i => i.id === id)
     if (inst && inst.quickReplyGroups[gIdx]) { inst.quickReplyGroups[gIdx].items[idx] = text; persist() }
   }
+  /** 快捷回复 chip 拖拽排序：fromRaw = items 原始索引，toVis = 目标可见顺序索引（跳过空项） */
+  function moveQuickReply(id: number, gIdx: number, fromRaw: number, toVis: number) {
+    const inst = instances.value.find(i => i.id === id)
+    if (!inst || !inst.quickReplyGroups[gIdx]) return
+    const items = inst.quickReplyGroups[gIdx].items
+    const vis: number[] = []
+    items.forEach((t, i) => { if (t.trim()) vis.push(i) })
+    const fromVis = vis.indexOf(fromRaw)
+    if (fromVis < 0 || toVis < 0 || toVis >= vis.length || fromVis === toVis) return
+    const [moved] = items.splice(fromRaw, 1)
+    // 移除后重算可见映射（比原来少一项），目标索引越界时插到末尾
+    const vis2: number[] = []
+    items.forEach((t, i) => { if (t.trim()) vis2.push(i) })
+    const insertAt = toVis >= vis2.length ? items.length : vis2[toVis]
+    items.splice(insertAt, 0, moved)
+    persist()
+  }
 
   function addInstance() {
     // 复用最小可用 ID：删掉的实例编号回收（如删了 3/4，下次新建回到 3）
@@ -335,7 +352,7 @@ export const useQuickReplyStore = defineStore('quickReply', () => {
   return {
     instances, sendViaWebview, pinInputSelector, pinSendSelector, clearInputSelector,
     addGroup, removeGroup, toggleGroup, setGroupName,
-    addQuickReply, removeQuickReply, setQuickReply,
+    addQuickReply, removeQuickReply, setQuickReply, moveQuickReply,
     addInstance, removeInstance,
     exportGroup, importGroupAsNew
   }
