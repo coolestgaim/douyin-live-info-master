@@ -56,11 +56,14 @@ function downloadWithCurl(url, dest, headers = {}) {
   }
 }
 
-// 查询 Release 中 ffmpeg.exe 资产的 API 下载 URL（需 token）
+// 查询 Release 中 ffmpeg.exe 资产的 API 下载 URL
+// 公开仓库无需 token（rate limit 60/h 足够）；私有仓库需 token
 function getAssetApiUrl(token) {
   return new Promise((resolve) => {
+    const headers = { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/vnd.github+json' }
+    if (token) headers['Authorization'] = 'token ' + token
     https.get(API + '/releases/latest', {
-      headers: { 'User-Agent': 'Mozilla/5.0', 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github+json' },
+      headers,
       rejectUnauthorized: false
     }, (res) => {
       if (res.statusCode !== 200) { res.resume(); resolve(null); return }
@@ -141,11 +144,16 @@ async function main() {
   console.log('ffmpeg.exe 缺失，尝试下载...')
 
   const token = getToken()
-  const assetApiUrl = token ? await getAssetApiUrl(token) : null
+  // 公开仓库无需 token 也能访问 Release API；私有仓库需 token
+  const assetApiUrl = await getAssetApiUrl(token)
   if (assetApiUrl) {
-    console.log('→ 源 1/6：本项目 Release 资产（API，token 已配置）')
+    console.log(token
+      ? '→ 源 1/6：本项目 Release 资产（API，token 已配置）'
+      : '→ 源 1/6：本项目 Release 资产（API，公开仓库免 token）')
     const tmp = path.join(ROOT, '.ffmpeg-download-tmp')
-    const ok = downloadWithCurl(assetApiUrl, tmp, { 'Authorization': 'token ' + token, 'Accept': 'application/octet-stream' })
+    const headers = { 'Accept': 'application/octet-stream' }
+    if (token) headers['Authorization'] = 'token ' + token
+    const ok = downloadWithCurl(assetApiUrl, tmp, headers)
     if (ok) {
       fs.renameSync(tmp, DEST)
       if (isUsable(DEST)) { console.log('✓ ffmpeg.exe 下载成功（Release 固定版本）'); return }
@@ -155,8 +163,8 @@ async function main() {
       console.log('  下载失败，切换下一源')
     }
   } else {
-    console.log('⚠ 未检测到 token（无 GITHUB_TOKEN 环境变量或 git remote 未内嵌），以下源可能较慢；')
-    console.log('  建议：设置 GITHUB_TOKEN 后重跑，可走 58MB/s 的 API 快速通道，或手动放置 ffmpeg.exe 到项目根目录')
+    console.log('⚠ 未获取到 Release 资产（私有仓库且未配置 token，或仓库暂无 ffmpeg 资产）')
+    console.log('  建议：设置 GITHUB_TOKEN 后重跑，可走 API 快速通道，或手动放置 ffmpeg.exe 到项目根目录')
   }
 
   const sources = [
