@@ -28,8 +28,12 @@ function isUsable(exePath) {
   } catch { return false }
 }
 
-// 从 git remote URL 提取 token（无则返回空）
+// 获取 GitHub 访问 token（访问本项目 Release 资产走快速 API 通道）
+// 优先级：环境变量 GITHUB_TOKEN / GH_TOKEN > git remote URL 内嵌 token
 function getToken() {
+  if (process.env.GITHUB_TOKEN || process.env.GH_TOKEN) {
+    return process.env.GITHUB_TOKEN || process.env.GH_TOKEN
+  }
   try {
     const r = spawnSync('git', ['remote', 'get-url', 'origin'], { cwd: ROOT, encoding: 'utf8', windowsHide: true })
     if (r.status !== 0) return ''
@@ -150,6 +154,9 @@ async function main() {
     } else {
       console.log('  下载失败，切换下一源')
     }
+  } else {
+    console.log('⚠ 未检测到 token（无 GITHUB_TOKEN 环境变量或 git remote 未内嵌），以下源可能较慢；')
+    console.log('  建议：设置 GITHUB_TOKEN 后重跑，可走 58MB/s 的 API 快速通道，或手动放置 ffmpeg.exe 到项目根目录')
   }
 
   const sources = [

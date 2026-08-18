@@ -69,6 +69,29 @@ npm run electron:build
 
 ---
 
+## 📦 打包说明（ffmpeg 自动下载）
+
+项目不含 ffmpeg 二进制（约 232MB，超过 GitHub 单文件 100MB 限制无法入库），但 `npm run electron:build` 会自动准备：
+
+1. 本地已有可用的 `ffmpeg.exe`（项目根目录）→ 直接使用
+2. 缺失 → 自动从 **本项目 Release 资产** 下载（与你打包机版本一致，已验证可达）并校验
+3. 全部失败 → 提示手动放置 `ffmpeg.exe` 到项目根目录
+
+**如何获得最快下载（约 30 秒 / 58MB/s）**，任选其一：
+
+```bash
+# 方式一：clone 时使用带 token 的 URL（GitHub → Settings → Developer settings → Personal access tokens）
+git clone https://<你的用户名>:<token>@github.com/coolestgaim/douyin-live-info-master.git
+
+# 方式二：设置环境变量（优先级最高）
+export GITHUB_TOKEN=<你的 token>     # Windows PowerShell: $env:GITHUB_TOKEN="<你的 token>"
+npm run electron:build
+```
+
+> 说明：本项目为私有仓库，能 clone 的都是协作者。未配置 token 时也会自动降级到镜像源（较慢），或跳过下载直接手动放置 ffmpeg.exe。
+
+---
+
 ## 📖 文档
 
 > 详细文档（架构、版本历史、交接指南）作为本地资料随项目保存，不上传 GitHub。
