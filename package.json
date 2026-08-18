@@ -13,7 +13,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && tsc -p tsconfig.electron.json && node scripts/electron-dev.cjs\"",
-    "electron:build": "npm run build && electron-builder"
+    "electron:build": "node scripts/ensure-ffmpeg.cjs && npm run build && electron-builder"
   },
   "dependencies": {
     "axios": "^1.7.0",

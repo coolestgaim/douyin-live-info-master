@@ -7,7 +7,6 @@ files:
   - dist-electron/**/*
   - public/**/*
   - sign.js
-  - ffmpeg.exe
 extraResources:
   - from: sign.js
     to: sign.js
