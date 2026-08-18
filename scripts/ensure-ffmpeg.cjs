@@ -1,19 +1,23 @@
 // 打包前置：确保项目根目录存在可用的 ffmpeg.exe（缺失时自动下载）
 // 用法：node scripts/ensure-ffmpeg.cjs（electron:build 自动调用）
-// 下载源优先级：
-//   1. 本项目 GitHub Release 资产 ffmpeg.exe（版本固定，与本机打包一致）
-//   2. BtbN FFmpeg-Builds GitHub release（zip，需解压提取 bin/ffmpeg.exe）
-//   3. ghproxy 镜像（国内可达）
+// 下载源优先级（前一个失败自动切换）：
+//   1. 本项目 GitHub Release 资产（API 方式，token 从 git remote 提取；版本固定，与打包机一致）
+//   2. 本项目 GitHub Release 资产（直链；Steam++ 完整通道下可用）
+//   3. gh-proxy.com 代理 BtbN FFmpeg-Builds（国内可用）
+//   4. ghproxy.com / mirror.ghproxy.com 代理 BtbN（备用）
 
 const fs = require('fs')
 const path = require('path')
 const https = require('https')
-const http = require('http')
 const zlib = require('zlib')
 const { spawnSync } = require('child_process')
 
 const ROOT = path.join(__dirname, '..')
 const DEST = path.join(ROOT, 'ffmpeg.exe')
+
+const OWNER = 'coolestgaim'
+const REPO = 'douyin-live-info-master'
+const API = `https://api.github.com/repos/${OWNER}/${REPO}`
 
 // ffmpeg.exe 是否可用（存在且能跑 -version）
 function isUsable(exePath) {
@@ -24,31 +28,49 @@ function isUsable(exePath) {
   } catch { return false }
 }
 
-// 下载文件（跟随重定向），返回是否成功
-function downloadFile(url, dest, redirectsLeft = 5) {
+// 从 git remote URL 提取 token（无则返回空）
+function getToken() {
+  try {
+    const r = spawnSync('git', ['remote', 'get-url', 'origin'], { cwd: ROOT, encoding: 'utf8', windowsHide: true })
+    if (r.status !== 0) return ''
+    const m = r.stdout.match(/:\/\/([^:]+):([^@]+)@/)
+    return m ? m[2] : ''
+  } catch { return '' }
+}
+
+// 用系统 curl 下载（Windows 10+ 内置 curl.exe；-L 跟随重定向且跨域自动丢弃 Authorization，
+// 避免 CDN 拒收；-k 兼容 Steam++ 自签证书）。返回是否成功。
+function downloadWithCurl(url, dest, headers = {}) {
+  const args = ['-skL', '--connect-timeout', '15', '--max-time', '900', '-o', dest]
+  for (const [k, v] of Object.entries(headers)) args.push('-H', `${k}: ${v}`)
+  args.push(url)
+  try {
+    const r = spawnSync('curl', args, { windowsHide: true, timeout: 900000 })
+    return r.status === 0 && fs.existsSync(dest) && fs.statSync(dest).size > 0
+  } catch {
+    return false
+  }
+}
+
+// 查询 Release 中 ffmpeg.exe 资产的 API 下载 URL（需 token）
+function getAssetApiUrl(token) {
   return new Promise((resolve) => {
-    const proto = url.startsWith('https') ? https : http
-    const file = fs.createWriteStream(dest)
-    const req = proto.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }, (res) => {
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && redirectsLeft > 0) {
-        file.close()
-        try { fs.unlinkSync(dest) } catch {}
-        downloadFile(res.headers.location, dest, redirectsLeft - 1).then(resolve)
-        return
-      }
-      if (res.statusCode !== 200) {
-        file.close()
-        try { fs.unlinkSync(dest) } catch {}
-        console.log(`  ✗ HTTP ${res.statusCode}`)
-        resolve(false)
-        return
-      }
-      res.on('data', (c) => file.write(c))
-      res.on('end', () => { file.end(); resolve(true) })
-      res.on('error', () => { file.close(); try { fs.unlinkSync(dest) } catch {}; resolve(false) })
-    })
-    req.on('error', () => { file.close(); try { fs.unlinkSync(dest) } catch {}; resolve(false) })
-    req.setTimeout(60000, () => { req.destroy(); file.close(); try { fs.unlinkSync(dest) } catch {}; resolve(false) })
+    https.get(API + '/releases/latest', {
+      headers: { 'User-Agent': 'Mozilla/5.0', 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github+json' },
+      rejectUnauthorized: false
+    }, (res) => {
+      if (res.statusCode !== 200) { res.resume(); resolve(null); return }
+      let d = ''
+      res.on('data', c => d += c)
+      res.on('end', () => {
+        try {
+          const rel = JSON.parse(d)
+          const asset = (rel.assets || []).find(a => a.name === 'ffmpeg.exe')
+          resolve(asset ? asset.url : null)
+        } catch { resolve(null) }
+      })
+      res.on('error', () => resolve(null))
+    }).on('error', () => resolve(null))
   })
 }
 
@@ -101,28 +123,11 @@ function extractFromZip(zipPath, targetName, destPath) {
   } catch (e) { console.log('  ✗ 解压失败:', e.message); return false }
 }
 
-const SOURCES = [
-  {
-    name: '项目 GitHub Release',
-    url: 'https://github.com/coolestgaim/douyin-live-info-master/releases/latest/download/ffmpeg.exe',
-    isZip: false,
-  },
-  {
-    name: 'BtbN FFmpeg-Builds (GitHub)',
-    url: 'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip',
-    isZip: true,
-  },
-  {
-    name: 'BtbN FFmpeg-Builds (ghproxy)',
-    url: 'https://ghproxy.com/https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip',
-    isZip: true,
-  },
-  {
-    name: 'BtbN FFmpeg-Builds (ghproxy mirror)',
-    url: 'https://mirror.ghproxy.com/https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip',
-    isZip: true,
-  },
-]
+// 各下载源（isZip=true 时下载后解压提取 bin/ffmpeg.exe）
+const BtbnZip = 'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip'
+const BtbnZipGhProxy = 'https://gh-proxy.com/https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip'
+const BtbnZipGhproxyOld = 'https://ghproxy.com/https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip'
+const BtbnZipMirror = 'https://mirror.ghproxy.com/https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip'
 
 async function main() {
   if (isUsable(DEST)) {
@@ -131,11 +136,35 @@ async function main() {
   }
   console.log('ffmpeg.exe 缺失，尝试下载...')
 
-  for (const src of SOURCES) {
+  const token = getToken()
+  const assetApiUrl = token ? await getAssetApiUrl(token) : null
+  if (assetApiUrl) {
+    console.log('→ 源 1/6：本项目 Release 资产（API，token 已配置）')
+    const tmp = path.join(ROOT, '.ffmpeg-download-tmp')
+    const ok = downloadWithCurl(assetApiUrl, tmp, { 'Authorization': 'token ' + token, 'Accept': 'application/octet-stream' })
+    if (ok) {
+      fs.renameSync(tmp, DEST)
+      if (isUsable(DEST)) { console.log('✓ ffmpeg.exe 下载成功（Release 固定版本）'); return }
+      console.log('  验证失败，切换下一源')
+      try { fs.unlinkSync(DEST) } catch {}
+    } else {
+      console.log('  下载失败，切换下一源')
+    }
+  }
+
+  const sources = [
+    { name: '源 2/6：本项目 Release 资产（直链）', url: `https://github.com/${OWNER}/${REPO}/releases/latest/download/ffmpeg.exe`, isZip: false },
+    { name: '源 3/6：gh-proxy.com 代理 BtbN', url: BtbnZipGhProxy, isZip: true },
+    { name: '源 4/6：ghproxy.com 代理 BtbN', url: BtbnZipGhproxyOld, isZip: true },
+    { name: '源 5/6：mirror.ghproxy.com 代理 BtbN', url: BtbnZipMirror, isZip: true },
+    { name: '源 6/6：BtbN GitHub 直链', url: BtbnZip, isZip: true },
+  ]
+
+  for (const src of sources) {
     console.log(`→ ${src.name}`)
     const tmp = path.join(ROOT, '.ffmpeg-download-tmp')
     try { fs.unlinkSync(tmp) } catch {}
-    const ok = await downloadFile(src.url, tmp)
+    const ok = downloadWithCurl(src.url, tmp)
     if (!ok) { console.log('  下载失败，切换下一源'); continue }
 
     if (src.isZip) {
@@ -145,6 +174,7 @@ async function main() {
         console.log('  解压后验证失败，切换下一源')
       } else {
         try { fs.unlinkSync(tmp) } catch {}
+        console.log('  zip 中未找到 ffmpeg.exe，切换下一源')
       }
     } else {
       fs.renameSync(tmp, DEST)
