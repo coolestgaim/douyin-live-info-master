@@ -11,6 +11,7 @@
             <LiveRoomsView v-show="currentRoute === '/rooms'" />
             <DanmuView v-show="currentRoute === '/danmu'" />
             <RecordingView v-show="currentRoute === '/recording'" />
+            <DanmuReplayView v-show="currentRoute === '/replay'" />
             <SettingsView v-show="currentRoute === '/settings'" />
             <QuickReplyView v-show="currentRoute === '/quick-reply'" />
             <AboutView v-show="currentRoute === '/about'" />
@@ -32,6 +33,7 @@ import DashboardView from './views/DashboardView.vue'
 import LiveRoomsView from './views/LiveRoomsView.vue'
 import DanmuView from './views/DanmuView.vue'
 import RecordingView from './views/RecordingView.vue'
+import DanmuReplayView from './views/DanmuReplayView.vue'
 import SettingsView from './views/SettingsView.vue'
 import QuickReplyView from './views/QuickReplyView.vue'
 import AboutView from './views/AboutView.vue'

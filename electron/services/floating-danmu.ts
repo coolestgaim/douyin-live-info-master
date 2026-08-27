@@ -137,6 +137,13 @@ export function sendDanmuToFloating(msg: { type: string; userName: string; conte
   }
 }
 
+/** 清空浮窗当前列表（回放开始前调用，避免与直播弹幕/上一次回放混在一起） */
+export function clearFloatingDanmu(): void {
+  if (floatingWindow && !floatingWindow.isDestroyed()) {
+    floatingWindow.webContents.send('floating:clear')
+  }
+}
+
 export function sendRoomList(nicknames: Map<string, string>): void {
   if (floatingWindow && !floatingWindow.isDestroyed()) {
     const rooms = Array.from(nicknames.entries()).map(([roomId, nickname]) => ({ roomId, nickname }))

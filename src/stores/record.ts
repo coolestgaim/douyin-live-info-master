@@ -116,6 +116,10 @@ export const useRecordStore = defineStore('record', () => {
     for (const item of recordingItems.value) {
       if (item.isActive && item.outputPath) addToHistory(item)
     }
+    // 用户明确要求：全局录制停止时，弹幕监听一并断开（录与弹是一对）
+    // ⚠️ 必须走 danmu store 的 disconnectAll（会同步刷新直播间行 connectionState + connectedRoomIds + 浮窗筛选）
+    // 直接调 api().danmuDisconnectAll() 会绕过状态同步，导致直播间列表仍显示"已连接"
+    try { await useDanmuStore().disconnectAll() } catch { /* ignore */ }
     const state = await api().recordStopAll()
     if (state) {
       for (const item of (state.items || [])) {
@@ -134,6 +138,9 @@ export const useRecordStore = defineStore('record', () => {
   }
 
   async function stopOne(roomId: string) {
+    // 停止该房间录制时也断开其弹幕（一对一的停止）
+    // ⚠️ 走 danmu store 的 disconnectRoom：同步行状态 + connectedRoomIds + 浮窗筛选
+    try { await useDanmuStore().disconnectRoom(roomId) } catch { /* ignore */ }
     const state = await api().recordStopOne(roomId)
     if (state) {
       const completed = state.items?.find((i: any) => i.roomId === roomId)
@@ -230,6 +237,6 @@ export const useRecordStore = defineStore('record', () => {
     ffmpegMissing, ffmpegProgress, ffmpegProgressMsg, ffmpegInstalling,
     recordingHistory,
     setupListeners, removeListeners, recordAll, stopAll, startRecording, stopOne,
-    installFfmpeg, deleteRecording, deleteHistoryItem
+    installFfmpeg, deleteRecording, deleteHistoryItem, applyState
   }
 })

@@ -48,7 +48,9 @@
       </span>
       <div class="header-actions">
         <n-button size="small" @click="roomList.deleteSelected()" :disabled="!roomList.selectedRoom">删除选中</n-button>
-        <n-button type="primary" size="small" @click="danmuStore.connectAll(roomList.results)">全部连接</n-button>
+        <n-button v-if="recordedRooms.size === 0" type="primary" size="small" @click="recordAllLive" :disabled="!roomList.results.some(r => !r.error && r.roomStatus !== 2)" title="对列表内所有直播中的房间同时连接弹幕 + 开始录制（统一归档到子文件夹 {nickname}_{时间}/）">全局录制</n-button>
+        <n-button v-else size="small" type="error" @click="stopAllRecord" :title="`当前正在录制 ${recordedRooms.size} 个直播间，点击全部停止`">停止录制 ({{ recordedRooms.size }})</n-button>
+        <n-button size="small" tertiary @click="danmuStore.connectAll(roomList.results)">全部连接</n-button>
         <n-button size="small" tertiary @click="danmuStore.disconnectAll()">全部断开</n-button>
       </div>
     </div>
@@ -83,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import { h, computed } from 'vue'
+import { h, computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { NInput, NButton, NDataTable, useMessage } from 'naive-ui'
 import { useRoomListStore } from '../stores/room-list'
 import { useDanmuStore } from '../stores/danmu'
@@ -92,6 +94,105 @@ import type { DataTableColumns } from 'naive-ui'
 const roomList = useRoomListStore()
 const danmuStore = useDanmuStore()
 const message = useMessage()
+
+// 预约开播：本地缓存已预约房间（真正轮询在主进程 RoomWatchService）
+const watchedRooms = ref<Set<string>>(new Set())
+// 正在录制的房间（main→render 通过 onRecordUpdate 实时同步）
+const recordedRooms = ref<Set<string>>(new Set())
+const api = () => (window as any).electronAPI
+
+async function refreshWatched() {
+  try {
+    const r = await (window as any).electronAPI?.roomWatchList?.()
+    if (r?.list) watchedRooms.value = new Set(r.list.filter((t: any) => !t.started).map((t: any) => t.roomId))
+  } catch { /* ignore */ }
+}
+onMounted(() => {
+  refreshWatched()
+  try { (window as any).electronAPI?.onRoomWatchStarted?.((data: { roomId: string; nickname: string }) => {
+    watchedRooms.value.delete(data.roomId)
+    watchedRooms.value = new Set(watchedRooms.value)
+    message.success(`主播「${data.nickname}」开播了，已自动连接弹幕并开始录制 🎬`)
+  }) } catch { /* ignore */ }
+  // 监听录制状态：标记当前正在录制的房间
+  try { (window as any).electronAPI?.onRecordUpdate?.((state: any) => {
+    recordedRooms.value = new Set((state?.items ?? []).filter((it: any) => it.isActive).map((it: any) => it.roomId))
+  }) } catch { /* ignore */ }
+  // 预约下播自动停止（room-watch 检测到房间已下播 → 主进程停止录制+断开弹幕）
+  try { (window as any).electronAPI?.onRoomWatchStopped?.((data: { roomId: string; nickname: string }) => {
+    message.info(`主播「${data.nickname}」已下播，录制与弹幕自动停止，产物已归档到子文件夹`)
+  }) } catch { /* ignore */ }
+})
+onBeforeUnmount(() => {
+  try { api()?.removeRecordListeners?.() } catch { /* ignore */ }
+  try { (window as any).electronAPI?.removeRoomWatchListeners?.() } catch { /* ignore */ }
+})
+
+// 全局录制：对列表内所有直播中的房间批量「开始录制 + 自动连弹幕」
+// 录到统一子文件夹 {nickname}_{startTime}/ 里，含视频和弹幕 CSV；可在「弹幕回放」页直接打开
+async function recordAllLive() {
+  // ⚠️ 必须白名单字段拆为普通字面量对象再过 IPC——Vue reactive 对象（Proxy）无法序列化克隆，会抛
+  // "An object could not be cloned"
+  const liveRooms = (roomList.results as any[])
+    .filter((r: any) => !r.error && r.roomStatus !== 2)
+    .map((r: any) => ({
+      enterRoomId: r.enterRoomId,
+      nickname: r.nickname,
+      roomStatus: r.roomStatus,
+      quality: r.quality || '',
+      url: r.url,
+    }))
+  if (!liveRooms.length) { message.warning('当前没有直播中的房间'); return }
+  try {
+    const r = await api()?.recordStartAll?.(liveRooms)
+    const ok = r?.count ?? liveRooms.length
+    const fail = r?.failures?.length ?? 0
+    if (fail > 0) message.warning(`已开始录制 ${ok} 个，${fail} 个失败：${(r.failures || []).map((f: any) => f.nickname + '（' + f.reason + '）').join('；')}`)
+    else message.success(`已开始录制 ${ok} 个直播间，弹幕自动连接并在「弹幕回放」页查看`)
+  } catch (e: any) {
+    message.error('全局录制失败: ' + (e?.message || String(e)))
+  }
+}
+// 全局停止：当前所有录制一律停止（不清弹幕连接，方便看弹幕不录像）
+async function stopAllRecord() {
+  try {
+    await api()?.recordStopAll?.()
+    message.success('全部录制已停止')
+  } catch (e: any) {
+    message.error('停止失败: ' + (e?.message || String(e)))
+  }
+}
+
+async function watchRoom(row: any) {
+  if (!row.enterRoomId) { message.error('该直播间无有效房间号'); return }
+  try {
+    const r = await (window as any).electronAPI?.roomWatchAdd?.({
+      url: row.url, enterRoomId: row.enterRoomId, nickname: row.nickname, quality: row.quality || ''
+    })
+    if (r?.success) {
+      watchedRooms.value = new Set(r.list.filter((t: any) => !t.started).map((t: any) => t.roomId))
+      if (r.started) {
+        message.success(`「${row.nickname}」正在直播，已直接开始录制并连接弹幕 🎬`)
+      } else {
+        message.success(`已预约「${row.nickname}」，开播后自动连接弹幕并开始录制`)
+      }
+    } else {
+      message.error(r?.error || '预约失败')
+    }
+  } catch (e: any) {
+    message.error('预约失败: ' + (e?.message || String(e)))
+  }
+}
+
+async function unwatchRoom(row: any) {
+  try {
+    const r = await (window as any).electronAPI?.roomWatchRemove?.(row.enterRoomId)
+    if (r?.success) {
+      watchedRooms.value = new Set(r.list.filter((t: any) => !t.started).map((t: any) => t.roomId))
+      message.info(`已取消预约「${row.nickname}」`)
+    }
+  } catch { /* ignore */ }
+}
 
 async function copyUrl(url: string) {
   try {
@@ -117,8 +218,13 @@ const columns: DataTableColumns<any> = [
   {
     title: '弹幕', key: 'connectionState', width: 60, align: 'center',
     render: (row) => h('span', {
-      style: 'color: var(--accent-cyan); font-weight: 600; font-size: 11px'
-    }, row.connectionState === 'Connected' ? '已连接' : row.connectionState === 'Connecting' ? '连接中' : '')
+      style: (() => {
+        if (row.connectionState === 'Connected') return 'color: var(--accent-cyan); font-weight: 600; font-size: 11px'
+        if (row.connectionState === 'Connecting') return 'color: var(--warning); font-weight: 500; font-size: 11px'
+        if (row.connectionState === 'Disconnected') return 'color: var(--text-faint); font-size: 11px'
+        return ''
+      })()
+    }, row.connectionState === 'Connected' ? '已连接' : row.connectionState === 'Connecting' ? '连接中' : row.connectionState === 'Disconnected' ? '已断开' : '')
   },
   {
     title: '', key: 'connect', width: 50, align: 'center',
@@ -131,6 +237,33 @@ const columns: DataTableColumns<any> = [
         onClick: (e: Event) => { e.stopPropagation(); connected ? danmuStore.disconnectRoom(row.enterRoomId) : danmuStore.connectRoom(row.enterRoomId, row.nickname) }
       }, connected ? '断开' : '连接')
     }
+  },
+  {
+    title: '', key: 'watch', width: 50, align: 'center',
+    render: (row) => {
+      const watching = watchedRooms.value.has(row.enterRoomId)
+      return h('button', {
+        title: watching ? '已预约：主播开播后自动连接弹幕并开始录制' : '预约开播：主播开播后自动连接弹幕并开始录制',
+        style: watching
+          ? 'background:var(--success-soft, rgba(99,145,34,.12));border:1px solid var(--success-border, rgba(99,145,34,.4));color:var(--success, #639922);font-size:10px;padding:2px 8px;border-radius:4px;cursor:pointer;font-family:inherit'
+          : 'background:var(--bg-active);border:1px solid var(--warning-border, rgba(186,117,23,.4));color:var(--warning, #BA7517);font-size:10px;padding:2px 8px;border-radius:4px;cursor:pointer;font-family:inherit',
+        onClick: (e: Event) => { e.stopPropagation(); watching ? unwatchRoom(row) : watchRoom(row) }
+      }, watching ? '已约' : '预约')
+    }
+  },
+  {
+    title: '', key: 'recordState', width: 50, align: 'center',
+    render: (row) => {
+      const rec = recordedRooms.value.has(row.enterRoomId)
+      if (!rec) return null
+      return h('span', {
+        title: '正在录制中（与该房间的弹幕实时写入同一子文件夹的 CSV，可在「弹幕回放」页查看）',
+        style: 'display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--danger, #E55);font-weight:600'
+      }, [
+        h('span', { style: 'width:6px;height:6px;border-radius:50%;background:var(--danger, #E55);animation:pulse 1s infinite;display:inline-block' }),
+        '●REC'
+      ])
+    }
   }
 ]
 
@@ -138,6 +271,7 @@ const rowProps = computed(() => {
   const selId = roomList.selectedRoom?.enterRoomId ?? ''
   return (row: any) => ({
     style: { background: row.enterRoomId === selId ? 'var(--bg-selected)' : undefined, cursor: 'pointer' },
+    class: roomList.selectedRoom?.enterRoomId === row.enterRoomId ? 'active-room-row' : '',
     onClick: () => {
       roomList.selectRoom(row)
       danmuStore.selectRoom(row)
@@ -251,5 +385,14 @@ function exportLinks() {
 .empty-title {
   font-size: 13px;
   color: var(--text-faint);
+}
+
+/* 选中行高亮（n-data-table 行内 style 8% 透明看不见，用 .active-room-row + !important） */
+:deep(.active-room-row td) {
+  background: rgba(240, 80, 110, 0.16) !important;
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+:deep(.active-room-row:hover td) {
+  background: rgba(240, 80, 110, 0.24) !important;
 }
 </style>

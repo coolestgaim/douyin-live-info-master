@@ -79,6 +79,16 @@ export const useDanmuStore = defineStore('danmu', () => {
     api().onDanmuStatus((data: { roomId: string; status: string }) => {
       const roomList = useRoomListStore()
       const room = roomList.results.find(r => r.enterRoomId === data.roomId)
+      // 同步行内 "弹幕" 状态列：把主进程推过来的中文状态映射成枚举（实时反映已连接/连接中/重连）
+      if (room) {
+        if (data.status.includes('已连接') || data.status.includes('自动重连成功') || data.status.includes('初始化')) {
+          room.connectionState = DanmuConnectionState.Connected
+        } else if (data.status.includes('正在') || data.status.includes('签名') || data.status.includes('重连')) {
+          room.connectionState = DanmuConnectionState.Connecting
+        } else if (data.status.includes('断开') || data.status.includes('错误') || data.status.includes('失败')) {
+          room.connectionState = DanmuConnectionState.Disconnected
+        }
+      }
       if (room && room === roomList.selectedRoom) {
         danmuStatus.value = data.status
       }

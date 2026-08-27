@@ -28,8 +28,13 @@ const LOG_MODULE = 'Danmu'
 export class DanmuService {
   private ws: WebSocket | null = null
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private roomId = ''
   private nickname = ''
+  private cookie = ''
+  private manualStop = false          // 主动断开（不重连）
+  private hasConnected = false        // 是否曾连接成功（决定意外断开是否自动重连）
+  private reconnectAttempts = 0       // 连续重连次数（用于退避与提示）
 
   public onMessage: ((msg: DanmuMsg) => void) | null = null
   public onStatusChanged: ((status: string) => void) | null = null
@@ -41,57 +46,115 @@ export class DanmuService {
 
   async connect(roomId: string, cookie: string, nick: string): Promise<void> {
     this.roomId = roomId
+    this.cookie = cookie
     this.nickname = nick
+    this.manualStop = false
+    this.hasConnected = false
+    this.reconnectAttempts = 0
+    await this.establishWs()
+  }
 
-    this.onStatusChanged?.('正在计算签名...')
-    const url = await buildWssUrl(roomId)
-    logger.info(LOG_MODULE, `签名完成 url长度=${url.length}`)
+  /** 建立单次连接（签名 + WebSocket）。连接成功后 resolve；首次连接失败 reject（由调用方提示）。 */
+  private establishWs(): Promise<void> {
+    return new Promise(async (resolve, reject) => {
+      try {
+        this.onStatusChanged?.('正在计算签名...')
+        const url = await buildWssUrl(this.roomId)
+        logger.info(LOG_MODULE, `签名完成 url长度=${url.length}`)
+        this.onStatusChanged?.('正在连接...')
 
-    this.onStatusChanged?.('正在连接...')
+        let settled = false
+        const ws = new WebSocket(url, {
+          headers: {
+            'Cookie': this.cookie,
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+          }
+        })
+        this.ws = ws
 
-    return new Promise((resolve, reject) => {
-      this.ws = new WebSocket(url, {
-        headers: {
-          'Cookie': cookie,
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-        }
-      })
+        ws.on('open', () => {
+          if (ws !== this.ws) return
+          logger.info(LOG_MODULE, 'WebSocket连接成功!')
+          this.hasConnected = true
+          const isReconnect = this.reconnectAttempts > 0
+          this.reconnectAttempts = 0
+          this.onStatusChanged?.(isReconnect ? '已连接（自动重连成功）' : '已连接')
+          this.startHeartbeat()
+          initializeTable(this.roomId, this.nickname)
+          if (!settled) { settled = true; resolve() }
+        })
 
-      this.ws.on('open', () => {
-        logger.info(LOG_MODULE, 'WebSocket连接成功!')
-        this.onStatusChanged?.('已连接')
-        this.startHeartbeat()
-        initializeTable(roomId, nick)
-        resolve()
-      })
+        ws.on('message', (data: WebSocket.Data) => {
+          if (ws !== this.ws) return
+          const buf = Buffer.isBuffer(data) ? data : Buffer.from(data as string)
+          this.processMessage(buf)
+        })
 
-      this.ws.on('message', (data: WebSocket.Data) => {
-        const buf = Buffer.isBuffer(data) ? data : Buffer.from(data as string)
-        this.processMessage(buf)
-      })
+        ws.on('close', () => {
+          if (ws !== this.ws) return
+          logger.info(LOG_MODULE, 'WebSocket关闭')
+          this.stopHeartbeat()
+          this.ws = null
+          // 首次连接失败（从未连上）→ 通知断开，不自动重连
+          if (!this.hasConnected) {
+            if (!settled) { settled = true; reject(new Error('连接失败')) }
+            this.onDisconnected?.('连接失败')
+            return
+          }
+          // 已连接后断开：主动断开不重连；意外断开自动重连
+          if (this.manualStop) {
+            this.onDisconnected?.('连接断开')
+          } else {
+            this.scheduleReconnect()
+          }
+        })
 
-      this.ws.on('close', () => {
-        logger.info(LOG_MODULE, 'WebSocket关闭')
-        this.stopHeartbeat()
-        this.onDisconnected?.('连接断开')
-      })
-
-      this.ws.on('error', (err: Error) => {
-        logger.error(LOG_MODULE, `WebSocket错误: ${err.message}`)
-        this.stopHeartbeat()
-        this.onDisconnected?.(err.message)
-        reject(new Error(err.message))
-      })
+        ws.on('error', (err: Error) => {
+          if (ws !== this.ws) return
+          logger.error(LOG_MODULE, `WebSocket错误: ${err.message}`)
+          // 首次连接失败立即 reject（close 兜底已处理，这里防挂起）
+          if (!this.hasConnected && !settled) {
+            settled = true
+            this.onDisconnected?.(err.message)
+            reject(new Error(err.message))
+          }
+          // 已连接后的 error 通常紧接 close，由 close 触发重连
+        })
+      } catch (ex: any) {
+        reject(ex)
+      }
     })
   }
 
   disconnect(): void {
+    this.manualStop = true
     this.stopHeartbeat()
+    if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null }
     if (this.ws) {
       try { this.ws.close() } catch { /* ignore */ }
-      this.ws = null
     }
     logger.info(LOG_MODULE, '主动断开')
+  }
+
+  /** 意外断开后指数退避重连：1s → 2s → 4s → 8s → 16s → 30s 封顶，无限重试 */
+  private scheduleReconnect(): void {
+    if (this.manualStop) return
+    this.reconnectAttempts++
+    const delay = Math.min(30000, 1000 * Math.pow(2, Math.min(5, this.reconnectAttempts)))
+    this.onStatusChanged?.(`连接断开，${Math.round(delay / 1000)}秒后自动重连（第${this.reconnectAttempts}次）`)
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer)
+    this.reconnectTimer = setTimeout(() => { void this.doReconnect() }, delay)
+  }
+
+  private async doReconnect(): Promise<void> {
+    if (this.manualStop) return
+    try {
+      await this.establishWs()
+      // 成功：open 回调已更新状态
+    } catch (ex: any) {
+      logger.warn(LOG_MODULE, `自动重连失败: ${ex.message}`)
+      this.scheduleReconnect()
+    }
   }
 
   private startHeartbeat(): void {

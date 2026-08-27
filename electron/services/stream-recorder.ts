@@ -16,13 +16,23 @@ export class StreamRecorder {
   public outputPath = ''
   public currentFileSize = 0
   public isRecording = false
+  /** 外部指定输出子文件夹（如录制管理用：{nickname}_{startTime}/） */
+  private outputDirOverride: string | null = null
 
   public onStatusChanged: ((status: string) => void) | null = null
+  /** 拉流失败/URL 过期时的回调（由 RecordingManager 负责自动重拉重录） */
+  public onRecordingFailed: (() => void) | null = null
+
+  setOutputSession(opts: { outputDir: string; sessionId?: string }): void {
+    this.outputDirOverride = opts.outputDir
+    if (opts.sessionId) this.sessionIdOverride = opts.sessionId
+  }
+  private sessionIdOverride: string | null = null
 
   startRecording(pullUrl: string, nickname: string, format = 'mp3', segmentMin = 0, quality = ''): void {
     this.manualStop = false
     const config = loadConfig()
-    const dir = getEffectiveOutputPath(config)
+    const dir = this.outputDirOverride ?? getEffectiveOutputPath(config)
     fs.mkdirSync(dir, { recursive: true })
 
     const ext = format
@@ -32,7 +42,8 @@ export class StreamRecorder {
 
     const useSegments = segmentMin > 0 && (format === 'mp4' || format === 'flv')
     const segSec = segmentMin * 60
-    const baseName = `${safeName}_${qLabel}_${ts}`
+    // 若外部传了 sessionId（如 {nickname}_{startTime}），用它作基底，保持 mp4/CSV 同子文件夹、命名空间统一；否则退回到旧格式
+    const baseName = this.sessionIdOverride ?? `${safeName}_${qLabel}_${ts}`
 
     if (useSegments) {
       this.outputPath = path.join(dir, `${baseName}_%03d.${ext}`)
@@ -95,7 +106,9 @@ export class StreamRecorder {
         }
       } catch { /* ignore */ }
       if (!produced) {
-        this.onStatusChanged?.(`录制失败：拉流URL可能已过期（${code !== 0 ? `code=${code}` : '无数据'}），请重试`)
+        this.onStatusChanged?.(`录制失败：拉流URL可能已过期（${code !== 0 ? `code=${code}` : '无数据'}），正在自动重连...`)
+        // 通知 manager 重新拉取 URL 并重启录制
+        this.onRecordingFailed?.()
       } else {
         this.onStatusChanged?.(code !== 0 ? `录制异常退出 (code=${code})` : '录制已停止')
       }

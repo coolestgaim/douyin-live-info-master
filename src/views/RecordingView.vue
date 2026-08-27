@@ -223,7 +223,14 @@ function refreshAllQualities() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // 注册 record:on-update 事件（否则录制页永远显示「暂无录制任务」）
+  recordStore.setupListeners()
+  // 主动拉一次当前录制状态：切回页面时能恢复显示已存在的录制
+  try {
+    const state = await api().recordGetState?.()
+    if (state) recordStore.applyState(state)
+  } catch { /* ignore */ }
   refreshAllQualities()
 })
 
@@ -579,4 +586,5 @@ function avatarGradient(roomId: string): string {
 .hist-detail { font-size: 11px; color: var(--text-faint); flex: 1; }
 .hist-time { font-size: 11px; color: var(--text-dim); }
 .hist-actions { display: flex; gap: 6px; }
+
 </style>

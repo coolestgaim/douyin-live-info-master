@@ -272,6 +272,13 @@ ipcRenderer.on('floating:danmu', (_e, msg) => {
   }
 })
 
+// 回放开始前清空列表（只滚回放文件夹里的弹幕，不混直播/上一次回放）
+ipcRenderer.on('floating:clear', () => {
+  allMsgs = []
+  list.innerHTML = ''
+  emptyEl.style.display = 'block'
+})
+
 ipcRenderer.on('floating:rooms', (_e, newRooms) => {
   rooms = newRooms || []
   buildRoomChips()
