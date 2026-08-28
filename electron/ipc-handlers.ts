@@ -3,6 +3,7 @@ import { DouyinLiveService } from './services/douyin-live'
 import { DanmuService, DanmuMsg } from './services/danmu'
 import { RecordingManager, type RecordSessionInfo } from './services/recording-manager'
 import { getPullUrl, type PullUrlResult } from './services/live-stream'
+import { nowLocal } from './utils/time'
 import * as db from './services/database'
 import * as config from './services/record-config'
 import * as floatingDanmu from './services/floating-danmu'
@@ -47,7 +48,7 @@ function buildRecordSession(roomId: string, nickname: string): RecordSessionInfo
 
 // 把"原始 msg"格式化为 danmu csv 用的字段（与 danmu.ts 推上来的 msg 兼容）
 function danmuToRow(msg: DanmuMsg): { time: string; type: string; userName: string; content: string; giftName: string; giftCount: number; giftPrice: number; likeCount: number } {
-  const now = new Date().toISOString().replace('T', ' ').substring(0, 19)
+  const now = nowLocal()
   return {
     time: now,
     type: msg.type || 'Chat',
@@ -93,6 +94,10 @@ export async function connectDanmuRoom(roomId: string, nickname: string): Promis
   }
   service.onDisconnected = (reason: string) => {
     danmuConnections.delete(roomId)
+    // ⭐ 断开时也把"最近活跃时间"更新为断开时刻（之前只在连接建立/有弹幕入库时更新，导致历史 tab 显示的是"最后一条弹幕入库时间"而非真正的断开时间）
+    try {
+      db.updateRoomLastActive(roomId, nowLocal())
+    } catch { /* ignore */ }
     safeSend('danmu:on-disconnect', { roomId, reason })
   }
 
@@ -539,6 +544,28 @@ export function registerIpcHandlers(): void {
       }
       if (fs.existsSync(filePath)) { fs.unlinkSync(filePath); return { success: true } }
       return { success: false, error: '文件不存在' }
+    } catch (ex: any) { return { success: false, error: ex.message } }
+  })
+
+  // 删除整个录制会话文件夹（{昵称}_{时间}/ 目录 + 里面所有视频/CSV）
+  ipcMain.handle('file:delete-dir', async (_e, dirPath: string) => {
+    try {
+      if (!dirPath) return { success: false, error: '路径为空' }
+      if (!fs.existsSync(dirPath)) return { success: false, error: '目录不存在' }
+      const stat = fs.statSync(dirPath)
+      if (!stat.isDirectory()) return { success: false, error: '不是目录' }
+      fs.rmSync(dirPath, { recursive: true, force: true })
+      return { success: true }
+    } catch (ex: any) { return { success: false, error: ex.message } }
+  })
+
+  // 用系统默认程序打开文件（如 CSV 用 Excel/记事本打开）
+  ipcMain.handle('file:open-path', async (_e, filePath: string) => {
+    try {
+      if (!filePath || !fs.existsSync(filePath)) return { success: false, error: '文件不存在' }
+      const { shell } = require('electron')
+      await shell.openPath(filePath)
+      return { success: true }
     } catch (ex: any) { return { success: false, error: ex.message } }
   })
 

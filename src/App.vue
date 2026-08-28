@@ -24,7 +24,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { darkTheme, lightTheme, NConfigProvider, NMessageProvider, NDialogProvider, type GlobalThemeOverrides } from 'naive-ui'
 import AppTitlebar from './components/AppTitlebar.vue'
@@ -48,6 +48,13 @@ const currentRoute = computed(() => route.path)
 function navigate(path: string) {
   router.push(path)
 }
+
+// ⭐ 全局挂载录制/弹幕状态监听（v2.9.27 修复）：必须在 App 启动时就注册，
+// 否则用户在直播间页发起「全局录制」时 store 没收到任何状态，停止后录制历史也不会入库
+onMounted(() => {
+  try { import('./stores/record').then(({ useRecordStore }) => useRecordStore().setupListeners()) } catch { /* ignore */ }
+  try { import('./stores/danmu').then(({ useDanmuStore }) => useDanmuStore().setupListeners()) } catch { /* ignore */ }
+})
 
 /* ===== 双主题 ===== */
 const themeMode = computed(() => settingsStore.themeMode)

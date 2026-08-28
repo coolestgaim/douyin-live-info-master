@@ -96,6 +96,8 @@ const api = {
   // File
   fileOpenLocation: (filePath: string) => ipcRenderer.invoke('file:open-location', filePath),
   fileDelete: (filePath: string) => ipcRenderer.invoke('file:delete', filePath),
+  fileDeleteDir: (dirPath: string) => ipcRenderer.invoke('file:delete-dir', dirPath),
+  fileOpenPath: (filePath: string) => ipcRenderer.invoke('file:open-path', filePath),
 
   // FFmpeg
   ffmpegCheck: () => ipcRenderer.invoke('ffmpeg:check'),

@@ -106,6 +106,8 @@ export const useDanmuStore = defineStore('danmu', () => {
       if (roomList.selectedRoom?.enterRoomId === data.roomId) {
         danmuStatus.value = `${room?.nickname || ''} 已断开: ${data.reason}`
       }
+      // 断开时主进程已更新 db.room_info.LastActive 为断开时刻，刷新历史 tab
+      void loadHistory()
       updateCountText()
     })
   }

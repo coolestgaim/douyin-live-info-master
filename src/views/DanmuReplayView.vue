@@ -2,74 +2,108 @@
   <div class="replay-page">
     <div class="rp-head">
       <h2 class="rp-title">弹幕回放</h2>
-      <div class="rp-sub">视频播放 + 弹幕浮窗滚动（先点击"打开弹幕浮窗"让弹幕在悬浮窗里按时间轴走）</div>
+      <div class="rp-sub">视频播放 + 视频下方长条弹幕带匀速滚动（视频播完弹幕正好滚完，CSV/录制历史快捷进入）</div>
     </div>
 
-    <!-- 工具栏：选择录制文件夹（推荐，自动挂载视频+弹幕） / 历史子文件夹快捷 -->
+    <!-- 工具栏 -->
     <div class="card rp-toolbar">
-      <n-button size="small" type="primary" @click="pickReplayFolder" title="选择一个 {nickname}_{时间}/ 文件夹，里面同时有视频和弹幕 CSV，自动挂载并按原始时间轴回放">📂 选择录制文件夹</n-button>
-      <n-button size="small" tertiary @click="csvInput?.click()" title="不推荐：先选 CSV 再选视频，需要手动对齐时间">手动导入弹幕 CSV</n-button>
+      <n-button size="small" type="primary" @click="pickReplayFolder" title="选择一个 {昵称}_{时间}/ 文件夹，自动挂载视频+CSV">📂 选择录制文件夹</n-button>
+      <n-button size="small" tertiary @click="csvInput?.click()" title="先选 CSV 再选视频（手动对齐）">手动导入弹幕 CSV</n-button>
       <input ref="csvInput" type="file" accept=".csv,text/csv" hidden @change="importReplayCsv($event)" />
-      <n-button v-if="videoPath || replayItems.length" size="small" @click="pickVideo" title="替换为其他视频文件（需要已导入 CSV 才能对齐）">替换视频</n-button>
-      <n-button size="small" type="primary" tertiary @click="openFloating" title="打开弹幕浮窗：回放时弹幕会同步推送到浮窗滚动（效果最接近直播）">🎈 打开弹幕浮窗</n-button>
+      <n-button v-if="currentSessionDir" size="small" @click="pickVideo" title="替换视频文件">替换视频</n-button>
+      <n-button v-if="videoPath || replayItems.length" size="tiny" type="error" quaternary @click="clearAll">清空</n-button>
       <span class="rp-sep"></span>
-      <span v-if="replayItems.length" class="rp-meta">{{ replayItems.length }} 条 · {{ formatReplayRange() }}</span>
-      <span class="rp-offset">
-        偏移
-        <input v-model.number="offsetSec" type="number" step="1" class="rp-offset-input" title="弹幕时间轴微调（秒）：正数=弹幕提前出现，负数=推迟；默认 0 时视频第 t 秒 ↔ 录制开始后第 t 秒的弹幕" />
-        秒
-      </span>
+      <span v-if="replayItems.length" class="rp-meta">{{ replayItems.length }} 条弹幕 · {{ danmuTotalSec }}s</span>
     </div>
 
-    <!-- 历史录制会话（按子文件夹 + 时间倒序）—— 来自录制输出根目录的实时扫描 -->
-    <div v-if="historySessions.length" class="rp-history">
-      <span class="rp-history-label">历史录制:</span>
-      <button
-        v-for="h in historySessions.slice(0, 14)"
-        :key="h.sessionId"
-        :class="['rp-history-chip', { on: h.outputDir === currentSessionDir }]"
-        :title="`${h.outputDir}（${h.videoFiles.length} 视频 / ${h.csvFiles.length} 弹幕）`"
-        @click="loadFromSession(h)"
+    <!-- 历史录制下拉菜单（v2.9.29：避免历史多时占满窗口） -->
+    <div class="rp-history-dropdown">
+      <n-button
+        size="small"
+        tertiary
+        :disabled="!historySessions.length"
+        @click="historyOpen = !historyOpen"
       >
-        {{ h.nickname }} · {{ h.startTime ? formatStartTime(h.startTime) : h.sessionId }}
-        <span v-if="h.videoFiles.length && h.csvFiles.length" class="rp-twin">📹+💬</span>
-      </button>
+        📂 历史录制 ({{ historySessions.length }}) ▾
+      </n-button>
+      <div v-if="historyOpen" class="rp-hist-overlay" @click.self="historyOpen = false">
+        <div class="rp-hist-panel">
+          <div class="rhp-head">
+            <span>历史录制会话</span>
+            <button class="rhp-close" @click="historyOpen = false">×</button>
+          </div>
+          <div v-if="!historySessions.length" class="rhp-empty">暂无历史录制</div>
+          <div v-else class="rhp-list">
+            <div
+              v-for="h in historySessions"
+              :key="h.sessionId"
+              :class="['rhp-row', { on: h.outputDir === currentSessionDir }]"
+              :title="`${h.outputDir}\n${h.videoFiles.length} 视频 / ${h.csvFiles.length} 弹幕`"
+            >
+              <div class="rhp-info" @click="loadFromSession(h); historyOpen = false">
+                <span class="rhp-name">{{ h.nickname || `房间 ${h.sessionId}` }}</span>
+                <span class="rhp-time">{{ h.startTime ? formatStartTime(h.startTime) : h.sessionId }}</span>
+                <span v-if="h.videoFiles.length && h.csvFiles.length" class="rhp-twin">📹+💬</span>
+              </div>
+              <div class="rhp-actions">
+                <button class="rhp-btn" @click.stop="openSessionFolder(h.outputDir)" title="打开文件夹">📂</button>
+                <button class="rhp-btn danger" @click.stop="deleteSession(h)" title="删除整次录制">🗑</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- 视频播放器 -->
-    <div class="card rp-player-card">
-      <div ref="dmLayerRef" class="rp-video-stage">
-        <video
-          ref="replayVideo"
-          :src="videoLocalUrl"
-          class="rp-video"
-          @timeupdate="onVideoTime"
-          @seeked="onVideoSeek"
-          @play="onVideoPlay"
-          @pause="onVideoPause"
-          @ratechange="onVideoTime"
-          @loadedmetadata="onVideoMeta"
-        ></video>
-        <div v-if="!videoPath" class="rp-stage-empty">
-          <div class="rp-empty-icon">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="13" rx="3" stroke="var(--border-strong)" stroke-width="1.5"/><path d="M8 21h8M12 17v4" stroke="var(--border-strong)" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <!-- 播放器 + 右侧竖向弹幕条（平行布局，v2.9.27） -->
+    <div class="rp-layout">
+      <!-- 左：视频播放器 -->
+      <div ref="playerCard" class="card rp-player-card">
+        <div class="rp-video-stage">
+          <video
+            ref="replayVideo"
+            :src="videoLocalUrl"
+            class="rp-video"
+            @timeupdate="onTimeUpdate"
+            @seeked="onSeek"
+            @play="onPlay"
+            @pause="onPause"
+            @ratechange="onTimeUpdate"
+            @loadedmetadata="onMeta"
+          ></video>
+          <div v-if="!videoPath" class="rp-stage-empty">
+            <div class="rp-empty-icon">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="13" rx="3" stroke="var(--border-strong)" stroke-width="1.5"/><path d="M8 21h8M12 17v4" stroke="var(--border-strong)" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </div>
+            <div class="rp-empty-title">点击「📂 选择录制文件夹」或上方「历史录制」chip 开始回放</div>
+            <div class="rp-empty-hint">CSV 弹幕按视频时间在右侧弹幕条逐条向上滚动</div>
           </div>
-          <div class="rp-empty-title">点击「📂 选择录制文件夹」开始回放</div>
-          <div class="rp-empty-hint">视频下方会有进度时间轴，弹幕按原始时间轴推送到弹幕浮窗滚动（请先点工具栏「🎈 打开弹幕浮窗」）</div>
+        </div>
+        <!-- 自定义控制条 -->
+        <div class="rp-controls">
+          <button class="rc-btn" @click="togglePlay" :title="videoPaused ? '播放' : '暂停'">{{ videoPaused ? '▶' : '⏸' }}</button>
+          <input type="range" class="rc-range" min="0" max="1000" :value="videoSeekVal" @input="videoSeek($event)" title="进度" />
+          <span class="rc-time">{{ fmtVideoTime(videoCur) }} / {{ fmtVideoTime(videoDur) }}</span>
+          <button class="rc-btn" @click="toggleMute" :title="videoMuted ? '取消静音' : '静音'">{{ videoMuted ? '🔇' : '🔊' }}</button>
+          <select class="rc-rate" :value="videoRate" @change="setRate" title="倍速">
+            <option :value="0.5">0.5x</option><option :value="1">1x</option><option :value="1.5">1.5x</option><option :value="2">2x</option>
+          </select>
+          <button class="rc-btn" @click="toggleFs" title="全屏">⛶</button>
         </div>
       </div>
 
-      <!-- 自定义控制条 -->
-      <div class="rp-controls">
-        <button class="rc-btn" @click="toggleVideoPlay" :title="videoPaused ? '播放' : '暂停'">{{ videoPaused ? '▶' : '⏸' }}</button>
-        <input type="range" class="rc-range" min="0" max="1000" :value="videoSeekVal" @input="videoSeek($event)" title="进度" />
-        <span class="rc-time">{{ fmtVideoTime(videoCur) }} / {{ fmtVideoTime(videoDur) }}</span>
-        <button class="rc-btn" @click="toggleVideoMute" :title="videoMuted ? '取消静音' : '静音'">{{ videoMuted ? '🔇' : '🔊' }}</button>
-        <select class="rc-rate" :value="videoRate" @change="setVideoRate" title="倍速">
-          <option :value="0.5">0.5x</option><option :value="1">1x</option>
-          <option :value="1.5">1.5x</option><option :value="2">2x</option>
-        </select>
-        <button class="rc-btn" @click="toggleFullscreen" title="全屏">⛶</button>
+      <!-- 右：竖向弹幕条（与视频同高，平行） -->
+      <div ref="danmuPanel" class="card rp-danmu-panel">
+        <div class="dp-head">
+          <span class="dp-title">回放弹幕</span>
+          <div class="dp-filters">
+            <button :class="['dp-chip', { on: dmFilter === 'all' }]" @click="dmFilter = 'all'">全部</button>
+            <button :class="['dp-chip', { on: dmFilter === 'chat' }]" @click="dmFilter = 'chat'">弹幕</button>
+          </div>
+        </div>
+        <div class="dp-list">
+          <DanmuList :messages="filteredReplayMsgs" empty="暂无弹幕，选择录制会话后播放视频" />
+        </div>
       </div>
     </div>
   </div>
@@ -78,31 +112,36 @@
 <script setup lang="ts">
 import { ref, computed, onBeforeUnmount, onMounted } from 'vue'
 import { NButton, useMessage } from 'naive-ui'
+import DanmuList from '../components/DanmuList.vue'
 
 defineOptions({ name: 'DanmuReplayView' })
 const message = useMessage()
 const api = () => (window as any).electronAPI
 
-// ==== 历史录制会话（来自主进程 scanOutputRoot） ====
+// ==== 历史录制会话 ====
 interface HistorySession { sessionId: string; nickname: string; startTime: number; outputDir: string; videoFiles: string[]; csvFiles: string[] }
 const historySessions = ref<HistorySession[]>([])
 const currentSessionDir = ref('')
 
 // ==== 弹幕数据（CSV） ====
-// 透传 CSV 里所有字段，方便推送到弹幕浮窗时显示完整文案（如礼物名/礼物数/点赞次数）
 interface ReplayMsg {
   time: number; type: string; userName: string; content: string
   giftName?: string; giftCount?: number; giftPrice?: number; likeCount?: number
 }
 const csvInput = ref<HTMLInputElement | null>(null)
-const replayItems = ref<ReplayMsg[]>([])
-const offsetSec = ref(0)
-let replayBaseTime = 0
-let linkedIndex = 0
+const replayItems = ref<ReplayMsg[]>([])  // 已按 time 升序
+// 视频起点对应的"弹幕基准时间"（ms），让视频 0s ↔ 弹幕 baseTime（对齐录制开始）
+const replayBaseTime = ref(0)
+const offsetSec = ref(0)  // 用户手动偏移（秒），正=弹幕提前
 
 // ==== 视频 ====
 const replayVideo = ref<HTMLVideoElement | null>(null)
 const videoPath = ref('')
+// 高度同步：整个左侧播放器卡片（视频+控制条）= 右侧弹幕条整高（v2.9.29，按红框对齐）
+const playerCard = ref<HTMLElement | null>(null)
+const danmuPanel = ref<HTMLElement | null>(null)
+let heightObserver: ResizeObserver | null = null
+const historyOpen = ref(false)
 const videoPaused = ref(true)
 const videoCur = ref(0)
 const videoDur = ref(0)
@@ -111,29 +150,36 @@ const videoRate = ref<number>(1)
 const videoLocalUrl = computed(() => (videoPath.value ? 'local-video:///' + videoPath.value.replace(/\\/g, '/') : ''))
 const videoSeekVal = computed(() => (videoDur.value > 0 ? Math.round((videoCur.value / videoDur.value) * 1000) : 0))
 
+// ==== 右侧竖向弹幕条（v2.9.27：平行布局，跟弹幕功能区一致，只有"全部/弹幕"两个筛选） ====
+const dmFilter = ref<'all' | 'chat'>('all')
+// 已进入列表的弹幕（按视频时间逐条 push，unshift 保持最新在上）
+const replayMsgs = ref<any[]>([])
+let replayCursor = 0  // replayItems 中已消费到的下标
+const filteredReplayMsgs = computed(() => {
+  if (dmFilter.value === 'chat') return replayMsgs.value.filter(m => m.type === 'Chat')
+  return replayMsgs.value
+})
+
+// ==== 右侧竖向弹幕条 ====
+// （弹幕数据在「弹幕数据（CSV）」区上方定义：dmFilter / replayMsgs / replayCursor / filteredReplayMsgs）
+
+/** 弹幕带总时长 = 视频总时长；用于"视频播完弹幕正好滚完" */
+const danmuTotalSec = computed(() => {
+  if (!videoDur.value) return Math.round((replayItems.value.at(-1)?.time ?? 0 - (replayItems.value[0]?.time ?? 0)) / 1000)
+  return Math.round(videoDur.value)
+})
+
 async function pickVideo() {
   try {
     const r = await api().pickVideo?.()
     if (!r?.success) return
     videoPath.value = r.path
+    currentSessionDir.value = ''
     resetReplay()
-    message.success('已选择视频：播放后弹幕将推送到弹幕浮窗滚动')
-  } catch (e: any) {
-    message.error('选择视频失败: ' + (e?.message || String(e)))
-  }
+    message.success('已选择视频：播放后下方弹幕带开始滚动')
+  } catch (e: any) { message.error('选择视频失败: ' + (e?.message || String(e))) }
 }
 
-/** 打开弹幕浮窗（回放弹幕实时推送到浮窗滚动，需要先开浮窗才能看到） */
-async function openFloating() {
-  try {
-    await api().floatingOpen?.()
-    message.success('弹幕浮窗已打开：回放时弹幕将同步推送过去滚动')
-  } catch (e: any) {
-    message.error('打开浮窗失败: ' + (e?.message || String(e)))
-  }
-}
-
-/** 主入口：选择录制会话子文件夹（{nickname}_{时间}/） → 自动匹配视频与 CSV → 立即回放 */
 async function pickReplayFolder() {
   try {
     const r = await api().pickReplayFolder?.()
@@ -151,27 +197,16 @@ async function pickReplayFolder() {
       csvFiles: r.csvFiles || [],
     })
     void refreshHistorySessions()
-  } catch (e: any) {
-    message.error('选择失败: ' + (e?.message || String(e)))
-  }
+  } catch (e: any) { message.error('选择失败: ' + (e?.message || String(e))) }
 }
 
-/** 从历史列表点选 → 同上 */
-async function loadFromSession(h: HistorySession) {
-  await applySession(h)
-}
+async function loadFromSession(h: HistorySession) { await applySession(h) }
 
-/** 把一个历史会话应用到当前状态：视频+CSV+偏移 */
 async function applySession(s: HistorySession) {
   currentSessionDir.value = s.outputDir
-  // 1) 视频：取第一个视频文件（不含 csv 的那个）
   const video = s.videoFiles[0] || ''
-  if (!video) {
-    message.warning('该录制会话未找到视频文件，仅显示弹幕')
-  } else {
-    videoPath.value = video
-  }
-  // 2) 弹幕 CSV：取唯一一个 csv（或第一个）
+  if (!video) { message.warning('该录制会话未找到视频文件') }
+  else { videoPath.value = video }
   const csv = s.csvFiles[0] || ''
   if (!csv) {
     replayItems.value = []
@@ -183,44 +218,24 @@ async function applySession(s: HistorySession) {
     const text = await readFileUtf8(csv)
     const rows = parseCsvText(text)
     const items = csvRowsToReplayItems(rows)
+    if (!items.length) { message.warning('CSV 中没有可回放的弹幕'); resetReplay(); return }
     replayItems.value = items
-    if (!items.length) {
-      message.warning('CSV 中没有可回放的弹幕')
-      resetReplay()
-      return
-    }
-    // ⚠️ 关键：replayBaseTime = 录制会话起始时间戳（ms），视频第 t 秒 ↔ 弹幕时间 <= base + t*1000
-    // CSV 里是绝对时间戳，若 base 恒为 0，while 条件永远不成立 → 弹幕一条都不显示
-    replayBaseTime = s.startTime || items[0].time
-    // 录制与弹幕同时启动，时间轴天然对齐：offset 默认 0，用户可按需微调（视频起点 ≠ 录制起点时）
+    // 基准 = 录制会话起始时间戳；用户在「偏移」可微调
+    replayBaseTime.value = s.startTime || items[0].time
     offsetSec.value = 0
-    // 清空浮窗旧内容：本次回放只滚该文件夹的弹幕，不混直播/上一次回放
-    try { api().floatingReplayClear?.() } catch { /* ignore */ }
     resetReplay()
     message.success(`已挂载：${s.nickname} · ${items.length} 条弹幕${video ? '，可播放' : ''}`)
-  } catch (e: any) {
-    message.error('读取 CSV 失败: ' + (e?.message || String(e)))
-  }
+  } catch (e: any) { message.error('读取 CSV 失败: ' + (e?.message || String(e))) }
 }
 
 async function readFileUtf8(p: string): Promise<string> {
-  // 优先用主进程 open 失败回退到 fs.readFileSync，electronAPI 暂未暴露文件读取，用 fetch + file:// 又受限
-  // 这里借助 fetch 走 local-video 协议的网络支持，但 fetch 不支持 file://，所以用同源 fs 方式：
-  // 直接通过 ipc 暴露一个 read-file 方法
   const r = await api().readTextFile?.(p)
   if (r?.success) return r.content
-  // 兜底：再尝试 fetch('local-file:///' + 路径)
-  try {
-    const resp = await fetch('local-video:///' + p.replace(/\\/g, '/'))
-    return await resp.text()
-  } catch { throw new Error('读取文件失败（请升级版本）') }
+  try { const resp = await fetch('local-video:///' + p.replace(/\\/g, '/')); return await resp.text() } catch { throw new Error('读取文件失败（请升级版本）') }
 }
 
 async function refreshHistorySessions() {
-  try {
-    const r = await api().recordScanSessions?.()
-    if (r?.success) historySessions.value = r.sessions || []
-  } catch { /* ignore */ }
+  try { const r = await api().recordScanSessions?.(); if (r?.success) historySessions.value = r.sessions || [] } catch { /* ignore */ }
 }
 
 function formatStartTime(ms: number): string {
@@ -232,36 +247,45 @@ function formatStartTime(ms: number): string {
 
 onMounted(() => {
   void refreshHistorySessions()
-  // 每次新录制完成时自动刷新列表
   try { api().onRecordSessionFinalized?.(() => { void refreshHistorySessions() }) } catch { /* ignore */ }
+  // 视频画面与右侧弹幕条高度严格一致（v2.9.29：红框覆盖整个播放器卡片 = 弹幕条整高）
+  if (typeof ResizeObserver !== 'undefined') {
+    heightObserver = new ResizeObserver(() => {
+      const h = playerCard.value?.offsetHeight
+      if (h && danmuPanel.value && Math.abs(danmuPanel.value.offsetHeight - h) > 1) {
+        danmuPanel.value.style.height = h + 'px'
+      }
+    })
+    if (playerCard.value) heightObserver.observe(playerCard.value)
+  }
 })
 onBeforeUnmount(() => {
+  heightObserver?.disconnect()
+  heightObserver = null
   try { api().removeRecordListeners?.() } catch { /* ignore */ }
 })
 
+function clearAll() {
+  replayItems.value = []
+  videoPath.value = ''
+  currentSessionDir.value = ''
+  replayBaseTime.value = 0
+  offsetSec.value = 0
+  replayMsgs.value = []
+  replayCursor = 0
+  resetReplay()
+  void refreshHistorySessions()
+}
+
 function resetReplay() {
-  linkedIndex = 0
+  replayMsgs.value = []
+  replayCursor = 0
   const v = replayVideo.value
   if (v) { try { v.currentTime = 0 } catch {} }
+  videoCur.value = 0
 }
 
-/** 推送回放弹幕到弹幕浮窗（复用直播时浮窗滚动链路：IPC → sendDanmuToFloating）
- *  透传 CSV 里所有字段（giftName/giftCount/likeCount）让浮窗能准确显示礼物/点赞文案 */
-function pushToFloating(item: ReplayMsg) {
-  try {
-    api().floatingReplay?.({
-      type: item.type,
-      userName: item.userName,
-      content: item.content,
-      giftName: item.giftName,
-      giftCount: item.giftCount,
-      likeCount: item.likeCount,
-      roomNickname: '',
-    })
-  } catch { /* ignore */ }
-}
-
-// ==== CSV 解析（兼容 BOM/引号转义） ====
+// ==== CSV 解析（同 v2.9.25） ====
 function parseCsvText(text: string): string[][] {
   if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1)
   const rows: string[][] = []
@@ -284,8 +308,6 @@ function parseCsvText(text: string): string[][] {
   return rows
 }
 
-// db 导出列：时间,类型,用户名,内容,礼物名称,礼物数量,礼物价值,点赞次数,头像URL,主页链接,原始数据
-// 将 CSV 二维数组转为 ReplayMsg[]（过滤无效行；按时间排序；Stats 不渲染）
 function csvRowsToReplayItems(rows: string[][]): ReplayMsg[] {
   const items: ReplayMsg[] = []
   for (const r of rows) {
@@ -296,7 +318,6 @@ function csvRowsToReplayItems(rows: string[][]): ReplayMsg[] {
     if (type === 'Stats') continue
     const userName = (r[2] || '观众').trim()
     let content = (r[3] || '').trim()
-    // 列：4=礼物名称 5=礼物数量 6=礼物价值 7=点赞次数（db 导出格式）
     const giftName = (r[4] || '').trim()
     const giftCount = parseInt(r[5] || '0', 10) || 0
     const giftPrice = parseInt(r[6] || '0', 10) || 0
@@ -321,111 +342,99 @@ function importReplayCsv(e: Event) {
       const rows = parseCsvText(String(reader.result || ''))
       const items = csvRowsToReplayItems(rows)
       if (!items.length) { message.warning('CSV 中没有可回放的弹幕'); return }
-      // 手动导入模式没有会话起始时间：以第一条弹幕时间作为基准（视频 0 秒对齐第一条弹幕）
-      replayBaseTime = items[0].time
-      offsetSec.value = 0
-      resetReplay()
       replayItems.value = items
+      replayBaseTime.value = items[0].time
+      offsetSec.value = 0
       currentSessionDir.value = ''
+      resetReplay()
       message.success(`已导入 ${items.length} 条弹幕，选择视频后播放即可`)
-    } catch (err: any) {
-      message.error('CSV 解析失败: ' + (err?.message || String(err)))
-    }
+    } catch (err: any) { message.error('CSV 解析失败: ' + (err?.message || String(err))) }
   }
   reader.onerror = () => message.error('文件读取失败')
   reader.readAsText(file)
   ;(e.target as HTMLInputElement).value = ''
 }
 
-function formatReplayRange(): string {
-  if (!replayItems.value.length) return ''
-  const a = new Date(replayItems.value[0].time)
-  const b = new Date(replayItems.value[replayItems.value.length - 1].time)
-  const fmt = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`
-  const totalSec = Math.max(0, Math.round((b.getTime() - a.getTime()) / 1000))
-  return `${fmt(a)} ~ ${fmt(b)}（${Math.floor(totalSec / 3600)}h ${Math.floor((totalSec % 3600) / 60)}m ${totalSec % 60}s）`
+// ==== 历史 chip 操作 ====
+function openSessionFolder(dir: string) {
+  api().fileOpenLocation?.(dir)
+}
+function deleteSession(h: HistorySession) {
+  // 二次确认（用 native confirm 避免再引 dialog）
+  // eslint-disable-next-line no-alert
+  if (!confirm(`确认删除本次录制？\n${h.outputDir}\n将删除整个文件夹（视频+弹幕 CSV）`)) return
+  api().fileDeleteDir?.(h.outputDir)
+  historySessions.value = historySessions.value.filter(x => x.outputDir !== h.outputDir)
+  if (currentSessionDir.value === h.outputDir) clearAll()
+  message.success('已删除')
 }
 
-// ==== 联动：视频进度 → 弹幕浮窗 ====（视频上不再叠遮罩，B 站风格被浮窗替代，效果更稳更清晰）
-function onVideoTime() {
+// ==== 联动：视频进度 → 右侧竖向弹幕条（v2.9.27：逐条按时间 push，最新在上，与弹幕功能区一致） ====
+function onTimeUpdate() {
   const v = replayVideo.value
   if (!v || !replayItems.value.length) return
   videoCur.value = v.currentTime || 0
-  const targetMs = v.currentTime * 1000 + offsetSec.value * 1000
-  while (linkedIndex < replayItems.value.length && replayItems.value[linkedIndex].time <= replayBaseTime + targetMs) {
-    pushToFloating(replayItems.value[linkedIndex])
-    linkedIndex++
+  pushReplayToNow(v.currentTime)
+}
+function onSeek() {
+  const v = replayVideo.value
+  if (!v) return
+  videoCur.value = v.currentTime || 0
+  // 拖动进度：重建列表（回放到新时刻为止的弹幕）
+  replayCursor = 0
+  replayMsgs.value = []
+  pushReplayToNow(v.currentTime)
+}
+function onPlay() { videoPaused.value = false }
+function onPause() { videoPaused.value = true }
+function onMeta() { const v = replayVideo.value; if (!v) return; videoDur.value = v.duration || 0; onSeek() }
+
+/** 把 <= 当前视频时间对应的弹幕都 push 进右侧列表（逐条、最新在上） */
+function pushReplayToNow(vCur: number) {
+  const items = replayItems.value
+  if (!items.length) return
+  const vDur = replayVideo.value?.duration || 0
+  const first = items[0].time
+  const last = items[items.length - 1].time
+  const danmuTotalMs = Math.max(1, last - first)
+  const offsetMs = (offsetSec.value || 0) * 1000
+  // 当前视频时刻对应的弹幕绝对时间：视频 0s ↔ 第一条；视频播完 ↔ 最后一条
+  const targetMs = vDur > 0 ? first + (vCur / vDur) * danmuTotalMs + offsetMs : first + vCur * 1000 + offsetMs
+  const pushList: any[] = []
+  while (replayCursor < items.length && items[replayCursor].time <= targetMs) {
+    const it = items[replayCursor]
+    if (it.content) {
+      pushList.push({
+        type: it.type,
+        userName: it.userName,
+        content: it.content,
+        giftName: it.giftName || '',
+        giftCount: it.giftCount || 0,
+        giftPrice: it.giftPrice || 0,
+        likeCount: it.likeCount || 0,
+        time: new Date(it.time).toLocaleTimeString('zh-CN', { hour12: false }),
+        totalUser: 0, totalLike: 0, roomName: '', avatar: '', profileUrl: '',
+      })
+    }
+    replayCursor++
+  }
+  if (pushList.length) {
+    // 最新在上（unshift），最多保留 800 条
+    replayMsgs.value = [...pushList.reverse(), ...replayMsgs.value].slice(0, 800)
   }
 }
 
-function onVideoSeek() {
-  // 拖动进度：跳到新时刻继续推送弹幕
-  linkedIndex = 0
-  const v = replayVideo.value
-  if (!v) return
-  const targetMs = v.currentTime * 1000 + offsetSec.value * 1000
-  while (linkedIndex < replayItems.value.length && replayItems.value[linkedIndex].time <= replayBaseTime + targetMs) linkedIndex++
-  onVideoTime()
-}
-
-function onVideoPlay() {
-  videoPaused.value = false
-  const v = replayVideo.value
-  if (v && v.currentTime < 0.3) { linkedIndex = 0 }
-}
-
-function onVideoPause() {
-  videoPaused.value = true
-}
-
-function onVideoMeta() {
-  const v = replayVideo.value
-  if (!v) return
-  videoDur.value = v.duration || 0
-  videoCur.value = v.currentTime || 0
-}
-
 // ==== 自定义控制条 ====
-function toggleVideoPlay() {
-  const v = replayVideo.value
-  if (!v) return
-  if (v.paused) void v.play()
-  else v.pause()
-}
-function toggleVideoMute() {
-  const v = replayVideo.value
-  if (!v) return
-  v.muted = !v.muted
-  videoMuted.value = v.muted
-}
-function setVideoRate(e: Event) {
-  const v = replayVideo.value
-  if (!v) return
-  v.playbackRate = parseFloat((e.target as HTMLSelectElement).value) || 1
-  videoRate.value = v.playbackRate
-  onVideoTime()
-}
-function videoSeek(e: Event) {
-  const v = replayVideo.value
-  if (!v || !videoDur.value) return
-  v.currentTime = (parseFloat((e.target as HTMLInputElement).value) / 1000) * videoDur.value
-  videoCur.value = v.currentTime
-}
-function toggleFullscreen() {
-  const v = replayVideo.value
-  if (!v) return
-  if (document.fullscreenElement) void document.exitFullscreen()
-  else void v.requestFullscreen?.()
-}
+function togglePlay() { const v = replayVideo.value; if (!v) return; if (v.paused) void v.play(); else v.pause() }
+function toggleMute() { const v = replayVideo.value; if (!v) return; v.muted = !v.muted; videoMuted.value = v.muted }
+function setRate(e: Event) { const v = replayVideo.value; if (!v) return; v.playbackRate = parseFloat((e.target as HTMLSelectElement).value) || 1; videoRate.value = v.playbackRate }
+function videoSeek(e: Event) { const v = replayVideo.value; if (!v || !videoDur.value) return; v.currentTime = (parseFloat((e.target as HTMLInputElement).value) / 1000) * videoDur.value; videoCur.value = v.currentTime }
+function toggleFs() { const v = replayVideo.value; if (!v) return; if (document.fullscreenElement) void document.exitFullscreen(); else void v.requestFullscreen?.() }
 function fmtVideoTime(sec: number): string {
   if (!isFinite(sec) || sec < 0) sec = 0
   const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = Math.floor(sec % 60)
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`
 }
-
-onBeforeUnmount(() => {
-  // 弹幕遮罩代码已删，不再需要清理
-})
 </script>
 
 <style scoped>
@@ -433,29 +442,59 @@ onBeforeUnmount(() => {
 .rp-head { display: flex; align-items: baseline; gap: 12px; flex-shrink: 0; }
 .rp-title { font-size: 16px; font-weight: 600; color: var(--text-primary); margin: 0; }
 .rp-sub { font-size: 11px; color: var(--text-faint); }
-
 .rp-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
 .rp-sep { width: 1px; height: 18px; background: var(--border-default); margin: 0 2px; }
-.rp-check { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-secondary); cursor: pointer; }
-.rp-check input { cursor: pointer; }
-.rp-label { font-size: 11px; color: var(--text-faint); }
-.rp-select { background: var(--bg-track); border: 1px solid var(--border-strong); color: var(--text-secondary); font-size: 11px; border-radius: 5px; padding: 2px 4px; font-family: inherit; outline: none; cursor: pointer; }
 .rp-meta { font-size: 11px; color: var(--text-faint); }
-.rp-offset { font-size: 11px; color: var(--text-faint); display: inline-flex; align-items: center; gap: 4px; }
-.rp-offset-input { width: 56px; background: var(--bg-track); border: 1px solid var(--border-strong); border-radius: 4px; color: var(--text-primary); padding: 2px 6px; font-size: 11px; font-family: inherit; outline: none; }
-.rp-offset-input:focus { border-color: var(--primary); }
 
-.rp-history { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
-.rp-history-label { font-size: 11px; color: var(--text-faint); }
-.rp-history-chip {
-  font-size: 11px; padding: 2px 10px; border-radius: 12px; cursor: pointer; font-family: inherit;
-  border: 1px solid var(--border-strong); background: transparent; color: var(--text-secondary);
+/* 历史录制下拉菜单（v2.9.29：避免历史多时占满窗口） */
+.rp-history-dropdown { position: relative; flex-shrink: 0; }
+.rp-hist-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: transparent;  /* 透明遮罩，仅用于捕获外部点击关闭 */
+  display: flex; align-items: flex-start; justify-content: flex-start;
 }
-.rp-history-chip:hover { border-color: var(--primary); color: var(--text-primary); }
-.rp-history-chip.on { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); }
+.rp-hist-panel {
+  margin-top: 56px; margin-left: 220px;  /* 弹在侧边栏右侧、顶栏下方 */
+  width: 520px; max-height: 540px;
+  background: var(--bg-elevated, #1a1d24);
+  border: 1px solid var(--border-default); border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.rhp-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border-bottom: 1px solid var(--border-default);
+  font-size: 13px; font-weight: 600; color: var(--text-primary);
+}
+.rhp-close {
+  background: transparent; border: none; color: var(--text-faint);
+  font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1;
+}
+.rhp-close:hover { color: var(--text-primary); }
+.rhp-empty { padding: 40px; text-align: center; color: var(--text-faint); font-size: 12px; }
+.rhp-list { flex: 1; overflow-y: auto; padding: 6px; }
+.rhp-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 6px; transition: background 0.1s;
+}
+.rhp-row:hover { background: var(--bg-active); }
+.rhp-row.on { background: var(--primary-soft); }
+.rhp-info { flex: 1; display: flex; align-items: center; gap: 8px; cursor: pointer; min-width: 0; }
+.rhp-name { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+.rhp-time { font-size: 11px; color: var(--text-faint); }
+.rhp-twin { font-size: 11px; }
+.rhp-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.rhp-btn {
+  background: transparent; border: 1px solid var(--border-strong); color: var(--text-faint);
+  width: 24px; height: 22px; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 12px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.rhp-btn:hover { border-color: var(--primary); color: var(--text-primary); }
+.rhp-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
 
-/* 视频播放器舞台（弹幕遮罩已移除，v2.9.22 起改用弹幕浮窗） */
-.rp-player-card { padding: 10px; flex-shrink: 0; }
+/* 左右布局：左=视频播放器，右=竖向弹幕条（平行） */
+.rp-layout { display: flex; gap: 10px; align-items: flex-start; flex-shrink: 0; }
+.rp-player-card { padding: 10px; flex: 1; min-width: 0; }
 .rp-video-stage { position: relative; width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 8px 8px 0 0; overflow: hidden; }
 .rp-video { width: 100%; height: 100%; display: block; background: #000; }
 .rp-stage-empty {
@@ -465,11 +504,31 @@ onBeforeUnmount(() => {
 .rp-empty-title { font-size: 13px; color: var(--text-secondary); }
 .rp-empty-hint { font-size: 11px; color: var(--text-faint); }
 
-/* 控制条（暗色） */
+/* 右侧竖向弹幕条（与视频同高平行，跟弹幕功能区一致；高度由 ResizeObserver 同步视频画面高度） */
+.rp-danmu-panel {
+  width: 340px; flex-shrink: 0; display: flex; flex-direction: column;
+  padding: 0; overflow: hidden; border-radius: 8px;
+}
+.rp-danmu-panel .dp-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; border-bottom: 1px solid var(--border-default); flex-shrink: 0;
+}
+.rp-danmu-panel .dp-title { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+.rp-danmu-panel .dp-filters { display: flex; gap: 4px; }
+.rp-danmu-panel .dp-chip {
+  background: transparent; border: 1px solid var(--border-strong); color: var(--text-secondary);
+  font-size: 11px; padding: 2px 10px; border-radius: 10px; cursor: pointer; font-family: inherit;
+}
+.rp-danmu-panel .dp-chip:hover { border-color: var(--primary); color: var(--text-primary); }
+.rp-danmu-panel .dp-chip.on { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); }
+.rp-danmu-panel .dp-list { flex: 1; min-height: 0; overflow: hidden; }
+
+/* 控制条 */
 .rp-controls {
   display: flex; align-items: center; gap: 8px; padding: 6px 10px;
   background: var(--bg-elevated, #1a1d24); border: 1px solid var(--border-default);
-  border-radius: 0 0 8px 8px; border-top: none;
+  border-radius: 0 0 8px 8px; border-top: 1px solid var(--border-default);
+  margin-top: 6px;
 }
 .rc-btn {
   background: transparent; border: 1px solid var(--border-strong); color: var(--text-secondary);

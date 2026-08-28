@@ -69,12 +69,18 @@ export interface RecordingItem {
   isActive: boolean
   statusText: string
   outputPath: string
+  /** 录制会话子文件夹（v2.9.15 起：{昵称}_{时间}/） */
+  outputDir?: string
+  /** 弹幕 CSV 路径 */
+  csvPath?: string
 }
 
 export interface RoomInfo {
   roomId: string
   nickname: string
   lastActive: string
+  /** 本次连接的开始时间（v2.9.25：每次连接一条独立记录） */
+  sessionStart: string
   messageCount: number
 }
 

@@ -1,6 +1,7 @@
 import { StreamRecorder } from './stream-recorder'
 import { formatFileSize } from './format'
 import { loadConfig } from './record-config'
+import { nowLocal } from '../utils/time'
 import * as logger from './logger'
 import * as fs from 'fs'
 import * as path from 'path'
@@ -42,6 +43,8 @@ export class RecordingManager {
   private csvStreams = new Map<string, fs.WriteStream>()
   private retryAttempts = new Map<string, number>()
   private retrying = new Set<string>()
+  /** 录制过程定时推送（1s 一次），让前端 stats-row 实时刷新大小/时长 */
+  private refreshTimer: ReturnType<typeof setInterval> | null = null
 
   public onUpdate: (() => void) | null = null
   public onSessionFinalized: ((s: RecordSessionInfo) => void) | null = null   // 录制停止/异常退出时通知 ipc，UI 刷新历史录制
@@ -129,7 +132,21 @@ export class RecordingManager {
 
     logger.info(LOG_MODULE, `开始录制 roomId=${roomId} nickname=${nickname} session=${sessionId} dir=${outputDir}`)
     this.onUpdate?.()  // 主动通知前端「录制已开始」（之前仅异常时才触发，导致渲染页看不到任务）
+    this.startRefresh()  // 启动 1s 定时推送（录制过程中 stats 实时刷新）
     return true
+  }
+
+  /** 启动/重启定时推送（多录制时单 timer 复用） */
+  private startRefresh(): void {
+    if (this.refreshTimer) return
+    this.refreshTimer = setInterval(() => { this.onUpdate?.() }, 1000)
+  }
+
+  private stopRefresh(): void {
+    if (this.refreshTimer) {
+      clearInterval(this.refreshTimer)
+      this.refreshTimer = null
+    }
   }
 
   /** 弹幕实时追加到该房间的 CSV 流 */
@@ -138,7 +155,7 @@ export class RecordingManager {
     if (!ws) return
     const item = this.items.get(roomId)
     const row = [
-      msg.time || new Date().toISOString().replace('T', ' ').substring(0, 19),
+      msg.time || nowLocal(),
       msg.type || '',
       msg.userName || '',
       msg.content || '',
@@ -169,6 +186,7 @@ export class RecordingManager {
     this.recorders.clear()
     this.retryAttempts.clear()
     this.retrying.clear()
+    this.stopRefresh()  // 全停后清掉定时器
     this.onUpdate?.()  // 主动通知前端
   }
 
@@ -187,6 +205,8 @@ export class RecordingManager {
       this.recorders.delete(roomId)
       this.retryAttempts.delete(roomId)
       logger.info(LOG_MODULE, `停止录制 roomId=${roomId}`)
+      // 若全停完了，清掉定时器
+      if (this.recorders.size === 0) this.stopRefresh()
       this.onUpdate?.()  // 主动通知前端
     }
   }

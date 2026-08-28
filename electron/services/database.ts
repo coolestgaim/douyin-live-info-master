@@ -4,6 +4,13 @@ import * as path from 'path'
 import { app } from 'electron'
 import * as logger from './logger'
 
+/** 本地时区格式化（YYYY-MM-DD HH:mm:ss）—— 给中国用户看，避免 ISO UTC 偏差 */
+function nowLocal(): string {
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
+
 const LOG_MODULE = 'Database'
 
 let dbInstance: SqlJsDatabase | null = null
@@ -97,8 +104,10 @@ export function initializeTable(roomId: string, nickname: string): void {
     try { db.run(`ALTER TABLE [${tableName}] ADD COLUMN RawData TEXT DEFAULT ''`) } catch { /* already exists */ }
 
     ensureRoomInfoTable(db)
-    db.run(`INSERT OR REPLACE INTO room_info (RoomId, Nickname, LastActive) VALUES (?, ?, ?)`,
-      [roomId, nickname, new Date().toISOString().replace('T', ' ').substring(0, 19)])
+    // 每次连接 = 一条独立记录（SessionStart=连接开始时刻，LastActive 留空待断开时补）
+    const now = nowLocal()
+    db.run(`INSERT OR REPLACE INTO room_info (RoomId, Nickname, LastActive, SessionStart) VALUES (?, ?, '', ?)`,
+      [roomId, nickname, now])
     saveDb(db)
   }).catch((ex) => logger.error(LOG_MODULE, 'initializeTable失败', ex))
 }
@@ -120,7 +129,7 @@ export function insertMessage(roomId: string, msg: DanmuInsert): void {
   getDb().then(db => {
     const tableName = safeTableName(roomId)
     db.run(`INSERT INTO [${tableName}] (Time, Type, UserName, Content, GiftName, GiftCount, GiftPrice, LikeCount, Avatar, ProfileUrl, RawData) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [new Date().toISOString().replace('T', ' ').substring(0, 19), msg.type, msg.userName, msg.content, msg.giftName, msg.giftCount, msg.giftPrice, msg.likeCount, msg.avatar, msg.profileUrl, msg.rawData])
+      [nowLocal(), msg.type, msg.userName, msg.content, msg.giftName, msg.giftCount, msg.giftPrice, msg.likeCount, msg.avatar, msg.profileUrl, msg.rawData])
     scheduleSave()
   }).catch((ex) => logger.error(LOG_MODULE, 'insertMessage失败', ex))
 }
@@ -129,14 +138,28 @@ export interface RoomInfo {
   roomId: string
   nickname: string
   lastActive: string
+  /** 本次连接的开始时间（v2.9.25：每次连接一条独立记录） */
+  sessionStart: string
   messageCount: number
+}
+
+/** 更新某房间的最近活跃时间（弹幕入库/断开连接时调用）。
+ *  只更新该房间"最近开始"的那一次会话行（同房间多次连接 = 多行，各记各的断开时间） */
+export function updateRoomLastActive(roomId: string, lastActive: string): void {
+  getDb().then(db => {
+    ensureRoomInfoTable(db)
+    db.run(`UPDATE room_info SET LastActive = ?
+            WHERE RoomId = ? AND SessionStart = (SELECT MAX(SessionStart) FROM room_info WHERE RoomId = ?)`,
+      [lastActive, roomId, roomId])
+    scheduleSave()
+  }).catch(ex => logger.error(LOG_MODULE, 'updateRoomLastActive失败', ex))
 }
 
 export async function getRooms(): Promise<RoomInfo[]> {
   const db = await getDb()
   ensureRoomInfoTable(db)
 
-  const rows = db.exec('SELECT RoomId, Nickname, LastActive FROM room_info ORDER BY LastActive DESC')
+  const rows = db.exec('SELECT RoomId, Nickname, LastActive, SessionStart FROM room_info ORDER BY LastActive DESC')
   const rooms: RoomInfo[] = []
 
   if (rows.length > 0) {
@@ -155,6 +178,7 @@ export async function getRooms(): Promise<RoomInfo[]> {
         roomId,
         nickname: row[1] as string,
         lastActive: row[2] as string,
+        sessionStart: row[3] as string,
         messageCount
       })
     }
@@ -255,8 +279,30 @@ export async function clearAll(): Promise<void> {
 
 function ensureRoomInfoTable(db: SqlJsDatabase): void {
   db.run(`CREATE TABLE IF NOT EXISTS room_info (
-    RoomId TEXT PRIMARY KEY,
+    RoomId TEXT NOT NULL,
     Nickname TEXT DEFAULT '',
-    LastActive TEXT DEFAULT ''
+    LastActive TEXT DEFAULT '',
+    SessionStart TEXT DEFAULT '',
+    PRIMARY KEY (RoomId, SessionStart)
   )`)
+  // 迁移旧表：老版本主键是 (RoomId)，无 SessionStart 列 → 重建为复合主键
+  try {
+    const info = db.exec(`PRAGMA table_info(room_info)`)
+    const cols = info.length > 0 ? info[0].values.map(r => r[1]) : []
+    if (cols.length > 0 && !cols.includes('SessionStart')) {
+      db.run(`ALTER TABLE room_info RENAME TO room_info_old`)
+      db.run(`CREATE TABLE room_info (
+        RoomId TEXT NOT NULL,
+        Nickname TEXT DEFAULT '',
+        LastActive TEXT DEFAULT '',
+        SessionStart TEXT DEFAULT '',
+        PRIMARY KEY (RoomId, SessionStart)
+      )`)
+      // 旧数据：用 LastActive 当作 SessionStart（同房间多次历史会合并成一行，可接受）
+      db.run(`INSERT OR IGNORE INTO room_info (RoomId, Nickname, LastActive, SessionStart)
+              SELECT RoomId, Nickname, LastActive, LastActive FROM room_info_old`)
+      db.run(`DROP TABLE room_info_old`)
+      saveDb(db)
+    }
+  } catch { /* 迁移失败忽略 */ }
 }

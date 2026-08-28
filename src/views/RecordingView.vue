@@ -154,10 +154,13 @@
         <span class="hist-detail">{{ h.durationText }} · {{ h.sizeText }}</span>
         <span class="hist-time">{{ formatTime(h.timestamp) }}</span>
         <div class="hist-actions">
+          <n-button v-if="h.csvPath" size="tiny" quaternary @click="openDanmuCsv(h.csvPath)" title="用默认程序打开弹幕 CSV 文件">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="var(--accent-cyan)" stroke-width="1.8" fill="none"/><polyline points="14 2 14 8 20 8" stroke="var(--accent-cyan)" stroke-width="1.8" fill="none"/><line x1="8" y1="13" x2="16" y2="13" stroke="var(--accent-cyan)" stroke-width="1.8"/><line x1="8" y1="17" x2="13" y2="17" stroke="var(--accent-cyan)" stroke-width="1.8"/></svg>
+          </n-button>
           <n-button size="tiny" quaternary @click="openFileLocation(h.outputPath)" title="打开文件夹">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="var(--text-muted)" stroke-width="1.8" fill="none"/></svg>
           </n-button>
-          <n-button size="tiny" type="error" quaternary @click="confirmDeleteHistory(h.roomId)" title="删除">
+          <n-button size="tiny" type="error" quaternary @click="confirmDeleteHistory(h.roomId)" title="删除整个录制会话（视频+CSV）">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="3 6 5 6 21 6" stroke="var(--danger)" stroke-width="1.8"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="var(--danger)" stroke-width="1.8"/></svg>
           </n-button>
         </div>
@@ -263,6 +266,12 @@ function confirmDeleteHistory(roomId: string) {
 
 function openFileLocation(filePath: string) {
   (window as any).electronAPI.fileOpenLocation(filePath)
+}
+
+/** 用系统默认程序打开弹幕 CSV（Excel/记事本等） */
+function openDanmuCsv(csvPath: string) {
+  if (!csvPath) return
+  ;(window as any).electronAPI.fileOpenPath(csvPath)
 }
 
 function retryRecording(item: any) {

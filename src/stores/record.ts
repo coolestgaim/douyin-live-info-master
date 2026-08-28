@@ -11,6 +11,10 @@ interface HistoryItem {
   roomId: string
   nickname: string
   outputPath: string
+  /** 录制会话子文件夹（{昵称}_{时间}/），删除时整目录删 */
+  outputDir?: string
+  /** 弹幕 CSV 路径（可在历史记录里直接打开查看弹幕） */
+  csvPath?: string
   durationText: string
   sizeText: string
   timestamp: number
@@ -155,10 +159,11 @@ export const useRecordStore = defineStore('record', () => {
   }
 
   // ===== History =====
-  function addToHistory(item: { roomId: string; nickname: string; outputPath: string; durationText?: string; sizeText?: string }) {
+  function addToHistory(item: { roomId: string; nickname: string; outputPath: string; outputDir?: string; csvPath?: string; durationText?: string; sizeText?: string }) {
     if (!item.outputPath) return
     recordingHistory.value.unshift({
       roomId: item.roomId, nickname: item.nickname, outputPath: item.outputPath,
+      outputDir: item.outputDir, csvPath: item.csvPath,
       durationText: item.durationText || '', sizeText: item.sizeText || '', timestamp: Date.now()
     })
     saveHistory(recordingHistory.value)
@@ -178,7 +183,12 @@ export const useRecordStore = defineStore('record', () => {
 
   async function deleteHistoryItem(roomId: string) {
     const h = recordingHistory.value.find(x => x.roomId === roomId)
-    if (h?.outputPath) await api().fileDelete(h.outputPath)
+    // v2.9.25：outputDir 是会话子文件夹，整体删除（file:delete 只能删单文件，删目录会失败）
+    if (h?.outputDir) {
+      try { await api().fileDeleteDir(h.outputDir) } catch { /* ignore */ }
+    } else if (h?.outputPath) {
+      try { await api().fileDelete(h.outputPath) } catch { /* ignore */ }
+    }
     removeFromHistory(roomId)
   }
 

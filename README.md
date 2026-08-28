@@ -2,7 +2,7 @@
 
 > 抖音直播间控场桌面工具 — 实时弹幕监听、数据统计、直播录制、快捷回复
 
-[![Release](https://img.shields.io/badge/Release-v2.9.23-blue?logo=github)](https://github.com/coolestgaim/douyin-live-info-master/releases)
+[![Release](https://img.shields.io/badge/Release-v2.9.29-blue?logo=github)](https://github.com/coolestgaim/douyin-live-info-master/releases)
 ![Electron](https://img.shields.io/badge/Electron-33-47848F?logo=electron)
 ![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)
@@ -27,15 +27,15 @@
 
 ---
 
-## 📸 截图（v2.9.23 实拍）
+## 📸 截图（v2.9.29 实拍）
 
-| 仪表盘 | 直播间 |
-| ------------------------------------ | ------------------------------------ |
-| ![](docs/screenshots/dashboard.png) | ![](docs/screenshots/rooms.png) |
+| 仪表盘 | 直播间 | 弹幕 |
+| ------------------------------------ | ------------------------------------ | ------------------------------------ |
+| ![](docs/screenshots/dashboard.png) | ![](docs/screenshots/rooms.png) | ![](docs/screenshots/danmu.png) |
 
-| 录制管理 | 快捷回复 |
-| ------------------------------------ | ------------------------------------ |
-| ![](docs/screenshots/recording.png) | ![](docs/screenshots/quick-reply.png) |
+| 录制管理 | 弹幕回放 | 快捷回复 |
+| ------------------------------------ | ------------------------------------ | ------------------------------------ |
+| ![](docs/screenshots/recording.png) | ![](docs/screenshots/replay.png) | ![](docs/screenshots/quick-reply.png) |
 
 | 设置 | 关于 |
 | ------------------------------------ | ------------------------------------ |

@@ -33,22 +33,22 @@
 
       <n-tabs v-model:value="danmuStore.selectedTab" type="line" animated>
         <n-tab-pane name="all" tab="全部">
-          <DanmuList :messages="danmuStore.filteredAllMessages" :paused="floatingOpen && !userOverride" empty="暂无消息，连接直播间后将实时显示" />
+          <DanmuList :messages="danmuStore.filteredAllMessages" empty="暂无消息，连接直播间后将实时显示" />
         </n-tab-pane>
         <n-tab-pane name="chat" tab="弹幕">
-          <DanmuList :messages="danmuStore.filteredChatMessages" :paused="floatingOpen && !userOverride" empty="暂无弹幕消息" />
+          <DanmuList :messages="danmuStore.filteredChatMessages" empty="暂无弹幕消息" />
         </n-tab-pane>
         <n-tab-pane name="gift" tab="礼物">
-          <DanmuList :messages="danmuStore.filteredGiftMessages" :paused="floatingOpen && !userOverride" empty="暂无礼物消息" />
+          <DanmuList :messages="danmuStore.filteredGiftMessages" empty="暂无礼物消息" />
         </n-tab-pane>
         <n-tab-pane name="like" tab="点赞">
-          <DanmuList :messages="danmuStore.filteredLikeMessages" :paused="floatingOpen && !userOverride" empty="暂无点赞消息" />
+          <DanmuList :messages="danmuStore.filteredLikeMessages" empty="暂无点赞消息" />
         </n-tab-pane>
         <n-tab-pane name="member" tab="进入">
-          <DanmuList :messages="danmuStore.filteredMemberMessages" :paused="floatingOpen && !userOverride" empty="暂无进入消息" />
+          <DanmuList :messages="danmuStore.filteredMemberMessages" empty="暂无进入消息" />
         </n-tab-pane>
         <n-tab-pane name="social" tab="关注">
-          <DanmuList :messages="danmuStore.filteredSocialMessages" :paused="floatingOpen && !userOverride" empty="暂无关注消息" />
+          <DanmuList :messages="danmuStore.filteredSocialMessages" empty="暂无关注消息" />
         </n-tab-pane>
         <n-tab-pane name="history" tab="历史">
           <div class="history-header">
@@ -56,31 +56,17 @@
             <n-button size="tiny" tertiary @click="danmuStore.clearDatabase()">清空记录</n-button>
           </div>
           <div v-if="danmuStore.historyRooms.length > 0" class="history-cards">
-            <div v-for="room in danmuStore.historyRooms" :key="room.roomId" class="history-card" @dblclick="openHistory(room)">
+            <div v-for="room in danmuStore.historyRooms" :key="room.roomId + '|' + (room.sessionStart || '')" class="history-card" @dblclick="openHistory(room)" :title="'连接: ' + (room.sessionStart || '-') + ' → 断开: ' + (room.lastActive || '-')">
               <div class="history-name">{{ room.nickname || `房间 ${room.roomId}` }}</div>
               <div class="history-meta">
                 <span class="accent">{{ room.messageCount }} 条消息</span>
-                <span class="history-time">{{ room.lastActive }}</span>
+                <span class="history-time">{{ fmtSession(room) }}</span>
               </div>
             </div>
           </div>
           <div v-else class="empty-inline">暂无历史记录</div>
         </n-tab-pane>
       </n-tabs>
-
-      <!-- 浮窗开启时主窗口弹幕暂停覆盖层 -->
-      <div v-if="floatingOpen" class="floating-pause-overlay">
-        <div class="pause-card">
-          <div class="pause-dot"></div>
-          <div class="pause-title">弹幕浮窗已打开</div>
-          <div class="pause-desc">主窗口已暂停更新，避免两边同时渲染弹幕浪费资源</div>
-          <div class="pause-actions">
-            <button v-if="!userOverride" class="pause-btn primary" @click="userOverride = true">继续在主窗口看</button>
-            <button v-else class="pause-btn primary" @click="userOverride = false">暂停主窗口</button>
-            <button class="pause-btn" @click="toggleFloating">关闭浮窗</button>
-          </div>
-        </div>
-      </div>
     </div>
 
     <n-modal v-model:show="showHistory" preset="card" style="width: 90%; max-width: 900px; max-height: 640px;" :title="historyTitle">
@@ -137,12 +123,8 @@ const historyMessages = ref<any[]>([])
 const exporting = ref(false)
 
 const api = () => (window as any).electronAPI
+// 浮窗状态：仅用于顶部按钮文案（开关浮窗）。主窗口弹幕不因浮窗开启而暂停，v2.9.24 起两侧独立显示
 const floatingOpen = ref(false)
-// 用户手动覆盖：浮窗打开时仍想在主窗口看弹幕（默认浮窗开→主窗口暂停更新）
-const userOverride = ref(false)
-watch(floatingOpen, (open) => {
-  if (open) userOverride.value = false
-})
 
 function toggleFloating() {
   if (floatingOpen.value) {
@@ -166,6 +148,16 @@ onMounted(() => {
 watch(() => danmuStore.selectedTab, (val) => {
   if (val === 'history') danmuStore.loadHistory()
 })
+
+/** 会话时间展示：连接开始 ~ 断开（同房间每次连接独立一张卡） */
+function fmtSession(room: RoomInfo): string {
+  const short = (t: string) => (t ? t.slice(5, 16) : '')
+  const s = room.sessionStart
+  const e = room.lastActive
+  if (s && e) return `${short(s)} ~ ${short(e)}`
+  if (s) return `${short(s)} ~ 连接中`
+  return room.lastActive || ''
+}
 
 async function openHistory(room: RoomInfo) {
   historyRoomId.value = room.roomId

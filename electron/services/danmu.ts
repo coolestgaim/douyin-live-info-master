@@ -3,6 +3,7 @@ import { gunzipSync } from 'zlib'
 import { buildWssUrl } from './signature'
 import { parse, getFieldString, getFieldDict, getBytesField, getBoolField, getLongField, getIntField, extractRepeatedField, ProtobufMap } from './protobuf-parser'
 import { initializeTable, insertMessage } from './database'
+import { nowLocal } from '../utils/time'
 import * as logger from './logger'
 
 export interface DanmuMsg {
@@ -276,7 +277,7 @@ export class DanmuService {
       likeCount: partial.likeCount || 0,
       totalUser: partial.totalUser || 0,
       totalLike: partial.totalLike || 0,
-      time: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      time: nowLocal(),
       roomName: this.nickname,
       avatar: partial.avatar || '',
       profileUrl: partial.profileUrl || '',

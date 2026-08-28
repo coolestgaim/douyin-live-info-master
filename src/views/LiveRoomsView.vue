@@ -153,11 +153,13 @@ async function recordAllLive() {
     message.error('全局录制失败: ' + (e?.message || String(e)))
   }
 }
-// 全局停止：当前所有录制一律停止（不清弹幕连接，方便看弹幕不录像）
+// 全局停止：当前所有录制一律停止 + 联动断开弹幕连接（v2.9.26 修复：之前直播页直接调 api 绕过了 record store）
 async function stopAllRecord() {
   try {
-    await api()?.recordStopAll?.()
-    message.success('全部录制已停止')
+    // 必须走 record store 的 stopAll：会先 useDanmuStore().disconnectAll() 同步刷新直播间行连接状态，再停止录制
+    const { useRecordStore } = await import('../stores/record')
+    await useRecordStore().stopAll()
+    message.success('全部录制已停止，弹幕连接也已断开')
   } catch (e: any) {
     message.error('停止失败: ' + (e?.message || String(e)))
   }
