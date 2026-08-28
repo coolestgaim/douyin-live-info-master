@@ -621,42 +621,15 @@ function doImport(e: Event) {
 
 .qr-scroll { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(340px, 375px)); gap: 12px; overflow: auto; padding: 4px 0; align-content: start; }
 
-/* 手机卡：固定高度（620px，模拟手机竖屏比例），最多 3 个并排，超出自动换行 */
-/* 手机操作台固定暗色：内部变量重定义为暗色值，模拟手机屏不随应用主题漂移 */
+/* 手机卡：固定高度（模拟手机竖屏比例），最多 3 个并排，超出自动换行 */
+/* v2.9.30：移除内部硬编码的暗色变量覆盖 —— 之前写死导致切换亮/暗主题时实例不跟随配色。
+   现在继承全局 tokens（.theme-dark / .theme-light），实例配色随应用主题实时切换 */
 .qr-phone {
   width: 100%; height: 540px; display: flex; flex-direction: column; padding: 8px; gap: 6px; overflow: hidden;
   position: relative;
   border-radius: 22px;
-  border: 1.5px solid #3a3d46;
-  box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.35);
-  --bg-card: #1a1d26;
-  --bg-elevated: #15171e;
-  --bg-track: #111318;
-  --bg-hover: rgba(240, 80, 110, 0.06);
-  --bg-active: rgba(240, 80, 110, 0.1);
-  --bg-selected: rgba(240, 80, 110, 0.08);
-  --border-default: #1e2028;
-  --border-strong: #2a2d36;
-  --border-hover: #3a3d46;
-  --text-primary: #e0e2e8;
-  --text-secondary: #8b8fa3;
-  --text-muted: #6b7080;
-  --text-faint: #4a4e5e;
-  --text-dim: #3a3d46;
-  --primary: #f0506e;
-  --primary-hover: #f26b84;
-  --primary-pressed: #d13b58;
-  --primary-soft: rgba(240, 80, 110, 0.12);
-  --primary-border: rgba(240, 80, 110, 0.35);
-  --danger: #e5484d;
-  --danger-soft: rgba(229, 72, 77, 0.1);
-  --danger-border: rgba(229, 72, 77, 0.3);
-  --info: #5b9bf0;
-  --info-soft: rgba(91, 155, 240, 0.12);
-  --warning: #e9b949;
-  --success: #4cc38a;
-  --success-soft: rgba(76, 195, 138, 0.12);
-  --success-border: rgba(76, 195, 138, 0.3);
+  border: 1.5px solid var(--border-strong);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.18), 0 8px 24px rgba(0,0,0,0.22);
 }
 .qr-topbar { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .qr-name { flex: 1; background: transparent; border: none; color: var(--text-primary); font-size: 13px; font-weight: 600; font-family: inherit; outline: none; padding: 2px 4px; }
@@ -717,7 +690,7 @@ function doImport(e: Event) {
 }
 .qr-history-chip:hover { border-color: var(--primary); color: var(--primary-hover); }
 .qr-history-chip.dragging {
-  border-color: var(--primary); color: var(--primary-hover); background: #1f2430;
+  border-color: var(--primary); color: var(--primary-hover); background: var(--bg-active);
   box-shadow: 0 4px 14px rgba(240,80,110,0.3);
   cursor: grabbing; position: relative;
 }
@@ -737,16 +710,16 @@ function doImport(e: Event) {
 .qr-sm-danger:hover { background: var(--danger-border); }
 .qr-sm-ref { border-color: var(--success-border); color: var(--success); }
 .qr-sm-ref:hover { background: var(--success-soft); }
-.qr-sm-clear { border-color: rgba(107,114,128,0.3); color: #6b7280; }
+.qr-sm-clear { border-color: rgba(107,114,128,0.3); color: var(--text-muted); }
 .qr-sm-clear:hover { background: rgba(107,114,128,0.1); }
 
 .qr-body { flex: 1; display: flex; flex-direction: column; min-height: 0; gap: 6px; }
 /* 手机屏幕：圆角大屏 + 内阴影 + 顶部屏幕装饰条 */
 .qr-webview-wrap {
   flex: 0 1 240px; min-height: 120px; border-radius: 14px; overflow: auto;
-  border: 1px solid #2a2d36; position: relative;
-  background: #0d0f14;
-  box-shadow: inset 0 0 12px rgba(0,0,0,0.45);
+  border: 1px solid var(--border-strong); position: relative;
+  background: var(--bg-track);
+  box-shadow: inset 0 0 12px rgba(0,0,0,0.25);
   transition: border-color .3s ease, box-shadow .3s ease;
 }
 /* 运行中：青色微光描边 */
