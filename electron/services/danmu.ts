@@ -26,6 +26,11 @@ export interface DanmuMsg {
 const HEARTBEAT_BYTES = Buffer.from([0x3A, 0x02, 0x68, 0x62])
 const LOG_MODULE = 'Danmu'
 
+// 仅弹幕模式（推送浮窗前过滤，默认 true：与渲染端一致，礼物/点赞/进房不渲染）
+let chatOnly = true
+export function setChatOnly(v: boolean) { chatOnly = !!v }
+export function isChatOnly() { return chatOnly }
+
 export class DanmuService {
   private ws: WebSocket | null = null
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null

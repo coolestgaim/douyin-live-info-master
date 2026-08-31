@@ -18,6 +18,7 @@ const api = {
 
   // Danmu
   danmuConnect: (roomId: string, nickname: string) => ipcRenderer.invoke('danmu:connect', roomId, nickname),
+  danmuSetChatOnly: (v: boolean) => ipcRenderer.invoke('danmu:set-chat-only', v),
   danmuDisconnect: (roomId: string) => ipcRenderer.invoke('danmu:disconnect', roomId),
   danmuDisconnectAll: () => ipcRenderer.invoke('danmu:disconnect-all'),
   onDanmuMessage: (cb: (data: any) => void) => ipcRenderer.on('danmu:on-message', (_e, data) => cb(data)),

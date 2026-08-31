@@ -24,12 +24,14 @@ export interface QuickReplyInstance {
   zoom: number
   /** 直播精简模式：隐藏聊天区只留直播画面 */
   liveMode: boolean
+  /** 直播平台（douyin/bilibili/huya/kuaishou/common），决定功能按钮组与预设 selector */
+  platform: string
 }
 
 function defaultInstance(id: number): QuickReplyInstance {
   return {
     id, name: `实例 ${id}`, roomUrl: '', status: 'idle', expanded: false, _stripped: true,
-    zoom: 1, liveMode: false,
+    zoom: 1, liveMode: false, platform: 'common',
     quickReplyGroups: [{ name: '默认分组', expanded: true, items: ['欢迎来到直播间！', '谢谢关注~', '点点赞支持一下'], _tab: 'send' }],
     sendInput: '', inputSelector: null, sendSelector: null, inputPinState: ''
   }
@@ -57,6 +59,7 @@ function loadFromStorage(): QuickReplyInstance[] {
           inputSelector: item.inputSelector ?? null,
           sendSelector: item.sendSelector ?? null,
           _stripped: item._stripped ?? true,
+          platform: item.platform ?? 'common',
         }))
       }
     }
@@ -69,7 +72,7 @@ function saveToStorage(instances: QuickReplyInstance[]) {
     const slim = instances.map(i => ({
       id: i.id, name: i.name, quickReplyGroups: i.quickReplyGroups,
       inputSelector: i.inputSelector, sendSelector: i.sendSelector,
-      _stripped: i._stripped,
+      _stripped: i._stripped, platform: i.platform,
     }))
     localStorage.setItem(STORAGE_KEY, JSON.stringify(slim))
   } catch {}
@@ -79,7 +82,7 @@ export const useQuickReplyStore = defineStore('quickReply', () => {
   const instances = ref<QuickReplyInstance[]>(loadFromStorage())
   function persist() { saveToStorage(instances.value) }
 
-  function sendViaWebview(webview: any, text: string, inputSelector: string | null, sendSelector: string | null): Promise<{ success: boolean; error?: string }> {
+  function sendViaWebview(webview: any, text: string, inputSelector: string | null, sendSelector: string | null, mode: 'auto' | 'enter' | 'button' = 'auto'): Promise<{ success: boolean; error?: string; sent?: string }> {
     if (!webview) return Promise.resolve({ success: false, error: 'webview 未就绪' })
     try {
       return webview.executeJavaScript(`
@@ -88,50 +91,129 @@ export const useQuickReplyStore = defineStore('quickReply', () => {
             const txt = ${JSON.stringify(text)};
             const inputSel = ${JSON.stringify(inputSelector || null)};
             const sendSel = ${JSON.stringify(sendSelector || null)};
+            const mode = ${JSON.stringify(mode)};
+            const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+            const visible = (el) => el && el.isConnected && el.getClientRects().length > 0;
+            // 深查找：主文档 + 同源 iframe 内都能找到（跨域 iframe 无法访问，需在 iframe 内单独定位）
+            const queryDeep = (sel) => {
+              const all = [];
+              try { const r = document.querySelectorAll(sel); for (let i = 0; i < r.length; i++) all.push(r[i]); } catch(e) {}
+              const frames = document.querySelectorAll('iframe');
+              for (let f = 0; f < frames.length; f++) {
+                try {
+                  const doc = frames[f].contentDocument;
+                  if (!doc) continue;
+                  const rr = doc.querySelectorAll(sel);
+                  for (let i = 0; i < rr.length; i++) all.push(rr[i]);
+                } catch(e) {}
+              }
+              return all;
+            };
+            // 1. 找输入框：selector（含 iframe）→ contenteditable → textarea
             let inputBox = null;
-            if (inputSel) { try { inputBox = document.querySelector(inputSel); } catch(e) {} }
-            if (!inputBox || !inputBox.isConnected) {
-              const editables = document.querySelectorAll('div[contenteditable="true"]');
-              for (const e of editables) { if (e.isConnected) { const s = getComputedStyle(e); if (s.display !== 'none') { inputBox = e; break; } } }
+            if (inputSel) {
+              const list = queryDeep(inputSel);
+              for (const el of list) { if (visible(el)) { inputBox = el; break; } }
             }
-            if (!inputBox || !inputBox.isConnected) {
-              const textareas = document.querySelectorAll('textarea');
-              for (const t of textareas) { if (t.isConnected) { inputBox = t; break; } }
+            if (!inputBox) {
+              const editables = document.querySelectorAll('div[contenteditable="true"], [contenteditable="true"]');
+              for (const e of editables) { if (visible(e)) { inputBox = e; break; } }
+            }
+            if (!inputBox) {
+              const tas = document.querySelectorAll('textarea');
+              for (const t of tas) { if (visible(t)) { inputBox = t; break; } }
             }
             if (!inputBox) return { success: false, error: '未找到输入框' };
-            inputBox.innerHTML = '';
-            inputBox.focus();
-            document.execCommand('insertText', false, txt);
-            inputBox.dispatchEvent(new Event('input', { bubbles: true }));
-            await new Promise(r => setTimeout(r, 400));
-            let sendBtn = null;
-            if (sendSel) { try { sendBtn = document.querySelector(sendSel); } catch(e) {} }
-            if (!sendBtn || !sendBtn.isConnected) {
-              const all = document.querySelectorAll('button, [role="button"], div, span');
-              for (const el of all) {
-                if (!el.isConnected || el.offsetWidth === 0) continue;
-                const t = (el.textContent || '').trim();
-                if (t === '发送' || t === 'Send') { sendBtn = el; break; }
+            // 2. 填值（只写一次，严禁双写：setter 赋值后不得再 insertText，否则内容会重复成"欢迎欢迎"）
+            if (inputBox.isContentEditable) {
+              inputBox.focus();
+              document.execCommand('selectAll', false, null);
+              document.execCommand('insertText', false, txt);
+              // 校验：若 selectAll 未生效导致内容被追加（≠目标文本），清空后重插一次
+              if ((inputBox.textContent || '').trim() !== txt.trim()) {
+                inputBox.focus();
+                document.execCommand('selectAll', false, null);
+                document.execCommand('delete', false, null);
+                document.execCommand('insertText', false, txt);
               }
+            } else {
+              // input/textarea：原生 setter 一次性赋值（受控组件标准写法），绝不追加 insertText
+              const proto = inputBox.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+              const setter = Object.getOwnPropertyDescriptor(proto, 'value').set;
+              setter.call(inputBox, txt);
+              inputBox.focus();
             }
-            if (!sendBtn) return { success: false, error: '未找到发送按钮' };
-            let btn = sendBtn;
-            for (let i = 0; i < 5 && btn && btn.tagName !== 'BUTTON'; i++) { btn = btn.parentElement; }
-            if (btn && btn.tagName === 'BUTTON') sendBtn = btn;
-            function clickOnce(el) {
+            inputBox.dispatchEvent(new Event('input', { bubbles: true }));
+            inputBox.dispatchEvent(new Event('change', { bubbles: true }));
+            await sleep(350);
+            // 3. 发送：三模式（都只执行一次发送动作，严禁"未清空自动重试"防重复发送）
+            //    auto   = 按钮优先，找不到按钮才 Enter（推荐，防多发最稳）
+            //    enter  = Enter 优先（适合 B站/虎牙等 Enter 直接发送且清空快的平台）
+            //    button = 只点按钮，找不到直接报错
+            const findBtn = () => {
+              if (sendSel) {
+                const list = queryDeep(sendSel);
+                for (const el of list) { if (visible(el)) { return el; } }
+              }
+              const all = document.querySelectorAll('button, [role="button"]');
+              for (const el of all) {
+                if (!visible(el)) continue;
+                const t = (el.textContent || '').trim();
+                if (t === '发送' || t === '发' || t === 'Send' || /^(发送|发条|发评论|post|send)$/i.test(t)) { return el; }
+              }
+              return null;
+            };
+            const pressEnter = async () => {
+              const enterOpts = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true };
+              inputBox.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
+              inputBox.dispatchEvent(new KeyboardEvent('keypress', enterOpts));
+              inputBox.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
+            };
+            const clickOnce = (el) => {
+              el.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, cancelable: true }));
+              el.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, cancelable: true }));
               el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
               el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
               el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+              if (typeof el.click === 'function') { try { el.click(); } catch(e) {} }
+            };
+            const clickBtn = (btn) => {
+              // 向上找最近的 BUTTON（有些发送是 icon 按钮包在 button 内）
+              let b = btn;
+              for (let i = 0; i < 4 && b && b.tagName !== 'BUTTON'; i++) { b = b.parentElement; }
+              if (b && b.tagName === 'BUTTON' && visible(b)) btn = b;
+              clickOnce(btn);
+            };
+            const inputText = () => (inputBox.value || inputBox.textContent || '').trim();
+            let sendBtn = null;
+            if (mode !== 'enter') sendBtn = findBtn();
+            if (mode === 'button') {
+              if (!sendBtn) return { success: false, error: '未找到发送按钮（可在选择器行「定位」发送按钮，或切换发送方式为「自动」）' };
+              clickBtn(sendBtn);
+              await sleep(600);
+              return { success: true, sent: 'click' };
             }
-            await new Promise(r => setTimeout(r, 200 + Math.random() * 800));
-            clickOnce(sendBtn);
-            await new Promise(r => setTimeout(r, 300 + Math.random() * 700));
-            clickOnce(sendBtn);
-            await new Promise(r => setTimeout(r, 400 + Math.random() * 800));
-            clickOnce(sendBtn);
-            if (typeof sendBtn.click === 'function') sendBtn.click();
-            await new Promise(r => setTimeout(r, 200));
-            return { success: true };
+            if (mode === 'enter') {
+              await pressEnter();
+              await sleep(800);
+              if (!inputText()) return { success: true, sent: 'enter' };
+              // Enter 未生效（内容未清空）→ 按钮兜底一次（不重试）
+              sendBtn = findBtn();
+              if (!sendBtn) return { success: false, error: '回车未发送且未找到发送按钮（输入框仍有内容）' };
+              clickBtn(sendBtn);
+              await sleep(600);
+              return { success: true, sent: 'enter→click' };
+            }
+            // auto：按钮优先 → 找不到才 Enter（各只一次）
+            if (sendBtn) {
+              clickBtn(sendBtn);
+              await sleep(600);
+              return { success: true, sent: inputText() ? 'click(已点发送，输入框未清空属正常)' : 'click' };
+            }
+            await pressEnter();
+            await sleep(800);
+            if (!inputText()) return { success: true, sent: 'enter' };
+            return { success: false, error: '未找到发送按钮且回车未发送（输入框仍有内容，请用「定位」选择发送按钮）' };
           } catch(err) { return { success: false, error: err.message }; }
         })()
       `)
@@ -353,7 +435,7 @@ export const useQuickReplyStore = defineStore('quickReply', () => {
     instances, sendViaWebview, pinInputSelector, pinSendSelector, clearInputSelector,
     addGroup, removeGroup, toggleGroup, setGroupName,
     addQuickReply, removeQuickReply, setQuickReply, moveQuickReply,
-    addInstance, removeInstance,
+    addInstance, removeInstance, persist,
     exportGroup, importGroupAsNew
   }
 })

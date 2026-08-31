@@ -32,7 +32,7 @@
       <div class="nav-group-label">工具</div>
       <button
         v-for="item in toolNavItems"
-        :key="item.path"
+            :key="item.path"
         :class="['nav-item', { active: current === item.path }]"
         @click="$emit('navigate', item.path)"
       >
@@ -67,7 +67,7 @@ defineEmits<{ navigate: [path: string] }>()
 
 const settingsStore = useSettingsStore()
 const isDark = computed(() => settingsStore.themeMode === 'dark')
-const version = '2.9.34'
+const version = '2.9.35'
 
 const liveNavItems = [
   {

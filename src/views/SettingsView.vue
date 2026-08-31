@@ -81,11 +81,12 @@
         <span v-if="settings.statusMessage" class="success-text">{{ settings.statusMessage }}</span>
       </div>
     </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { NInput, NButton, NSelect, NSwitch, NInputNumber, NRadioGroup, NRadioButton } from 'naive-ui'
 import { useSettingsStore } from '../stores/settings'
 
@@ -101,9 +102,10 @@ onMounted(async () => {
 })
 async function setPerfMode(m: string) {
   perfMode.value = m
-  try { await (window as any).electronAPI?.perfSetMode?.(m) } catch { /* ignore */ }
+  try {
+    await (window as any).electronAPI?.perfSetMode?.(m)
+  } catch { /* ignore */ }
 }
-
 
 const formatOptions = [
   { label: 'MP3', value: 'mp3' },
@@ -118,10 +120,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.settings-page { padding: 16px 20px 20px; height: 100%; overflow-y: auto; }
-.page-title { margin-bottom: 20px; }
+.settings-page { padding: 16px 20px 20px; height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+.page-title { margin-bottom: 0; }
 
-.settings-card { padding: 24px; max-width: 520px; margin: 0 auto; }
+.settings-card { padding: 24px; max-width: 520px; margin: 0 auto; width: 100%; box-sizing: border-box; }
 
 .section-header {
   display: flex;
@@ -141,6 +143,8 @@ onMounted(() => {
   font-weight: 500;
 }
 .switch-label { font-size: 12px; color: var(--text-secondary); margin-left: 8px; vertical-align: middle; }
+.form-label-inline { font-size: 11px; color: var(--text-muted); margin-right: 8px; }
+.context-row { display: flex; align-items: center; margin-top: 8px; }
 
 .path-row { display: flex; gap: 8px; }
 .form-hint { font-size: 10px; color: var(--text-dim); margin-top: 6px; }
@@ -153,4 +157,16 @@ onMounted(() => {
 
 .form-actions { display: flex; align-items: center; gap: 12px; }
 .success-text { font-size: 12px; color: var(--success); font-weight: 500; }
+.danger-text { font-size: 12px; color: var(--danger); font-weight: 500; }
+
+
+/* 平台/角色选项卡 */
+.platform-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.platform-tab {
+  font-size: 12px; padding: 4px 14px; border-radius: 6px; cursor: pointer; font-family: inherit;
+  border: 1px solid var(--border-secondary); background: transparent; color: var(--text-secondary);
+  transition: all .15s;
+}
+.platform-tab:hover { border-color: var(--primary); color: var(--text-primary); }
+.platform-tab.on { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); font-weight: 500; }
 </style>

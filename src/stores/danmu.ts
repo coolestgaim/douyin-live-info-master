@@ -22,6 +22,17 @@ export const useDanmuStore = defineStore('danmu', () => {
   const danmuCountText = ref('')
   const selectedTab = ref('all')
 
+  // 仅弹幕模式：只处理 Chat 消息，丢弃礼物/点赞/进房等高频消息，降低内存与渲染压力
+  // 默认开启（未设置过时默认 true），弹幕页/浮窗都只渲染弹幕
+  const chatOnly = ref(true)
+  try { const v = localStorage.getItem('danmu-chat-only'); if (v !== null) chatOnly.value = v === '1' } catch {}
+  function setChatOnly(v: boolean) {
+    chatOnly.value = v
+    try { localStorage.setItem('danmu-chat-only', v ? '1' : '0') } catch {}
+    // 同步主进程（用于推送浮窗前的过滤）
+    try { (window as any).electronAPI?.danmuSetChatOnly?.(v) } catch {}
+  }
+
   // Use reactive Set so mutations are tracked
   const connectedRoomIds = reactive(new Set<string>())
 
@@ -69,6 +80,8 @@ export const useDanmuStore = defineStore('danmu', () => {
 
     api().onDanmuMessage((data: { roomId: string; msg: DanmuMessage }) => {
       data.msg.roomId = data.roomId
+      // 仅弹幕模式：Chat 以外的消息直接丢弃（礼物/点赞/进房是高频消息，是连接卡顿的主要来源）
+      if (chatOnly.value && data.msg.type !== 'Chat') return
       addMessage(data.msg)
 
       // Forward to dashboard
@@ -293,6 +306,7 @@ export const useDanmuStore = defineStore('danmu', () => {
   return {
     allMessages, chatMessages, giftMessages, likeMessages, memberMessages, socialMessages,
     historyRooms, danmuStatus, danmuTitle, danmuRoom, danmuCountText, selectedTab,
+    chatOnly, setChatOnly,
     connectedRoomIds, connectedRoomCount,
     filterRoomId, filterRoomOptions,
     filteredAllMessages, filteredChatMessages, filteredGiftMessages,

@@ -10,6 +10,9 @@
         <!-- 实例顶栏 -->
         <div class="qr-topbar">
           <input v-model="inst.name" class="qr-name" placeholder="实例名称" />
+          <select v-model="inst.platform" class="qr-platform" @change="onPlatformChange(inst)" title="直播平台：决定功能按钮组与预设选择器">
+            <option v-for="p in PLATFORMS" :key="p.id" :value="p.id">{{ p.name }}</option>
+          </select>
           <span :class="['qr-inst-status', { on: inst.status === 'running' }]">
             <span class="qr-inst-dot"></span>
             {{ inst.status === 'running' ? '运行中' : '已停止' }}
@@ -21,7 +24,7 @@
 
         <!-- URL + 操作行 -->
         <div class="qr-urlbar">
-          <input v-model="inst.roomUrl" class="qr-url" placeholder="直播间链接" @keyup.enter="loadWebview(inst)" />
+          <input v-model="inst.roomUrl" class="qr-url" placeholder="网页链接（支持任意直播网站，定位输入框+发送按钮即可）" @keyup.enter="loadWebview(inst)" />
           <button :class="['qr-sm-btn', inst.status === 'running' ? 'qr-sm-danger' : 'qr-sm-pri']"
             @click="inst.status === 'running' ? closeWebview(inst) : loadWebview(inst)">
             {{ inst.status === 'running' ? '关闭' : '加载' }}
@@ -44,33 +47,55 @@
                 <button class="qr-sm-btn" @click="zoomOut(inst)" title="缩小页面">−</button>
                 <button class="qr-sm-btn" @click="zoomIn(inst)" title="放大页面">+</button>
               </div>
-              <button class="qr-more-item qr-sm-live" :class="{ on: inst.liveMode }" @click="toggleLive(inst)"
-                :title="inst.liveMode ? '退出直播画面模式，回到快捷回复' : '直播画面精简模式：隐藏聊天区，只看直播'">{{ inst.liveMode ? '✓ 直播模式' : '直播画面模式' }}</button>
-              <button class="qr-more-item" @click="toggleStripped(inst)"
-                :title="inst._stripped ? '恢复全部元素' : '精简模式'">{{ inst._stripped ? '恢复全部元素' : '精简模式' }}</button>
+              <!-- 抖音专属：直播画面精简模式 + 沉浸（CSS 为抖音页面定制） -->
+              <template v-if="inst.platform === 'douyin'">
+                <button class="qr-more-item qr-sm-live" :class="{ on: inst.liveMode }" @click="toggleLive(inst)"
+                  :title="inst.liveMode ? '退出直播画面模式，回到快捷回复' : '直播画面精简模式：隐藏聊天区，只看直播'">{{ inst.liveMode ? '✓ 直播模式' : '直播画面模式' }}</button>
+                <button class="qr-more-item" @click="toggleStripped(inst)"
+                  :title="inst._stripped ? '恢复全部元素' : '精简模式'">{{ inst._stripped ? '恢复全部元素' : '精简模式' }}</button>
+              </template>
+              <!-- 需全屏才能发送的平台（虎牙/B站）：全屏化按钮 -->
+              <button v-if="getPlatform(inst.platform).needFullscreen" class="qr-more-item" @click="fullscreenWebview(inst)"
+                :title="getPlatform(inst.platform).loginHint">⛶ 全屏化（{{ getPlatform(inst.platform).name }}需全屏发送）</button>
+              <!-- 快手：扫码登录指引 -->
+              <button v-if="inst.platform === 'kuaishou'" class="qr-more-item" @click="showPlatformHint(inst)"
+                :title="getPlatform(inst.platform).loginHint">扫码登录指引</button>
               <button class="qr-more-item" @click="refreshWebview(inst)">刷新网页</button>
               <button class="qr-more-item qr-more-danger" @click="clearLogin(inst)">清除登录</button>
               <button class="qr-more-item qr-more-danger" @click="clearCache(inst)" title="清掉 cookie/缓存，下次重新登录">清空缓存</button>
+              <div class="qr-more-hint" v-if="getPlatform(inst.platform).loginHint && inst.platform !== 'douyin'">
+                {{ getPlatform(inst.platform).name }}：{{ getPlatform(inst.platform).loginHint }}
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- 历史直播间快捷填入（长按拖拽排序） -->
+        <!-- 历史直播间快捷填入（下拉菜单省空间，面板内可拖拽排序） -->
         <div v-if="roomListStore.roomHistory.length > 0" class="qr-history">
-          <span class="qr-history-label">历史:</span>
-          <button
-            v-for="(h, idx) in roomListStore.roomHistory"
-            :key="h.url"
-            class="qr-history-chip"
-            :class="{ dragging: dragIdx === idx }"
-            :style="dragIdx === idx ? { transform: `translate(${dragPos.x}px, ${dragPos.y}px)`, zIndex: 10 } : {}"
-            :title="h.url"
-            @pointerdown="chipDown($event, idx)"
-            @pointermove="chipMove($event, idx)"
-            @pointerup="chipUp(idx)"
-            @pointercancel="chipUp(idx)"
-            @click="chipClick(inst, h.url)"
-          >{{ h.nickname || h.url.split('/').pop() }}</button>
+          <button class="qr-history-btn" :class="{ open: historyOpenId === inst.id }" @click.stop="historyOpenId = historyOpenId === inst.id ? null : inst.id" title="历史直播间（点击选择，长按拖拽排序）">
+            历史 <span class="qr-h-cnt">{{ roomListStore.roomHistory.length }}</span>
+            <svg class="qr-h-arr" viewBox="0 0 24 24" width="10" height="10"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <transition name="qr-hdrop">
+            <div v-if="historyOpenId === inst.id" class="qr-history-panel" @click.stop>
+              <button
+                v-for="(h, idx) in roomListStore.roomHistory"
+                :key="h.url"
+                class="qr-history-chip"
+                :class="{ dragging: dragIdx === idx }"
+                :style="dragIdx === idx ? { transform: `translate(${dragPos.x}px, ${dragPos.y}px)`, zIndex: 10 } : {}"
+                :title="(h.nickname || h.url.split('/').pop()) + ' — ' + h.url"
+                @pointerdown="chipDown($event, idx)"
+                @pointermove="chipMove($event, idx)"
+                @pointerup="chipUp(idx)"
+                @pointercancel="chipUp(idx)"
+                @click="chipClick(inst, h.url)"
+              >
+                <span class="qr-hi-name">{{ h.nickname || h.url.split('/').pop() }}</span>
+                <span class="qr-hi-url">{{ h.url }}</span>
+              </button>
+            </div>
+          </transition>
         </div>
 
         <!-- 手机主体：v-show 假关闭（保登录态，重开秒显示） -->
@@ -121,17 +146,17 @@
                     <!-- 发送模式：点击 chip 发送，长按拖拽排序（像手机桌面图标） -->
                     <div v-if="g._tab === 'send'">
                       <div class="qr-chips" v-if="g.items.filter(t=>t.trim()).length">
-                        <template v-for="(raw, rawIdx) in g.items" :key="rawIdx">
-                          <span v-if="raw.trim()" class="qr-chip"
-                            :class="{ dragging: qrDrag.active && qrDrag.idx === rawIdx }"
+                        <template v-for="(c, vi) in visibleChips(g)" :key="c.rawIdx">
+                          <span class="qr-chip"
+                            :class="{ dragging: isDragChip(inst.id, gi, c.rawIdx) }"
                             :data-g="gi"
-                            :style="qrDrag.active && qrDrag.idx === rawIdx ? { transform: `translate(${qrDrag.x}px, ${qrDrag.y}px) scale(1.05)`, zIndex: 20 } : {}"
-                            @pointerdown="qrChipDown($event, inst.id, gi, rawIdx)"
+                            :style="chipDragStyle(inst.id, gi, c.rawIdx, vi)"
+                            @pointerdown="qrChipDown($event, inst.id, gi, c.rawIdx)"
                             @pointermove="qrChipMove($event, gi)"
                             @pointerup="qrChipUp()"
                             @pointercancel="qrChipUp()"
-                            @click="qrChipClick(inst.id, raw)">
-                            <span class="qr-chip-text">{{ raw }}</span>
+                            @click="qrChipClick(inst.id, c.raw)">
+                            <span class="qr-chip-text">{{ c.raw }}</span>
                           </span>
                         </template>
                       </div>
@@ -179,6 +204,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useQuickReplyStore } from '../stores/quick-reply'
 import { useRoomListStore } from '../stores/room-list'
+import { PLATFORMS, getPlatform, guessPlatform } from '../data/platforms'
 
 defineOptions({ name: 'QuickReplyView' })
 const store = useQuickReplyStore()
@@ -193,8 +219,10 @@ function setWvLoading(id: number, loading: boolean) { wvLoading[id] = loading }
 
 /* 更多功能下拉：当前打开的实例 id，null = 全部关闭 */
 const moreOpenId = ref<number | null>(null)
+/* 历史直播间下拉：当前展开的实例 id，null = 全部关闭（按实例隔离，避免多实例同步展开） */
+const historyOpenId = ref<number | null>(null)
 onMounted(() => {
-  document.addEventListener('click', () => { moreOpenId.value = null })
+  document.addEventListener('click', () => { moreOpenId.value = null; historyOpenId.value = null })
 })
 
 const STRIP_RULES = `.webcast-chatroom > :not(.pZzS8QUV):not(.webcast-chatroom___input-container){display:none!important}.LyAdeVIF.sBRqUw32,[class*="gift"],[class*="floating"],[class*="Floating"],[class*="interact-bar"],[class*="VideoPlayer"],video,[class*="player-container"],[class*="Player"],[class*="shop"],[class*="Shop"],[class*="product"],[class*="mall"],[class*="cart"]{display:none!important}`
@@ -232,7 +260,45 @@ function setWebviewRef(id: number, el: HTMLWebViewElement | null) {
 }
 function resolveUrl(raw: string) { return raw ? (raw.includes('://') ? raw : 'https://' + raw) : 'about:blank' }
 
-function loadWebview(inst: any) { if (inst.roomUrl) { inst.status = 'running'; inst._stripped = true } }
+// 加载 webview：按 URL 推断平台 + 空 selector 填入平台预设
+function loadWebview(inst: any) {
+  if (inst.roomUrl) {
+    inst.platform = guessPlatform(inst.roomUrl)
+    const cfg = getPlatform(inst.platform)
+    if (!inst.inputSelector && cfg.inputSelector) inst.inputSelector = cfg.inputSelector
+    if (!inst.sendSelector && cfg.sendSelector) inst.sendSelector = cfg.sendSelector
+    store.persist()
+    inst.status = 'running'; inst._stripped = true
+  }
+}
+// 手动切换平台：空 selector 时填入该平台预设（不覆盖已自定义的）
+function onPlatformChange(inst: any) {
+  const cfg = getPlatform(inst.platform)
+  if (!inst.inputSelector && cfg.inputSelector) inst.inputSelector = cfg.inputSelector
+  if (!inst.sendSelector && cfg.sendSelector) inst.sendSelector = cfg.sendSelector
+  store.persist()
+}
+// 平台登录/操作指引弹窗
+function showPlatformHint(inst: any) {
+  const cfg = getPlatform(inst.platform)
+  const text = `${cfg.name}平台指引\n\n${cfg.loginHint || '无特殊指引'}\n\n输入框选择器: ${cfg.inputSelector || '手动定位'}\n发送按钮选择器: ${cfg.sendSelector || '手动定位'}`
+  window.alert(text)
+}
+// 全屏化（虎牙/B站等需全屏才能发送）：在网页里点击全屏按钮
+async function fullscreenWebview(inst: any) {
+  const w = wvRefs.value[inst.id]
+  if (!w) return
+  try {
+    await w.executeJavaScript(`(function(){
+      const els = document.querySelectorAll('button,[class*="fullscreen"],[class*="Fullscreen"],[id*="fullscreen"],[class*="player-full"]');
+      for (const b of els) {
+        const t = (b.textContent||'').trim();
+        if (t.includes('全屏') || /fullscreen/i.test(b.className||'')) { b.click(); return true }
+      }
+      return false;
+    })()`)
+  } catch {}
+}
 // 点击历史 chip：填入 URL 并直接加载（省去复制粘贴）
 function fillHistory(inst: any, url: string) { inst.roomUrl = url; loadWebview(inst) }
 
@@ -308,10 +374,46 @@ function chipClick(inst: any, url: string) {
 }
 
 // ==== 快捷回复 chip 长按拖拽排序（发送模式下，仿手机桌面图标） ====
-// qrDrag.idx = items 原始索引（模板里 rawIdx 对应）；visIdx = 可见顺序索引（排除自己）；toIdx = 目标可见顺序索引
-const qrDrag = reactive({ active: false, longPress: false, instId: 0, gIdx: 0, idx: -1, visIdx: -1, toIdx: -1, x: 0, y: 0, sx: 0, sy: 0 })
+// qrDrag.idx = items 原始索引（模板里 rawIdx 对应）；visIdx/fromVis = 可见顺序索引；toIdx = 目标可见顺序索引
+const qrDrag = reactive({
+  active: false, longPress: false,
+  instId: 0, gIdx: 0, idx: -1, visIdx: -1, fromVis: -1, toIdx: -1,
+  x: 0, y: 0, sx: 0, sy: 0,
+  chipWidths: [] as number[],   // 当前实例当前分组可见 chip 的宽度（让位动画用）
+})
 let qrDragTimer: any = null
 let qrSuppressClick = false
+
+// 可见 chip 列表（跳过空项）：raw = 文本, rawIdx = items 原始索引
+function visibleChips(g: any): { raw: string; rawIdx: number }[] {
+  return g.items.map((t: string, i: number) => ({ raw: t, rawIdx: i })).filter((c: any) => c.raw.trim())
+}
+
+// 是否当前正在拖拽的 chip（必须实例 + 分组 + 索引全匹配，避免跨实例误判）
+function isDragChip(instId: number, gIdx: number, rawIdx: number): boolean {
+  return qrDrag.active && qrDrag.instId === instId && qrDrag.gIdx === gIdx && qrDrag.idx === rawIdx
+}
+
+// chip 拖拽/让位样式：被拖 chip 浮起跟随指针；中间的 chip 向两边让位（插队动画）
+function chipDragStyle(instId: number, gIdx: number, rawIdx: number, vi: number): Record<string, string> {
+  if (isDragChip(instId, gIdx, rawIdx)) {
+    return { transform: `translate(${qrDrag.x}px, ${qrDrag.y}px) scale(1.05)`, zIndex: '20', transition: 'none' }
+  }
+  // 让位：仅拖拽本实例本分组时，位于被拖 chip 与目标之间的 chip 平移让开
+  if (qrDrag.active && qrDrag.longPress && qrDrag.instId === instId && qrDrag.gIdx === gIdx) {
+    const from = qrDrag.fromVis, to = qrDrag.toIdx
+    if (from >= 0 && to >= 0 && from !== to) {
+      const w = qrDrag.chipWidths[vi] || 60
+      if (to > from && vi > from && vi <= to) {
+        return { transform: `translateX(${-(w + 4)}px)` }
+      }
+      if (to < from && vi >= to && vi < from) {
+        return { transform: `translateX(${w + 4}px)` }
+      }
+    }
+  }
+  return {}
+}
 
 function qrChipDown(e: PointerEvent, instId: number, gIdx: number, idx: number) {
   qrDrag.active = true
@@ -324,10 +426,12 @@ function qrChipDown(e: PointerEvent, instId: number, gIdx: number, idx: number) 
   qrDrag.y = 0
   qrDrag.sx = e.clientX
   qrDrag.sy = e.clientY
-  // 记录被拖 chip 的可见顺序索引（跳过空项），目标计算时排除自己
+  // 记录被拖 chip 的可见顺序索引 + 所有 chip 宽度（目标计算排除自己 + 让位动画）
   const card = (e.currentTarget as HTMLElement).closest('.qr-phone')
   const chips = card ? Array.from(card.querySelectorAll('.qr-chip[data-g="' + gIdx + '"]')) : []
   qrDrag.visIdx = chips.indexOf(e.currentTarget as HTMLElement)
+  qrDrag.fromVis = qrDrag.visIdx
+  qrDrag.chipWidths = chips.map(c => (c as HTMLElement).getBoundingClientRect().width)
   clearTimeout(qrDragTimer)
   qrDragTimer = setTimeout(() => { qrDrag.longPress = true }, 300)
 }
@@ -358,12 +462,16 @@ function qrChipMove(e: PointerEvent, gIdx: number) {
     }
   })
   qrDrag.toIdx = target
+  // 刷新宽度（让位动画的位移量随目标 chip 宽度变化）
+  if (chips.length === qrDrag.chipWidths.length) {
+    qrDrag.chipWidths = chips.map(c => (c as HTMLElement).getBoundingClientRect().width)
+  }
 }
 
 function qrChipUp() {
   clearTimeout(qrDragTimer)
   if (qrDrag.active && qrDrag.longPress) {
-    if (qrDrag.toIdx >= 0 && qrDrag.toIdx !== qrDrag.idx) {
+    if (qrDrag.toIdx >= 0 && qrDrag.toIdx !== qrDrag.fromVis) {
       store.moveQuickReply(qrDrag.instId, qrDrag.gIdx, qrDrag.idx, qrDrag.toIdx)
     }
     qrSuppressClick = true
@@ -373,6 +481,7 @@ function qrChipUp() {
   qrDrag.idx = -1
   qrDrag.x = 0
   qrDrag.y = 0
+  qrDrag.chipWidths = []
 }
 
 function qrChipClick(instId: number, text: string) {
@@ -625,7 +734,7 @@ function doImport(e: Event) {
 /* v2.9.30：移除内部硬编码的暗色变量覆盖 —— 之前写死导致切换亮/暗主题时实例不跟随配色。
    现在继承全局 tokens（.theme-dark / .theme-light），实例配色随应用主题实时切换 */
 .qr-phone {
-  width: 100%; height: 540px; display: flex; flex-direction: column; padding: 8px; gap: 6px; overflow: hidden;
+  width: 100%; height: 640px; display: flex; flex-direction: column; padding: 8px; gap: 6px; overflow: hidden;
   position: relative;
   border-radius: 22px;
   border: 1.5px solid var(--border-strong);
@@ -633,6 +742,14 @@ function doImport(e: Event) {
 }
 .qr-topbar { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .qr-name { flex: 1; background: transparent; border: none; color: var(--text-primary); font-size: 13px; font-weight: 600; font-family: inherit; outline: none; padding: 2px 4px; }
+/* 平台选择下拉 */
+.qr-platform {
+  flex-shrink: 0; max-width: 88px;
+  background: var(--bg-card); border: 1px solid var(--border-strong); color: var(--text-secondary);
+  font-size: 10px; padding: 1px 4px; border-radius: 6px; cursor: pointer; font-family: inherit; outline: none;
+}
+.qr-platform:hover { border-color: var(--primary); }
+.qr-platform option { background: var(--bg-card); color: var(--text-primary); }
 /* 实例运行状态胶囊 */
 .qr-inst-status {
   display: inline-flex; align-items: center; gap: 4px;
@@ -660,6 +777,11 @@ function doImport(e: Event) {
   border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.4);
 }
 .qr-more-row { display: flex; gap: 4px; align-items: center; justify-content: center; }
+/* 平台登录/操作提示（面板底部灰色小字） */
+.qr-more-hint {
+  margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--border-default);
+  font-size: 9px; color: var(--text-faint); line-height: 1.5; max-width: 180px; white-space: normal;
+}
 /* 缩放滑块行 */
 .qr-zoom-row { display: flex; align-items: center; gap: 6px; padding: 2px 4px 6px; border-bottom: 1px dashed var(--border-default); margin-bottom: 4px; }
 .qr-zoom-label { font-size: 10px; color: var(--text-faint); flex-shrink: 0; }
@@ -678,22 +800,48 @@ function doImport(e: Event) {
 .qr-more-item.qr-sm-live:hover { background: var(--accent-cyan-soft); }
 .qr-more-item.qr-sm-live.on { background: var(--accent-cyan-soft); font-weight: 600; }
 
-/* 历史直播间快捷填入 */
-.qr-history { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; flex-shrink: 0; }
-.qr-history-label { font-size: 10px; color: var(--text-faint); flex-shrink: 0; }
+/* 历史直播间快捷填入（下拉菜单，省空间） */
+.qr-history { position: relative; flex-shrink: 0; }
+.qr-history-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; color: var(--text-secondary); background: var(--bg-card);
+  border: 1px solid var(--border-strong); padding: 2px 8px; border-radius: 10px;
+  cursor: pointer; font-family: inherit; white-space: nowrap;
+  transition: border-color .15s, color .15s;
+}
+.qr-history-btn:hover, .qr-history-btn.open { border-color: var(--primary); color: var(--primary-hover); }
+.qr-h-cnt { background: var(--primary-soft); color: var(--primary); border-radius: 7px; padding: 0 5px; font-size: 9px; }
+.qr-h-arr { flex-shrink: 0; transition: transform .18s ease; }
+.qr-history-btn.open .qr-h-arr { transform: rotate(180deg); }
+/* 下拉面板：独立定位 + 高 z-index 防被机身 overflow 裁剪；面板内滚动防长列表溢出 */
+.qr-history-panel {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 45;
+  min-width: 240px; max-width: 300px; max-height: 180px; overflow-y: auto;
+  background: var(--bg-card); border: 1px solid var(--border-strong);
+  border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.45);
+  padding: 4px; display: flex; flex-direction: column; gap: 2px;
+}
+.qr-history-panel::-webkit-scrollbar { width: 6px; }
+.qr-history-panel::-webkit-scrollbar-thumb { background: var(--primary-border); border-radius: 3px; }
 .qr-history-chip {
-  font-size: 10px; color: var(--text-secondary); background: var(--bg-card); border: 1px solid var(--border-strong);
-  padding: 1px 8px; border-radius: 10px; cursor: pointer; max-width: 140px;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  transition: border-color .15s, box-shadow .15s;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0;
+  width: 100%; text-align: left;
+  font-size: 10px; color: var(--text-secondary); background: transparent;
+  border: 1px solid transparent; padding: 3px 6px; border-radius: 6px; cursor: pointer;
+  transition: border-color .15s, background .15s;
   touch-action: none; user-select: none; -webkit-user-select: none;
 }
-.qr-history-chip:hover { border-color: var(--primary); color: var(--primary-hover); }
+.qr-history-chip:hover { border-color: var(--primary); color: var(--primary-hover); background: var(--bg-hover); }
+.qr-hi-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.qr-hi-url { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-faint); font-size: 9px; }
 .qr-history-chip.dragging {
   border-color: var(--primary); color: var(--primary-hover); background: var(--bg-active);
   box-shadow: 0 4px 14px rgba(240,80,110,0.3);
-  cursor: grabbing; position: relative;
+  cursor: grabbing; position: relative; z-index: 20;
 }
+/* 下拉展开/收起过渡 */
+.qr-hdrop-enter-active, .qr-hdrop-leave-active { transition: opacity .14s ease, transform .14s ease; }
+.qr-hdrop-enter-from, .qr-hdrop-leave-to { opacity: 0; transform: translateY(-4px); }
 .qr-url { flex: 1; background: var(--bg-track); border: 1px solid var(--border-strong); border-radius: 8px; padding: 4px 10px; color: var(--text-secondary); font-size: 10px; font-family: inherit; outline: none; min-width: 0; transition: border-color .15s; }
 .qr-url:focus { border-color: var(--primary); }
 .qr-sm-btn { padding: 3px 8px; border-radius: 6px; font-size: 10px; font-family: inherit; cursor: pointer; border: 1px solid var(--border-strong); background: transparent; color: var(--text-muted); white-space: nowrap; }
@@ -817,7 +965,7 @@ function doImport(e: Event) {
   color: var(--primary-hover); font-size: 10px; padding: 0; border-radius: 10px;
   max-width: 180px; min-width: 0; min-height: 20px; overflow: hidden;
   cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none;
-  transition: border-color .15s, box-shadow .15s;
+  transition: border-color .15s, box-shadow .15s, transform .18s ease;
 }
 .qr-chip:hover { border-color: var(--primary); }
 .qr-chip-text {

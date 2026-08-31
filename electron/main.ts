@@ -37,9 +37,9 @@ let mainWindow: BrowserWindow | null = null
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1100,
-    height: 680,
+    height: 760,
     minWidth: 900,
-    minHeight: 550,
+    minHeight: 600,
     frame: false,
     backgroundColor: '#111318',
     resizable: true,
@@ -49,7 +49,9 @@ function createWindow(): void {
       contextIsolation: true,
       nodeIntegration: false,
       webSecurity: false,
-      webviewTag: true
+      webviewTag: true,
+      // 窗口最小化/失焦时不节流渲染进程定时器：保证 AI 回复触发、弹幕收集在后台持续运行
+      backgroundThrottling: false
     }
   })
 

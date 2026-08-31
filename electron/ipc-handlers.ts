@@ -1,6 +1,6 @@
 import { ipcMain, BrowserWindow, dialog, shell, session } from 'electron'
 import { DouyinLiveService } from './services/douyin-live'
-import { DanmuService, DanmuMsg } from './services/danmu'
+import { DanmuService, DanmuMsg, isChatOnly, setChatOnly } from './services/danmu'
 import { RecordingManager, type RecordSessionInfo } from './services/recording-manager'
 import { getPullUrl, type PullUrlResult } from './services/live-stream'
 import { nowLocal } from './utils/time'
@@ -86,6 +86,8 @@ export async function connectDanmuRoom(roomId: string, nickname: string): Promis
     }
     safeSend('danmu:on-message', { roomId, msg })
     if (msg.type !== 'Stats') {
+      // 推送浮窗前过滤：仅弹幕模式下只推 Chat（礼物/点赞/进房不渲染浮窗）
+      if (isChatOnly() && msg.type !== 'Chat') return
       const nick = roomNicknames.get(roomId) || ''
       floatingDanmu.sendDanmuToFloating({ ...msg, roomId, roomNickname: nick })
     }
@@ -323,6 +325,11 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('room:watch-list', () => ({ list: roomWatch.list() }))
 
   // ===== Danmu =====
+  // 同步渲染端的仅弹幕模式到主进程（用于推送浮窗前的过滤）
+  ipcMain.handle('danmu:set-chat-only', (_e, v: boolean) => {
+    setChatOnly(!!v)
+    return { success: true }
+  })
   ipcMain.handle('danmu:connect', async (_e, roomId: string, nickname: string) => {
     try {
       await connectDanmuRoom(roomId, nickname)

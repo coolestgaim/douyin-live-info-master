@@ -6,6 +6,8 @@
         <div class="danmu-room">{{ danmuStore.danmuRoom }}</div>
       </div>
       <div class="danmu-status-area">
+        <button class="chat-only-btn" :class="{ on: danmuStore.chatOnly }" @click="danmuStore.setChatOnly(!danmuStore.chatOnly)"
+          :title="danmuStore.chatOnly ? '仅监听弹幕中：礼物/点赞/进房已忽略，省资源' : '监听全部消息（含礼物/点赞/进房）'">{{ danmuStore.chatOnly ? '仅弹幕' : '全部消息' }}</button>
         <button class="float-btn" @click="toggleFloating" :title="floatingOpen ? '关闭弹幕浮窗' : '打开弹幕浮窗'">{{ floatingOpen ? '关闭浮窗' : '弹幕浮窗' }}</button>
         <button class="clear-btn" @click="clearCurrentMessages" title="清空当前筛选的消息">清空</button>
         <span class="danmu-count">{{ danmuStore.danmuCountText }}</span>
@@ -223,6 +225,10 @@ async function exportData(format: 'csv' | 'json') {
 .float-btn:hover { background: var(--primary-soft); }
 .clear-btn { background: var(--danger-soft); border: 1px solid var(--danger-border); color: var(--danger); font-size: 11px; padding: 2px 10px; border-radius: 4px; cursor: pointer; font-family: inherit; white-space: nowrap; }
 .clear-btn:hover { background: var(--danger-soft); }
+/* 仅弹幕模式开关 */
+.chat-only-btn { background: var(--bg-selected); border: 1px solid var(--border-strong); color: var(--text-muted); font-size: 11px; padding: 2px 10px; border-radius: 4px; cursor: pointer; font-family: inherit; white-space: nowrap; transition: all .15s; }
+.chat-only-btn:hover { border-color: var(--primary); color: var(--text-secondary); }
+.chat-only-btn.on { background: var(--success-soft); border-color: var(--success-border); color: var(--success); }
 .danmu-count { font-size: 11px; color: var(--text-faint); }
 .danmu-status-text { font-size: 12px; color: var(--text-muted); }
 
