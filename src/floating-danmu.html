@@ -237,7 +237,7 @@ function renderList() {
   let msgs = allMsgs
   if (filterType) msgs = msgs.filter(m => m.type === filterType)
   if (filterRoomId) msgs = msgs.filter(m => m.roomId === filterRoomId)
-  const shown = msgs.slice(0, MAX)
+  const shown = msgs.slice(-MAX)
   shown.forEach(msg => appendRow(msg))
   emptyEl.style.display = shown.length === 0 ? 'block' : 'none'
   scrollBottom()

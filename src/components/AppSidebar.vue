@@ -67,7 +67,7 @@ defineEmits<{ navigate: [path: string] }>()
 
 const settingsStore = useSettingsStore()
 const isDark = computed(() => settingsStore.themeMode === 'dark')
-const version = '2.9.30'
+const version = '2.9.31'
 
 const liveNavItems = [
   {
@@ -93,7 +93,7 @@ const liveNavItems = [
   {
     path: '/replay',
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M6 9v6M9.5 9v6M13 9l4 3-4 3z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-    label: '弹幕回放'
+    label: '回放'
   }
 ]
 

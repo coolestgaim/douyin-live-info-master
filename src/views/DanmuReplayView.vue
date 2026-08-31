@@ -1,7 +1,7 @@
 <template>
   <div class="replay-page">
     <div class="rp-head">
-      <h2 class="rp-title">弹幕回放</h2>
+      <h2 class="rp-title">回放</h2>
       <div class="rp-sub">视频播放 + 视频下方长条弹幕带匀速滚动（视频播完弹幕正好滚完，CSV/录制历史快捷进入）</div>
     </div>
 
@@ -16,16 +16,19 @@
       <span v-if="replayItems.length" class="rp-meta">{{ replayItems.length }} 条弹幕 · {{ danmuTotalSec }}s</span>
     </div>
 
-    <!-- 历史录制下拉菜单（v2.9.29：避免历史多时占满窗口） -->
+    <!-- 历史录制下拉菜单（v2.9.29；v2.21.0 美化） -->
     <div class="rp-history-dropdown">
-      <n-button
-        size="small"
-        tertiary
+      <button
+        type="button"
+        :class="['rp-history-trigger', { open: historyOpen }]"
         :disabled="!historySessions.length"
+        :title="historySessions.length ? '查看历史录制会话' : '暂无历史录制'"
         @click="historyOpen = !historyOpen"
       >
-        📂 历史录制 ({{ historySessions.length }}) ▾
-      </n-button>
+        <span>📂 历史录制</span>
+        <span class="rhp-count-badge">{{ historySessions.length }}</span>
+        <span class="rhp-caret">▾</span>
+      </button>
       <div v-if="historyOpen" class="rp-hist-overlay" @click.self="historyOpen = false">
         <div class="rp-hist-panel">
           <div class="rhp-head">
@@ -446,8 +449,34 @@ function fmtVideoTime(sec: number): string {
 .rp-sep { width: 1px; height: 18px; background: var(--border-default); margin: 0 2px; }
 .rp-meta { font-size: 11px; color: var(--text-faint); }
 
-/* 历史录制下拉菜单（v2.9.29：避免历史多时占满窗口） */
+/* 历史录制下拉菜单（v2.9.29；v2.21.0 美化：更大气 + 选中色条 + 徽章） */
 .rp-history-dropdown { position: relative; flex-shrink: 0; }
+.rp-history-trigger {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; padding: 4px 12px; height: 28px;
+  background: var(--bg-elevated, #1a1d24);
+  border: 1px solid var(--border-strong);
+  color: var(--text-primary);
+  border-radius: 6px; cursor: pointer; font-family: inherit;
+  transition: all .15s;
+}
+.rp-history-trigger:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+.rp-history-trigger:disabled { opacity: 0.5; cursor: not-allowed; }
+.rp-history-trigger.open { border-color: var(--primary); color: var(--primary); }
+.rhp-count-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 16px; padding: 0 5px;
+  background: var(--primary); color: #fff;
+  font-size: 10px; font-weight: 600; border-radius: 8px;
+  line-height: 1;
+}
+.rp-history-trigger .rhp-caret { font-size: 10px; opacity: 0.6; transition: transform .15s; }
+.rp-history-trigger.open .rhp-caret { transform: rotate(180deg); }
+
 .rp-hist-overlay {
   position: fixed; inset: 0; z-index: 1000;
   background: transparent;  /* 透明遮罩，仅用于捕获外部点击关闭 */
@@ -455,42 +484,75 @@ function fmtVideoTime(sec: number): string {
 }
 .rp-hist-panel {
   margin-top: 56px; margin-left: 220px;  /* 弹在侧边栏右侧、顶栏下方 */
-  width: 520px; max-height: 540px;
+  width: 560px; max-height: 580px;
   background: var(--bg-elevated, #1a1d24);
-  border: 1px solid var(--border-default); border-radius: 8px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.02);
   display: flex; flex-direction: column; overflow: hidden;
 }
 .rhp-head {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 14px; border-bottom: 1px solid var(--border-default);
+  padding: 14px 18px;
+  background: linear-gradient(180deg, var(--bg-elevated, #1a1d24) 0%, transparent 100%);
+  border-bottom: 1px solid var(--border-default);
   font-size: 13px; font-weight: 600; color: var(--text-primary);
 }
+.rhp-head .rhp-head-title { display: inline-flex; align-items: center; gap: 8px; }
+.rhp-head .rhp-head-title::before { content: '📂'; font-size: 14px; }
 .rhp-close {
   background: transparent; border: none; color: var(--text-faint);
-  font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1;
+  font-size: 18px; cursor: pointer; padding: 2px 6px; line-height: 1;
+  border-radius: 4px; transition: all .12s;
 }
-.rhp-close:hover { color: var(--text-primary); }
-.rhp-empty { padding: 40px; text-align: center; color: var(--text-faint); font-size: 12px; }
-.rhp-list { flex: 1; overflow-y: auto; padding: 6px; }
+.rhp-close:hover { color: var(--text-primary); background: var(--bg-active); }
+.rhp-empty { padding: 48px; text-align: center; color: var(--text-faint); font-size: 12px; }
+.rhp-list { flex: 1; overflow-y: auto; padding: 8px 10px; }
+.rhp-list::-webkit-scrollbar { width: 8px; }
+.rhp-list::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 4px; }
+.rhp-list::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
 .rhp-row {
-  display: flex; align-items: center; gap: 8px;
-  padding: 8px 10px; border-radius: 6px; transition: background 0.1s;
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; margin-bottom: 4px; border-radius: 8px;
+  position: relative; transition: background .12s;
 }
+.rhp-row:last-child { margin-bottom: 0; }
 .rhp-row:hover { background: var(--bg-active); }
-.rhp-row.on { background: var(--primary-soft); }
-.rhp-info { flex: 1; display: flex; align-items: center; gap: 8px; cursor: pointer; min-width: 0; }
-.rhp-name { font-size: 13px; font-weight: 500; color: var(--text-primary); }
-.rhp-time { font-size: 11px; color: var(--text-faint); }
-.rhp-twin { font-size: 11px; }
-.rhp-actions { display: flex; gap: 4px; flex-shrink: 0; }
-.rhp-btn {
-  background: transparent; border: 1px solid var(--border-strong); color: var(--text-faint);
-  width: 24px; height: 22px; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 12px;
-  display: inline-flex; align-items: center; justify-content: center;
+.rhp-row.on {
+  background: linear-gradient(90deg, var(--primary-soft, rgba(240,80,110,0.12)) 0%, transparent 80%);
+  box-shadow: inset 3px 0 0 var(--primary);
 }
-.rhp-btn:hover { border-color: var(--primary); color: var(--text-primary); }
-.rhp-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+.rhp-info {
+  flex: 1; display: flex; align-items: center; gap: 8px; cursor: pointer; min-width: 0;
+}
+.rhp-name {
+  font-size: 13px; font-weight: 500; color: var(--text-primary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 200px;
+}
+.rhp-time {
+  font-size: 11px; color: var(--text-faint);
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.rhp-twin {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; padding: 2px 7px; border-radius: 10px;
+  background: var(--bg-track); color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  font-weight: 500;
+}
+.rhp-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.rhp-btn {
+  background: transparent;
+  border: 1px solid var(--border-default);
+  color: var(--text-faint);
+  width: 26px; height: 24px; border-radius: 5px;
+  cursor: pointer; font-family: inherit; font-size: 13px;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: all .12s;
+}
+.rhp-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
+.rhp-btn.danger:hover { border-color: var(--danger); color: var(--danger); background: rgba(229,72,77,0.08); }
 
 /* 左右布局：左=视频播放器，右=竖向弹幕条（平行） */
 .rp-layout { display: flex; gap: 10px; align-items: flex-start; flex-shrink: 0; }

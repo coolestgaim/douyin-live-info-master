@@ -8,7 +8,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, watch, onUnmounted, nextTick } from 'vue'
 import type { DanmuMessage } from '../types'
 import DanmuItem from './DanmuItem.vue'
 
@@ -22,6 +22,9 @@ const props = defineProps<{
 /** 渲染上限：只渲染最近 N 条，避免 2000 条全量 diff 导致卡顿 */
 const RENDER_LIMIT = 300
 
+/** 距底部多少像素内算"已贴底"：用户在此区域内才跟随新消息自动滚到底 */
+const STICK_BOTTOM_PX = 40
+
 const listRef = ref<HTMLElement | null>(null)
 const localMessages = ref<DanmuMessage[]>([])
 let rafId = 0
@@ -30,7 +33,14 @@ let rafId = 0
 function syncMessages() {
   cancelAnimationFrame(rafId)
   rafId = requestAnimationFrame(() => {
+    const el = listRef.value
+    // 同步前判断用户是否已贴底（"在底部"才跟随新消息自动滚到底）
+    const wasAtBottom = !!(el && (el.scrollHeight - el.scrollTop - el.clientHeight) < STICK_BOTTOM_PX)
     localMessages.value = props.paused ? localMessages.value : props.messages.slice(-RENDER_LIMIT)
+    if (!props.paused && el && wasAtBottom) {
+      // 下一个 tick 让 DOM 完成 v-for 渲染后再滚到底（最新弹幕从底部出现，旧消息向上推）
+      nextTick(() => { el.scrollTop = el.scrollHeight })
+    }
   })
 }
 watch(() => props.messages, syncMessages, { immediate: true })

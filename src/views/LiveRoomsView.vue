@@ -52,6 +52,10 @@
         <n-button v-else size="small" type="error" @click="stopAllRecord" :title="`当前正在录制 ${recordedRooms.size} 个直播间，点击全部停止`">停止录制 ({{ recordedRooms.size }})</n-button>
         <n-button size="small" tertiary @click="danmuStore.connectAll(roomList.results)">全部连接</n-button>
         <n-button size="small" tertiary @click="danmuStore.disconnectAll()">全部断开</n-button>
+        <button class="chat-only-toggle" :class="{ on: danmuStore.chatOnly }" @click="danmuStore.setChatOnly(!danmuStore.chatOnly)"
+          :title="danmuStore.chatOnly ? '仅监听弹幕中（礼物/点赞/进房已忽略，资源占用最低）' : '监听全部消息（含礼物/点赞/进房）'">
+          <span class="chat-only-check">{{ danmuStore.chatOnly ? '✓' : '☐' }}</span>仅弹幕
+        </button>
       </div>
     </div>
 
@@ -61,6 +65,7 @@
         :data="roomList.results"
         :row-key="(row: any) => row.enterRoomId"
         :row-props="rowProps"
+        :row-class-name="rowClassName"
         :bordered="false"
         size="small"
         :pagination="false"
@@ -275,11 +280,21 @@ const rowProps = computed(() => {
     style: { background: row.enterRoomId === selId ? 'var(--bg-selected)' : undefined, cursor: 'pointer' },
     class: roomList.selectedRoom?.enterRoomId === row.enterRoomId ? 'active-room-row' : '',
     onClick: () => {
-      roomList.selectRoom(row)
-      danmuStore.selectRoom(row)
+      // 再次点同一行 → 取消选中（一整条切换）
+      if (roomList.selectedRoom?.enterRoomId === row.enterRoomId) {
+        roomList.selectRoom(null)
+      } else {
+        roomList.selectRoom(row)
+        danmuStore.selectRoom(row)
+      }
     }
   })
 })
+
+// 选中行高亮（n-data-table row-class-name，CSS 用 !important 覆盖 n-data-table 内联样式）
+const rowClassName = (row: any) => {
+  return roomList.selectedRoom?.enterRoomId === row.enterRoomId ? 'active-room-row' : ''
+}
 
 async function handleFetch() {
   await roomList.fetchRooms()
@@ -315,6 +330,8 @@ function exportLinks() {
   padding: 16px 20px 20px;
   height: 100%;
   overflow-y: auto;
+  display: flex;
+
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -397,4 +414,29 @@ function exportLinks() {
 :deep(.active-room-row:hover td) {
   background: rgba(240, 80, 110, 0.24) !important;
 }
+
+/* 去掉表格分栏边框：每行作为一整条信息，不画列分隔线 */
+:deep(.n-data-table .n-data-table-td),
+:deep(.n-data-table .n-data-table-th) {
+  border-right: none !important;
+  border-left: none !important;
+}
+:deep(.n-data-table .n-data-table-tr) {
+  border: none !important;
+}
+:deep(.n-data-table .n-data-table-th) {
+  border-bottom: 1px solid var(--border-default) !important;
+}
+
+/* 仅弹幕 toggle 按钮（点打勾风格） */
+.chat-only-toggle {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; padding: 2px 10px; border-radius: 6px; cursor: pointer; font-family: inherit;
+  border: 1px solid var(--border-secondary);
+  background: transparent; color: var(--text-muted);
+  transition: all .15s;
+}
+.chat-only-toggle:hover { border-color: var(--primary); color: var(--text-primary); }
+.chat-only-toggle.on { background: var(--success-soft); border-color: var(--success-border); color: var(--success); font-weight: 500; }
+.chat-only-check { font-size: 13px; font-weight: 700; }
 </style>
