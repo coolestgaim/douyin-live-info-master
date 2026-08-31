@@ -218,6 +218,24 @@ export const useRecordStore = defineStore('record', () => {
     }
   }
 
+  /** 手动指定 ffmpeg：打开文件选择框选中 ffmpeg.exe 并绑定；成功返回路径 */
+  async function pickFfmpeg(): Promise<{ success: boolean; path?: string; error?: string }> {
+    try {
+      const result = await api().ffmpegPick()
+      if (result?.success) {
+        ffmpegMissing.value = false
+        danmuStatus.value = `ffmpeg 已绑定: ${result.path}`
+        return { success: true, path: result.path }
+      }
+      if (result?.canceled) return { success: false }
+      danmuStatus.value = '绑定失败: ' + (result?.error || '未知错误')
+      return { success: false, error: result?.error }
+    } catch (ex: any) {
+      danmuStatus.value = '绑定异常: ' + (ex.message || '')
+      return { success: false, error: ex.message }
+    }
+  }
+
   async function installFfmpeg() {
     ffmpegInstalling.value = true
     ffmpegMissing.value = false
@@ -247,6 +265,6 @@ export const useRecordStore = defineStore('record', () => {
     ffmpegMissing, ffmpegProgress, ffmpegProgressMsg, ffmpegInstalling,
     recordingHistory,
     setupListeners, removeListeners, recordAll, stopAll, startRecording, stopOne,
-    installFfmpeg, deleteRecording, deleteHistoryItem, applyState
+    installFfmpeg, pickFfmpeg, deleteRecording, deleteHistoryItem, applyState
   }
 })

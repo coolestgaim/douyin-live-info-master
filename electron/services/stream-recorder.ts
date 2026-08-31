@@ -201,8 +201,12 @@ export class StreamRecorder {
 }
 
 function resolveFfmpegPath(): string {
-  // 0. User-installed (via ffmpeg-installer)
-  const { getFfmpegUserPath } = require('./ffmpeg-installer')
+  // 0. 用户手动绑定的路径（"指定 ffmpeg"，优先级最高）
+  const { getCustomFfmpegPath, getFfmpegUserPath } = require('./ffmpeg-installer')
+  const customPath = getCustomFfmpegPath()
+  if (customPath && fs.existsSync(customPath)) return customPath
+
+  // 1. User-installed (via ffmpeg-installer)
   const userPath = getFfmpegUserPath()
   if (fs.existsSync(userPath)) return userPath
 
@@ -221,6 +225,14 @@ function resolveFfmpegPath(): string {
     if (fs.existsSync(resPath)) return resPath
   }
 
-  // 4. Fallback to PATH
+  // 4. Next to the app executable (user manually places ffmpeg.exe beside the installed exe)
+  try {
+    const { app } = require('electron')
+    const exeDir = path.dirname(app.getPath('exe'))
+    const exeSide = path.join(exeDir, 'ffmpeg.exe')
+    if (fs.existsSync(exeSide)) return exeSide
+  } catch { /* ignore */ }
+
+  // 5. Fallback to PATH
   return 'ffmpeg'
 }

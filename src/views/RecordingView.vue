@@ -81,6 +81,7 @@
         <div class="ffmpeg-dialog-body">录制功能需要 ffmpeg，是否自动下载安装？（约 50MB）</div>
         <div class="ffmpeg-dialog-actions">
           <n-button size="small" @click="recordStore.ffmpegMissing = false">取消</n-button>
+          <n-button size="small" :loading="ffmpegPicking" @click="pickFfmpeg()" title="打开文件选择框，选中你已有的 ffmpeg.exe 进行绑定">指定 ffmpeg</n-button>
           <n-button size="small" type="primary" :loading="recordStore.ffmpegInstalling" @click="recordStore.installFfmpeg()">下载安装</n-button>
         </div>
         <div v-if="recordStore.ffmpegInstalling" class="ffmpeg-progress">
@@ -170,13 +171,24 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, watch, onMounted } from 'vue'
+import { ref, computed, reactive, watch, onMounted } from 'vue'
 import { NButton, NSelect, useDialog } from 'naive-ui'
 import { useRecordStore } from '../stores/record'
 import { useRoomListStore } from '../stores/room-list'
 import { formatFileSize } from '../utils/format'
 
 const recordStore = useRecordStore()
+
+// 手动指定 ffmpeg（打开文件选择框绑定）
+const ffmpegPicking = ref(false)
+async function pickFfmpeg() {
+  ffmpegPicking.value = true
+  try {
+    await recordStore.pickFfmpeg()
+  } finally {
+    ffmpegPicking.value = false
+  }
+}
 const roomList = useRoomListStore()
 const dialog = useDialog()
 const api = () => (window as any).electronAPI

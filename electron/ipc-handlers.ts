@@ -582,6 +582,25 @@ export function registerIpcHandlers(): void {
     return { available: ffmpegInstaller.isFfmpegAvailable() }
   })
 
+  // 手动指定 ffmpeg：打开文件选择框选中 ffmpeg.exe 并绑定（校验可用后持久化）
+  ipcMain.handle('ffmpeg:pick', async () => {
+    const win = BrowserWindow.getFocusedWindow() || mainWindow
+    const r = await dialog.showOpenDialog(win!, {
+      title: '指定 ffmpeg（选择 ffmpeg.exe）',
+      filters: [{ name: 'ffmpeg 可执行文件', extensions: ['exe'] }],
+      properties: ['openFile'],
+    })
+    if (r.canceled || !r.filePaths?.length) return { success: false, canceled: true }
+    const result = ffmpegInstaller.setCustomFfmpegPath(r.filePaths[0])
+    return { success: result.success, path: result.success ? r.filePaths[0] : '', error: result.error }
+  })
+
+  // 清除手动绑定（回落到自动查找）
+  ipcMain.handle('ffmpeg:clear-path', () => {
+    ffmpegInstaller.clearCustomFfmpegPath()
+    return { success: true }
+  })
+
   ipcMain.handle('ffmpeg:install', async () => {
     try {
       const ok = await ffmpegInstaller.downloadAndInstall((pct, msg) => {

@@ -28,14 +28,55 @@ export function getFfmpegUserPath(): string {
   return path.join(getFfmpegDir(), 'ffmpeg.exe')
 }
 
+// ===== 用户手动指定的 ffmpeg 路径（"指定 ffmpeg" 绑定）=====
+const CUSTOM_PATH_FILE = 'ffmpeg-custom-path.json'
+let customFfmpegPath = ''
+try {
+  const raw = fs.readFileSync(path.join(app.getPath('userData'), CUSTOM_PATH_FILE), 'utf-8')
+  const parsed = JSON.parse(raw)
+  if (typeof parsed?.path === 'string') customFfmpegPath = parsed.path
+} catch { /* 无历史绑定 */ }
+
+/** 读取用户手动绑定的 ffmpeg 路径（空 = 未绑定） */
+export function getCustomFfmpegPath(): string {
+  return customFfmpegPath
+}
+
+/** 绑定用户手动指定的 ffmpeg 路径（校验存在且可运行）；返回是否成功 */
+export function setCustomFfmpegPath(p: string): { success: boolean; error?: string } {
+  if (!p) return { success: false, error: '路径为空' }
+  if (!fs.existsSync(p)) return { success: false, error: '文件不存在' }
+  try {
+    const r = spawnSync(p, ['-version'], { windowsHide: true, timeout: 10000 })
+    if (r.status !== 0) return { success: false, error: '不是可用的 ffmpeg（-version 执行失败）' }
+  } catch (e: any) {
+    return { success: false, error: `校验失败: ${e.message}` }
+  }
+  customFfmpegPath = p
+  try {
+    fs.writeFileSync(path.join(app.getPath('userData'), CUSTOM_PATH_FILE), JSON.stringify({ path: p }), 'utf-8')
+  } catch { /* 持久化失败不阻断本次绑定 */ }
+  return { success: true }
+}
+
+/** 清除手动绑定（回落到自动查找） */
+export function clearCustomFfmpegPath(): void {
+  customFfmpegPath = ''
+  try { fs.unlinkSync(path.join(app.getPath('userData'), CUSTOM_PATH_FILE)) } catch { /* ignore */ }
+}
+
 export function isFfmpegAvailable(): boolean {
   const paths = [
+    // 用户手动绑定的路径优先级最高
+    ...(customFfmpegPath ? [customFfmpegPath] : []),
     getFfmpegUserPath(),
     path.join(__dirname, 'ffmpeg.exe'),
     path.join(process.cwd(), 'ffmpeg.exe'),
     path.join(process.resourcesPath || '', 'ffmpeg.exe'),
-    'ffmpeg'
   ]
+  // 应用 exe 同级目录（用户手动放置）
+  try { paths.push(path.join(path.dirname(app.getPath('exe')), 'ffmpeg.exe')) } catch {}
+  paths.push('ffmpeg')
   for (const p of paths) {
     try {
       if (p === 'ffmpeg') {

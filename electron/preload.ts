@@ -106,6 +106,8 @@ const api = {
   // FFmpeg
   ffmpegCheck: () => ipcRenderer.invoke('ffmpeg:check'),
   ffmpegInstall: () => ipcRenderer.invoke('ffmpeg:install'),
+  ffmpegPick: () => ipcRenderer.invoke('ffmpeg:pick'),
+  ffmpegClearPath: () => ipcRenderer.invoke('ffmpeg:clear-path'),
   onFfmpegProgress: (cb: (data: { pct: number; msg: string }) => void) => ipcRenderer.on('ffmpeg:progress', (_e, data) => cb(data)),
 
 }
