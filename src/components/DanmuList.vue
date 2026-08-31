@@ -36,8 +36,11 @@ function syncMessages() {
     const el = listRef.value
     // 同步前判断用户是否已贴底（"在底部"才跟随新消息自动滚到底）
     const wasAtBottom = !!(el && (el.scrollHeight - el.scrollTop - el.clientHeight) < STICK_BOTTOM_PX)
-    localMessages.value = props.paused ? localMessages.value : props.messages.slice(-RENDER_LIMIT)
-    if (!props.paused && el && wasAtBottom) {
+    if (props.paused) return
+    // 约定：props.messages 最新在数组头部（store 与回放页都是 unshift）
+    // 取最新 N 条（前 300）并反转成"旧→新"，渲染后最新固定在底部，新弹幕从底部冒出
+    localMessages.value = props.messages.slice(0, RENDER_LIMIT).reverse()
+    if (el && wasAtBottom) {
       // 下一个 tick 让 DOM 完成 v-for 渲染后再滚到底（最新弹幕从底部出现，旧消息向上推）
       nextTick(() => { el.scrollTop = el.scrollHeight })
     }
