@@ -415,17 +415,24 @@ function exportLinks() {
   background: rgba(240, 80, 110, 0.24) !important;
 }
 
-/* 去掉表格分栏边框：每行作为一整条信息，不画列分隔线 */
-:deep(.n-data-table .n-data-table-td),
-:deep(.n-data-table .n-data-table-th) {
+/* 去掉表格分栏边框：每行作为一整条信息，不画列分隔线
+   注意：Naive UI 实际类名是 BEM 双下划线 n-data-table__td/__th/__tr（单连字符不生效） */
+:deep(.n-data-table__td),
+:deep(.n-data-table__th),
+:deep(.n-data-table__tr) {
   border-right: none !important;
   border-left: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
 }
-:deep(.n-data-table .n-data-table-tr) {
-  border: none !important;
-}
-:deep(.n-data-table .n-data-table-th) {
+/* 保留表头与第一行之间的分隔线（视觉分组） */
+:deep(.n-data-table__th) {
   border-bottom: 1px solid var(--border-default) !important;
+}
+/* 选中行高亮保留左侧色条（v2.21.1 已加，这里仅防被上面的 none 清掉） */
+:deep(.n-data-table__tr.active-room-row td) {
+  box-shadow: inset 3px 0 0 var(--primary) !important;
 }
 
 /* 仅弹幕 toggle 按钮（点打勾风格） */
