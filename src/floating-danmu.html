@@ -133,6 +133,42 @@ body { color: var(--text-primary); }
 .d-text { font-size: 12px; color: var(--text-secondary); line-height: 1.5; word-break: break-all; flex: 1; min-width: 0; }
 .d-user { color: var(--primary); font-weight: 500; }
 
+/* 入场动画：新弹幕从底部滑入（列表/气泡形态） */
+@keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+body[data-mode="list"] .d-item,
+body[data-mode="bubble"] .d-item { animation: slideUp .18s ease-out; }
+
+/* 气泡形态：聊天气泡卡片 */
+body[data-mode="bubble"] .d-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: 12px 12px 12px 4px;
+  padding: 6px 10px; margin: 4px 8px;
+}
+body[data-mode="bubble"] .d-gift { background: var(--primary-soft); border-color: var(--primary-border); }
+body[data-mode="bubble"] .d-social { background: var(--info-soft); border-color: var(--info-border); }
+body[data-mode="bubble"] .d-time { display: none; }
+
+/* 飘字形态：弹幕从右侧向左横向滚动（经典直播飘字），多条自底部堆叠 */
+body[data-mode="fly"] #list { position: relative; overflow: hidden; background: transparent; }
+body[data-mode="fly"] .d-item {
+  position: absolute; left: 0; right: 0;
+  margin: 0; border-radius: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  padding: 5px 14px; width: fit-content; max-width: 92%;
+  animation: flyIn 5.5s linear forwards;
+  white-space: nowrap; overflow: hidden;
+}
+body[data-mode="fly"] .d-time { display: none; }
+body[data-mode="fly"] .d-room-tag { display: none; }
+@keyframes flyIn {
+  from { transform: translateX(110%); opacity: 0; }
+  8% { opacity: 1; }
+  to { transform: translateX(-120%); opacity: 1; }
+}
+
 /* Empty state */
 #empty { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 13px; color: var(--text-faint); display: none; }
 
@@ -149,6 +185,12 @@ body { color: var(--text-primary); }
     <span class="title"><span class="dot"></span>弹幕浮窗</span>
     <div id="controls">
       <input id="opacity" type="range" min="30" max="100" value="100" title="透明度">
+      <button id="sizeBtn" class="ctrl-btn" title="切换尺寸：极小/小/中/大">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <button id="modeBtn" class="ctrl-btn" title="切换形态：列表/飘字/气泡">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="4" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="15" width="18" height="4" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg>
+      </button>
       <button id="latestBtn" class="ctrl-btn" title="回到最新弹幕">
         <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
@@ -184,6 +226,43 @@ let filterRoomId = ''
 let allMsgs = []
 let autoScroll = true
 let rooms = []
+
+// ===== 尺寸预设 4 档（极小/小/中/大，保持左上角，持久化） =====
+const SIZES = [
+  { label: '极小', w: 240, h: 240 },
+  { label: '小', w: 320, h: 320 },
+  { label: '中', w: 480, h: 420 },
+  { label: '大', w: 640, h: 560 },
+]
+let sizeIdx = parseInt(localStorage.getItem('float-size') || '2', 10)
+sizeIdx = isNaN(sizeIdx) ? 2 : Math.max(0, Math.min(SIZES.length - 1, sizeIdx))
+document.getElementById('sizeBtn').onclick = () => {
+  sizeIdx = (sizeIdx + 1) % SIZES.length
+  localStorage.setItem('float-size', String(sizeIdx))
+  ipcRenderer.send('floating:resize', SIZES[sizeIdx])
+  document.getElementById('sizeBtn').title = '尺寸：' + SIZES[sizeIdx].label
+}
+
+// ===== 形态 3 种（列表/飘字/气泡，持久化） =====
+const MODES = ['list', 'fly', 'bubble']
+const MODE_NAMES = { list: '列表', fly: '飘字', bubble: '气泡' }
+let modeIdx = parseInt(localStorage.getItem('float-mode') || '0', 10)
+modeIdx = isNaN(modeIdx) ? 0 : Math.max(0, Math.min(MODES.length - 1, modeIdx))
+let flyCount = 0  // 飘字模式底部堆叠序号
+function applyMode() {
+  document.body.setAttribute('data-mode', MODES[modeIdx])
+  const btn = document.getElementById('modeBtn')
+  btn.title = '形态：' + (MODE_NAMES[MODES[modeIdx]] || MODES[modeIdx]) + '（点击切换）'
+  // 切回列表/气泡时清掉残留的飘字条
+  if (MODES[modeIdx] !== 'fly') list.querySelectorAll('.d-item.fly').forEach(el => el.remove())
+}
+document.getElementById('modeBtn').onclick = () => {
+  modeIdx = (modeIdx + 1) % MODES.length
+  localStorage.setItem('float-mode', String(modeIdx))
+  applyMode()
+}
+applyMode()
+document.getElementById('sizeBtn').title = '尺寸：' + SIZES[sizeIdx].label
 
 list.addEventListener('scroll', () => {
   autoScroll = list.scrollTop + list.clientHeight >= list.scrollHeight - 20
@@ -260,6 +339,16 @@ function appendRow(msg) {
   else text.appendChild(document.createTextNode(msg.content || ''))
   item.appendChild(time); item.appendChild(roomTag); item.appendChild(tag); item.appendChild(text)
   list.appendChild(item)
+
+  // 飘字形态：横向滚动动画结束后自动移除，最多保留 6 条堆叠
+  if (MODES[modeIdx] === 'fly') {
+    item.classList.add('fly')
+    flyCount = (flyCount + 1) % 6
+    item.style.bottom = (flyCount * 26) + 'px'
+    const flying = list.querySelectorAll('.d-item.fly')
+    if (flying.length > 6) flying[0].remove()
+    setTimeout(() => { if (item.isConnected) item.remove() }, 5600)
+  }
 }
 
 ipcRenderer.on('floating:danmu', (_e, msg) => {

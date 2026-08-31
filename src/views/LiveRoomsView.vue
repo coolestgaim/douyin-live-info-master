@@ -52,10 +52,6 @@
         <n-button v-else size="small" type="error" @click="stopAllRecord" :title="`当前正在录制 ${recordedRooms.size} 个直播间，点击全部停止`">停止录制 ({{ recordedRooms.size }})</n-button>
         <n-button size="small" tertiary @click="danmuStore.connectAll(roomList.results)">全部连接</n-button>
         <n-button size="small" tertiary @click="danmuStore.disconnectAll()">全部断开</n-button>
-        <button class="chat-only-toggle" :class="{ on: danmuStore.chatOnly }" @click="danmuStore.setChatOnly(!danmuStore.chatOnly)"
-          :title="danmuStore.chatOnly ? '仅监听弹幕中（礼物/点赞/进房已忽略，资源占用最低）' : '监听全部消息（含礼物/点赞/进房）'">
-          <span class="chat-only-check">{{ danmuStore.chatOnly ? '✓' : '☐' }}</span>仅弹幕
-        </button>
       </div>
     </div>
 
@@ -429,6 +425,15 @@ function exportLinks() {
 /* 保留表头与第一行之间的分隔线（视觉分组） */
 :deep(.n-data-table__th) {
   border-bottom: 1px solid var(--border-default) !important;
+}
+/* 双保险：Naive UI 用 CSS 变量控制边框颜色，直接置透明（边框与背景统一） */
+:deep(.n-data-table) {
+  --n-td-border-color: transparent !important;
+  --n-th-border-color: transparent !important;
+  --n-td-border-bottom-color: transparent !important;
+  --n-th-border-bottom-color: transparent !important;
+  --n-td-border-top-color: transparent !important;
+  --n-th-border-top-color: transparent !important;
 }
 /* 选中行高亮保留左侧色条（v2.21.1 已加，这里仅防被上面的 none 清掉） */
 :deep(.n-data-table__tr.active-room-row td) {

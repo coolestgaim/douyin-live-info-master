@@ -99,6 +99,10 @@ const api = {
   fileDeleteDir: (dirPath: string) => ipcRenderer.invoke('file:delete-dir', dirPath),
   fileOpenPath: (filePath: string) => ipcRenderer.invoke('file:open-path', filePath),
 
+  // 性能模式（无独显/低配优化）
+  perfGetMode: () => ipcRenderer.invoke('app:get-perf-mode'),
+  perfSetMode: (mode: string) => ipcRenderer.invoke('app:set-perf-mode', mode),
+
   // FFmpeg
   ffmpegCheck: () => ipcRenderer.invoke('ffmpeg:check'),
   ffmpegInstall: () => ipcRenderer.invoke('ffmpeg:install'),

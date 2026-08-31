@@ -8,6 +8,7 @@ import * as db from './services/database'
 import * as config from './services/record-config'
 import * as floatingDanmu from './services/floating-danmu'
 import * as ffmpegInstaller from './services/ffmpeg-installer'
+import { getPerfMode, setPerfMode, type PerfMode } from './services/perf'
 import * as logger from './services/logger'
 import { roomWatch } from './services/room-watch'
 import * as fs from 'fs'
@@ -567,6 +568,13 @@ export function registerIpcHandlers(): void {
       await shell.openPath(filePath)
       return { success: true }
     } catch (ex: any) { return { success: false, error: ex.message } }
+  })
+
+  // ===== 性能模式（无独显/低配优化；兼容档重启后生效）=====
+  ipcMain.handle('app:get-perf-mode', () => ({ mode: getPerfMode() }))
+  ipcMain.handle('app:set-perf-mode', (_e, m: PerfMode) => {
+    setPerfMode(m)
+    return { success: true, mode: getPerfMode() }
   })
 
   // ===== FFmpeg =====

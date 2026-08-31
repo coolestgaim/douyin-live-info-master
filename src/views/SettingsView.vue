@@ -24,6 +24,25 @@
     <div class="card settings-card">
       <div class="section-header">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" stroke="var(--primary)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h3 class="section-title">性能模式</h3>
+      </div>
+      <div class="form-group">
+        <label class="form-label">渲染性能</label>
+        <n-radio-group :value="perfMode" @update:value="setPerfMode">
+          <n-radio-button value="high">高性能</n-radio-button>
+          <n-radio-button value="balanced">平衡（默认）</n-radio-button>
+          <n-radio-button value="compat">兼容（无独显/低配）</n-radio-button>
+        </n-radio-group>
+        <div class="form-hint" v-if="perfMode === 'compat'">兼容模式：关闭 GPU 硬件加速 + 浮窗改用不透明背景，减少 CPU 负担；<b>需重启应用生效</b></div>
+        <div class="form-hint" v-else>高性能 = 完全 GPU 渲染；平衡 = 默认。无独立显卡的电脑卡顿时建议切换到「兼容」</div>
+      </div>
+    </div>
+
+    <div class="card settings-card">
+      <div class="section-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
           <circle cx="12" cy="12" r="3" stroke="var(--primary)" stroke-width="1.8"/>
           <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="var(--primary)" stroke-width="1.8" stroke-linecap="round"/>
         </svg>
@@ -71,6 +90,20 @@ import { NInput, NButton, NSelect, NSwitch, NInputNumber, NRadioGroup, NRadioBut
 import { useSettingsStore } from '../stores/settings'
 
 const settings = useSettingsStore()
+
+// 性能模式（兼容档需重启生效）
+const perfMode = ref('balanced')
+onMounted(async () => {
+  try {
+    const r = await (window as any).electronAPI?.perfGetMode?.()
+    if (r?.mode) perfMode.value = r.mode
+  } catch { /* ignore */ }
+})
+async function setPerfMode(m: string) {
+  perfMode.value = m
+  try { await (window as any).electronAPI?.perfSetMode?.(m) } catch { /* ignore */ }
+}
+
 
 const formatOptions = [
   { label: 'MP3', value: 'mp3' },

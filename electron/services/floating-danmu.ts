@@ -68,6 +68,10 @@ export function createFloatingDanmu(): void {
   const bounds = state.bounds
   pendingBounds = bounds || null
 
+  // 兼容模式（低配/无独显）：浮窗用不透明背景，减少透明窗口合成开销
+  const { isCompat } = require('./perf')
+  const compat = isCompat()
+
   const opts: Electron.BrowserWindowConstructorOptions = {
     width: bounds?.w || 480,
     height: bounds?.h || 420,
@@ -79,10 +83,13 @@ export function createFloatingDanmu(): void {
     skipTaskbar: true,
     type: 'toolbar',
     focusable: false,
-    backgroundColor: '#14161CE8',
+    // 兼容模式不透明（透明合成是 CPU 重负）；普通模式带 alpha 圆角
+    backgroundColor: compat ? '#14161C' : '#14161CE8',
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
+      // 兼容模式：后台节流开启（减少 CPU）
+      backgroundThrottling: compat,
     }
   }
   // 如果有保存的 bounds（且在当前屏幕范围内），应用位置
@@ -180,5 +187,14 @@ export function registerFloatingIPC(): void {
   ipcMain.on('floating:save-bounds', (_e, bounds: { x: number; y: number; w: number; h: number }) => {
     const s = loadState()
     saveState({ ...s, bounds })
+  })
+
+  // 浮窗尺寸预设（v2.21.4：极小/小/中/大 4 档，保持左上角不变）
+  ipcMain.on('floating:resize', (_e, size: { w: number; h: number }) => {
+    if (!floatingWindow || floatingWindow.isDestroyed() || !size?.w || !size?.h) return
+    const [x, y] = floatingWindow.getPosition()
+    floatingWindow.setBounds({ x, y, width: Math.round(size.w), height: Math.round(size.h) })
+    const s = loadState()
+    saveState({ ...s, bounds: { x, y, w: Math.round(size.w), h: Math.round(size.h) } })
   })
 }

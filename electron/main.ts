@@ -13,6 +13,13 @@ app.commandLine.appendSwitch('font-render-hinting', 'medium')
 // 禁用磁盘缓存：避免 userData 缓存锁/损坏导致渲染黑屏（配合 electron:dev 的 --disk-cache-size=0）
 app.commandLine.appendSwitch('disk-cache-size', '0')
 
+// 性能模式：兼容档在 app ready 前全局关闭 GPU 硬件加速（无独显/低配电脑卡顿优化）
+import { isCompat } from './services/perf'
+if (isCompat()) {
+  app.disableHardwareAcceleration()
+  console.warn('[main] 兼容模式：已关闭 GPU 硬件加速')
+}
+
 // 兜底：任何主进程未捕获异常都只 console.warn，不再弹窗打断用户
 process.on('uncaughtException', (err) => {
   console.warn('[main] uncaughtException:', err?.message || err)
