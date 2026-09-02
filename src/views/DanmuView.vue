@@ -76,10 +76,6 @@
         <n-radio-group v-model:value="historyFilter" size="small" @update:value="loadHistoryMessages">
           <n-radio-button value="">全部</n-radio-button>
           <n-radio-button value="Chat">弹幕</n-radio-button>
-          <n-radio-button value="Gift">礼物</n-radio-button>
-          <n-radio-button value="Like">点赞</n-radio-button>
-          <n-radio-button value="Member">进入</n-radio-button>
-          <n-radio-button value="Social">关注</n-radio-button>
         </n-radio-group>
         <n-input v-model:value="historyKeyword" size="small" placeholder="搜索内容..." style="width: 200px" @update:value="loadHistoryMessages" />
         <n-input v-model:value="historyUsername" size="small" placeholder="筛选用户名..." style="width: 200px" @update:value="loadHistoryMessages" />
