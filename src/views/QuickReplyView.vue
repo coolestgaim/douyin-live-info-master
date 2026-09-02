@@ -7,8 +7,9 @@
 
     <div class="qr-scroll" v-if="store.instances.length > 0">
       <div v-for="inst in store.instances" :key="inst.id" class="card qr-phone" :style="phoneStyle(inst.id)">
-        <!-- 实例顶栏 -->
+        <!-- 实例顶栏（删除键固定最左，避免被 input flex:1 挤到右边溢出） -->
         <div class="qr-topbar">
+          <button v-if="store.instances.length > 1" class="qr-top-btn qr-del-i" @click="doRemoveInstance(inst)" title="删除实例">×</button>
           <input v-model="inst.name" class="qr-name" placeholder="实例名称" />
           <select v-model="inst.platform" class="qr-platform" @change="onPlatformChange(inst)" title="直播平台：决定功能按钮组与预设选择器">
             <option v-for="p in PLATFORMS" :key="p.id" :value="p.id">{{ p.name }}</option>
@@ -17,9 +18,6 @@
             <span class="qr-inst-dot"></span>
             {{ inst.status === 'running' ? '运行中' : '已停止' }}
           </span>
-          <div class="qr-top-actions">
-            <button v-if="store.instances.length > 1" class="qr-top-btn qr-del-i" @click="doRemoveInstance(inst)">×</button>
-          </div>
         </div>
 
         <!-- URL + 操作行 -->
@@ -742,7 +740,7 @@ function doImport(e: Event) {
   box-shadow: 0 0 0 1px rgba(0,0,0,0.18), 0 8px 24px rgba(0,0,0,0.22);
 }
 .qr-topbar { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-.qr-name { flex: 1; background: transparent; border: none; color: var(--text-primary); font-size: 13px; font-weight: 600; font-family: inherit; outline: none; padding: 2px 4px; }
+.qr-name { flex: 1; min-width: 0; background: transparent; border: none; color: var(--text-primary); font-size: 13px; font-weight: 600; font-family: inherit; outline: none; padding: 2px 4px; }
 /* 平台选择下拉 */
 .qr-platform {
   flex-shrink: 0; max-width: 88px;
