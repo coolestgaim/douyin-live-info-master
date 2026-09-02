@@ -111,6 +111,12 @@ const api = {
   ffmpegClearPath: () => ipcRenderer.invoke('ffmpeg:clear-path'),
   onFfmpegProgress: (cb: (data: { pct: number; msg: string }) => void) => ipcRenderer.on('ffmpeg:progress', (_e, data) => cb(data)),
 
+  // 直播画面预览（录制中一键预览）
+  previewOpen: (roomId: string, quality?: string) => ipcRenderer.invoke('preview:open', roomId, quality),
+  previewClose: (roomId: string) => ipcRenderer.invoke('preview:close', roomId),
+  previewList: () => ipcRenderer.invoke('preview:list'),
+  previewIsOpen: (roomId: string) => ipcRenderer.invoke('preview:is-open', roomId),
+
 }
 
 contextBridge.exposeInMainWorld('electronAPI', api)

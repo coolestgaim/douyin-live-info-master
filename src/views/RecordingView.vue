@@ -120,6 +120,9 @@
           <span :class="['rec-status-text', { active: item.isActive, error: item.statusText.includes('异常') }]">
             {{ item.statusText }}
           </span>
+          <n-button v-if="item.isActive" size="tiny" quaternary @click="openPreview(item)" title="在独立窗口预览直播画面">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="var(--accent-cyan)" stroke-width="1.8"/><circle cx="12" cy="12" r="3" stroke="var(--accent-cyan)" stroke-width="1.8"/></svg>
+          </n-button>
           <n-button v-if="item.isActive" size="tiny" type="error" quaternary @click="recordStore.stopOne(item.roomId)">停止</n-button>
           <template v-if="!item.isActive">
             <n-button size="tiny" type="primary" quaternary @click="retryRecording(item)" title="新开录制">
@@ -288,6 +291,24 @@ function openDanmuCsv(csvPath: string) {
 
 function retryRecording(item: any) {
   recordStore.startRecording({ enterRoomId: item.roomId, nickname: item.nickname })
+}
+
+/** 在独立窗口预览直播画面（B 方案：主进程 ffmpeg -c copy → HLS → hls.js） */
+async function openPreview(item: any) {
+  try {
+    const api = (window as any).electronAPI
+    if (await api.previewIsOpen?.(item.roomId)) {
+      // 已开窗：只 focus
+      await api.previewOpen(item.roomId, selectedQuality[item.roomId] || '')
+      return
+    }
+    const res = await api.previewOpen(item.roomId, selectedQuality[item.roomId] || '')
+    if (!res?.ok) {
+      dialog.warning({ title: '预览失败', content: res?.error || '未知错误', positiveText: '知道了' })
+    }
+  } catch (e: any) {
+    dialog.warning({ title: '预览异常', content: e?.message || String(e), positiveText: '知道了' })
+  }
 }
 
 function formatTime(ts: number): string {

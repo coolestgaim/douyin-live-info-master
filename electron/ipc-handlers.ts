@@ -3,6 +3,7 @@ import { DouyinLiveService } from './services/douyin-live'
 import { DanmuService, DanmuMsg, isChatOnly, setChatOnly } from './services/danmu'
 import { RecordingManager, type RecordSessionInfo } from './services/recording-manager'
 import { getPullUrl, type PullUrlResult } from './services/live-stream'
+import { livePreview } from './services/live-preview'
 import { nowLocal } from './utils/time'
 import * as db from './services/database'
 import * as config from './services/record-config'
@@ -654,6 +655,9 @@ export function registerIpcHandlers(): void {
       return { success: false, error: ex.message }
     }
   })
+
+  // 直播画面预览
+  registerPreviewHandlers()
 }
 
 export async function cleanup(): Promise<void> {
@@ -661,7 +665,81 @@ export async function cleanup(): Promise<void> {
     for (const [, service] of danmuConnections) { try { service.disconnect() } catch {} }
     danmuConnections.clear()
     try { recordingManager.stopAll() } catch {}
+    try { livePreview.stopAll() } catch {}
+    try { for (const w of previewWindows.values()) { try { w.close() } catch {} } previewWindows.clear() } catch {}
     try { floatingDanmu.closeFloatingDanmu() } catch {}
     try { await db.flushDb() } catch {}
   } catch {}
+}
+
+// ===== 直播画面预览 =====
+const previewWindows = new Map<string, BrowserWindow>()
+
+function openPreviewWindow(roomId: string, m3u8Url: string): BrowserWindow {
+  const win = new BrowserWindow({
+    width: 960,
+    height: 600,
+    minWidth: 480,
+    minHeight: 320,
+    backgroundColor: '#000',
+    title: '直播画面预览',
+    parent: mainWindow || undefined,
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      webSecurity: false,
+      backgroundThrottling: false
+    }
+  })
+  // 预览页（根目录 preview.html，vite 多入口）：dev 走 vite server，prod 走 dist
+  const devUrl = process.env.VITE_DEV_URL || 'http://localhost:5173'
+  const prodPath = path.join(__dirname, '..', 'dist', 'preview.html')
+  const isDev = !fs.existsSync(prodPath)  // 与 mainWindow loadFile 判定一致
+  const baseUrl = isDev ? devUrl : `file://${prodPath}`
+  win.loadURL(`${baseUrl}?roomId=${encodeURIComponent(roomId)}&m3u8=${encodeURIComponent(m3u8Url)}`)
+  win.on('closed', () => {
+    previewWindows.delete(roomId)
+    try { livePreview.stop(roomId) } catch {}
+  })
+  previewWindows.set(roomId, win)
+  return win
+}
+
+function registerPreviewHandlers() {
+  ipcMain.handle('preview:open', async (_e, roomId: string, quality?: string) => {
+    if (!roomId) return { ok: false, error: 'roomId 为空' }
+    try {
+      // 同源房间：已存在则直接 focus
+      if (livePreview.has(roomId)) {
+        const w = previewWindows.get(roomId)
+        if (w && !w.isDestroyed()) { w.focus(); return { ok: true, m3u8Url: livePreview.getM3u8Url(roomId) } }
+      }
+      // 拉流地址（同 record:get-qualities）：用与录制同款接口
+      const result = await getPullUrl(roomId)
+      if (!result.success || !result.pullUrl) return { ok: false, error: '拉流失败（房间未直播或接口异常）' }
+      const pullUrl = pickQualityUrl(result, quality || '')
+      await livePreview.ensureServer()
+      const startRes = livePreview.start(roomId, pullUrl)
+      if (!startRes.ok) return { ok: false, error: startRes.error }
+      openPreviewWindow(roomId, livePreview.getM3u8Url(roomId))
+      logger.info(LOG_MODULE, `preview:open roomId=${roomId} nick=${result.nickname}`)
+      return { ok: true, m3u8Url: livePreview.getM3u8Url(roomId), nickname: result.nickname }
+    } catch (ex: any) {
+      logger.error(LOG_MODULE, `preview:open err: ${ex.message}`)
+      return { ok: false, error: ex.message }
+    }
+  })
+
+  ipcMain.handle('preview:close', async (_e, roomId: string) => {
+    const w = previewWindows.get(roomId)
+    if (w && !w.isDestroyed()) try { w.close() } catch {}
+    try { livePreview.stop(roomId) } catch {}
+    previewWindows.delete(roomId)
+    return { ok: true }
+  })
+
+  ipcMain.handle('preview:list', async () => livePreview.getList())
+  ipcMain.handle('preview:is-open', async (_e, roomId: string) => livePreview.has(roomId))
 }

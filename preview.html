@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>直播画面预览</title>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; background: #000; color: #ddd; font: 13px system-ui; overflow: hidden; }
+    .wrap { display: flex; flex-direction: column; height: 100vh; }
+    header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 8px 14px; background: #111318; border-bottom: 1px solid #2a2a2a;
+      flex-shrink: 0;
+    }
+    .pill { background: #1f2937; border: 1px solid #2a2a2a; border-radius: 12px; padding: 3px 10px; font-size: 12px; }
+    .pill.cyan { color: #35d3c4; border-color: #2d6f6a; }
+    .pill.red { color: #f0506e; border-color: #5a2a36; }
+    .room { font-weight: 600; color: #fff; font-size: 13px; }
+    .state { color: #9aa0a6; font-size: 12px; flex: 1; }
+    .state.ok { color: #35d3c4; }
+    .state.err { color: #f0506e; }
+    button.close {
+      background: transparent; color: #ddd; border: 1px solid #3a3a3a; border-radius: 6px;
+      padding: 4px 12px; cursor: pointer; font-size: 12px;
+    }
+    button.close:hover { background: #f0506e; border-color: #f0506e; color: #fff; }
+    video { flex: 1; width: 100%; height: 100%; background: #000; object-fit: contain; }
+  </style>
+  <script src="/lib/hls.min.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <span class="room" id="room">直播间</span>
+      <span class="pill cyan" id="latency">延迟 -</span>
+      <span class="state" id="state">连接中…</span>
+      <button class="close" onclick="window.close()">关闭</button>
+    </header>
+    <video id="v" autoplay muted playsinline controls></video>
+  </div>
+  <script>
+    (function () {
+      const params = new URLSearchParams(location.search)
+      const roomId = params.get('roomId') || ''
+      const m3u8Url = params.get('m3u8') || ''
+      document.getElementById('room').textContent = '房间 ' + roomId
+      const v = document.getElementById('v')
+      const stateEl = document.getElementById('state')
+      const latEl = document.getElementById('latency')
+      const setState = (s, cls) => { stateEl.textContent = s; stateEl.className = 'state' + (cls ? ' ' + cls : '') }
+      if (!m3u8Url) { setState('缺少 m3u8 URL 参数', 'err'); return }
+      if (window.Hls && Hls.isSupported()) {
+        const hls = new Hls({ liveDurationInfinity: true, liveSyncDurationCount: 3, lowLatencyMode: false })
+        hls.on(Hls.Events.MANIFEST_PARSED, () => { setState('已连接，画面输出中…', '') })
+        hls.on(Hls.Events.FRAG_BUFFERED, () => { if (stateEl.textContent.indexOf('已出') < 0) setState('画面已出 ✓', 'ok') })
+        hls.on(Hls.Events.ERROR, (e, d) => {
+          if (!d.fatal) return
+          if (d.type === Hls.ErrorTypes.NETWORK_ERROR) { setState('断流，自动重连中…', 'err'); hls.startLoad() }
+          else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError()
+          else setState('播放失败：' + d.details, 'err')
+        })
+        hls.loadSource(m3u8Url)
+        hls.attachMedia(v)
+        v.play().catch(() => { /* muted 仍可能被部分环境拦，无害 */ })
+        setInterval(() => { if (hls.latency !== undefined) latEl.textContent = '延迟 ' + hls.latency.toFixed(1) + 's' }, 1000)
+      } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+        v.src = m3u8Url
+        v.addEventListener('loadedmetadata', () => setState('画面已出 ✓', 'ok'))
+      } else {
+        setState('当前环境不支持 HLS', 'err')
+      }
+    })()
+  </script>
+</body>
+</html>
