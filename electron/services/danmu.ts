@@ -288,21 +288,25 @@ export class DanmuService {
       profileUrl: partial.profileUrl || '',
       rawData: partial.rawData || ''
     }
+    // 实时显示/浮窗/录制 CSV 始终推送（不经 DB，不受降量影响）
     this.onMessage?.(msg)
 
-    // Save to database
-    const dbContent = msg.type === 'Stats' ? `在线: ${msg.totalUser} | 点赞: ${msg.totalLike}` : msg.content
+    // B 方案：仅 Chat（弹幕）入库。
+    // Member/Like/Social/Stats 高频消息与 Gift 不再写入 DB，rawData 不再整包存储——
+    // 挂一整晚 DB 从上百 MB 降到几 MB，消除 sql.js 全量同步写盘导致的主进程卡死。
+    // 旧库已有数据保留（只影响新数据）；历史回放/CSV 导出走 Chat 不受影响。
+    if (msg.type !== 'Chat') return
     insertMessage(this.roomId, {
       type: msg.type,
       userName: msg.userName,
-      content: dbContent,
-      giftName: msg.giftName,
-      giftCount: msg.giftCount,
-      giftPrice: msg.giftPrice,
-      likeCount: msg.likeCount,
+      content: msg.content,
+      giftName: '',
+      giftCount: 0,
+      giftPrice: 0,
+      likeCount: 0,
       avatar: msg.avatar,
       profileUrl: msg.profileUrl,
-      rawData: msg.rawData
+      rawData: ''
     })
   }
 
