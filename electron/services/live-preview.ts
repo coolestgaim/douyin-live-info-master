@@ -80,6 +80,11 @@ export class LivePreviewManager {
   private spawn(inst: PreviewInstance) {
     if (inst.manualStop) return
     const outDir = path.join(this.outputDir, inst.roomId)
+    // A 修复：去掉 delete_segments 滚删后旧 .ts 不再被物理删除（消除"播放器慢半拍 → 请求已删切片 → 404 → 断流"竞速），
+    // 改用 temp_file：切片先写临时名再改名，播放器绝不会读到写了一半的文件。
+    // 代价：预览期间文件会持续累积（开多久存多久）—— 每次(重)启动前先清空该房残留，stop() 也会在停止后清理目录。
+    try { fs.rmSync(outDir, { recursive: true, force: true }) } catch {}
+    fs.mkdirSync(outDir, { recursive: true })
     const outPath = path.join(outDir, 'index.m3u8')
     const segPattern = path.join(outDir, 'seg_%05d.ts')
     const args = [
@@ -89,7 +94,7 @@ export class LivePreviewManager {
       '-f', 'hls',
       '-hls_time', '2',
       '-hls_list_size', '6',
-      '-hls_flags', 'delete_segments+append_list+independent_segments',
+      '-hls_flags', 'append_list+independent_segments+temp_file',
       '-hls_segment_filename', segPattern,
       outPath
     ]

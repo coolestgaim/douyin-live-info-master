@@ -48,27 +48,73 @@
       const stateEl = document.getElementById('state')
       const latEl = document.getElementById('latency')
       const setState = (s, cls) => { stateEl.textContent = s; stateEl.className = 'state' + (cls ? ' ' + cls : '') }
-      if (!m3u8Url) { setState('缺少 m3u8 URL 参数', 'err'); return }
-      if (window.Hls && Hls.isSupported()) {
-        const hls = new Hls({ liveDurationInfinity: true, liveSyncDurationCount: 3, lowLatencyMode: false })
-        hls.on(Hls.Events.MANIFEST_PARSED, () => { setState('已连接，画面输出中…', '') })
-        hls.on(Hls.Events.FRAG_BUFFERED, () => { if (stateEl.textContent.indexOf('已出') < 0) setState('画面已出 ✓', 'ok') })
-        hls.on(Hls.Events.ERROR, (e, d) => {
-          if (!d.fatal) return
-          if (d.type === Hls.ErrorTypes.NETWORK_ERROR) { setState('断流，自动重连中…', 'err'); hls.startLoad() }
-          else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError()
-          else setState('播放失败：' + d.details, 'err')
-        })
-        hls.loadSource(m3u8Url)
-        hls.attachMedia(v)
-        v.play().catch(() => { /* muted 仍可能被部分环境拦，无害 */ })
-        setInterval(() => { if (hls.latency !== undefined) latEl.textContent = '延迟 ' + hls.latency.toFixed(1) + 's' }, 1000)
-      } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-        v.src = m3u8Url
-        v.addEventListener('loadedmetadata', () => setState('画面已出 ✓', 'ok'))
-      } else {
-        setState('当前环境不支持 HLS', 'err')
+      const m3u8Base = (m3u8Url || '').split('?')[0]
+      if (!m3u8Base) { setState('缺少 m3u8 URL 参数', 'err'); return }
+
+      let hls = null
+      let retryTimer = null
+      let backoff = 800                      // 指数退避起点：800ms → 翻倍 → 封顶 10s
+      let failCount = 0                      // 连续失败计数，成功播出一片即清零
+      const MAX_BACKOFF = 10000
+      const RECREATE_AFTER_NONFATAL = 5
+
+      const freshUrl = () => m3u8Base + '?t=' + Date.now()
+
+      function destroyPlayer() {
+        if (hls) { try { hls.destroy() } catch (e) {} hls = null }
       }
+
+      function createPlayer() {
+        destroyPlayer()
+        setState('连接中…', '')
+        if (window.Hls && Hls.isSupported()) {
+          hls = new Hls({ liveDurationInfinity: true, liveSyncDurationCount: 3, lowLatencyMode: false })
+          hls.on(Hls.Events.MANIFEST_PARSED, () => { setState('已连接，画面输出中…', '') })
+          hls.on(Hls.Events.FRAG_BUFFERED, () => { failCount = 0; backoff = 800; if (stateEl.textContent.indexOf('已出') < 0) setState('画面已出 ✓', 'ok') })
+          hls.on(Hls.Events.ERROR, (_e, d) => onError(d))
+          hls.loadSource(freshUrl())
+          hls.attachMedia(v)
+          v.play().catch(() => { /* muted 仍可能被部分环境拦，无害 */ })
+        } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+          v.src = freshUrl()
+          v.addEventListener('loadedmetadata', () => setState('画面已出 ✓', 'ok'))
+        } else {
+          setState('当前环境不支持 HLS', 'err')
+        }
+      }
+
+      // B 修复：fatal 不再只调 hls.startLoad()（失败状态残留会原地打转、表现为"一直断流重连"），
+      // 改为销毁重建播放器 + 指数退避 + URL 带 ?t= 缓存戳，让重连真正从"最新清单"重新开始。
+      function scheduleRecreate(msg) {
+        setState(msg || '断流，自动重连中…', 'err')
+        if (retryTimer) return
+        const wait = backoff
+        backoff = Math.min(backoff * 2, MAX_BACKOFF)
+        retryTimer = setTimeout(() => { retryTimer = null; createPlayer() }, wait)
+      }
+
+      function onError(d) {
+        if (!d) return
+        failCount++
+        if (!d.fatal) {
+          // 非致命错误（如个别切片抖动）：连续多次仍失败就整体重建一次
+          if (failCount >= RECREATE_AFTER_NONFATAL) scheduleRecreate('切片连续加载失败，正在重建…')
+          return
+        }
+        if (d.type === Hls.ErrorTypes.MEDIA_ERROR) {
+          // 解码类错误先轻量恢复一次，仍不行则重建
+          if (failCount <= 2 && hls) { try { hls.recoverMediaError() } catch (e) {} return }
+          scheduleRecreate('画面解码异常，正在重建…')
+          return
+        }
+        scheduleRecreate('断流，自动重连中…')
+      }
+
+      setInterval(() => {
+        try { if (hls && hls.latency !== undefined) latEl.textContent = '延迟 ' + hls.latency.toFixed(1) + 's' } catch (e) {}
+      }, 1000)
+
+      createPlayer()
     })()
   </script>
 </body>
