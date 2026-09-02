@@ -29,6 +29,8 @@
             @click="inst.status === 'running' ? closeWebview(inst) : loadWebview(inst)">
             {{ inst.status === 'running' ? '关闭' : '加载' }}
           </button>
+          <!-- 独立刷新按钮（运行中才显示，替代下拉菜单里的刷新项） -->
+          <button v-if="inst.status === 'running'" class="qr-sm-btn qr-refresh-btn" @click="refreshWebview(inst)" title="刷新网页（忽略缓存强制重载，登录保留）">⟳</button>
           <!-- 更多功能下拉 -->
           <div class="qr-more" @click.stop>
             <button v-if="inst.status === 'running'" class="qr-sm-btn qr-more-btn" :class="{ open: moreOpenId === inst.id }"
@@ -60,7 +62,6 @@
               <!-- 快手：扫码登录指引 -->
               <button v-if="inst.platform === 'kuaishou'" class="qr-more-item" @click="showPlatformHint(inst)"
                 :title="getPlatform(inst.platform).loginHint">扫码登录指引</button>
-              <button class="qr-more-item" @click="refreshWebview(inst)">刷新网页</button>
               <button class="qr-more-item qr-more-danger" @click="clearLogin(inst)">清除登录</button>
               <button class="qr-more-item qr-more-danger" @click="clearCache(inst)" title="清掉 cookie/缓存，下次重新登录">清空缓存</button>
               <div class="qr-more-hint" v-if="getPlatform(inst.platform).loginHint && inst.platform !== 'douyin'">
@@ -762,10 +763,22 @@ function doImport(e: Event) {
 .qr-inst-status.on .qr-inst-dot { background: var(--success); box-shadow: 0 0 5px var(--success-border); }
 .qr-top-actions { display: flex; gap: 4px; }
 .qr-top-btn { background: transparent; border: none; color: var(--text-muted); font-size: 14px; cursor: pointer; padding: 0 4px; line-height: 1; }
-.qr-del-i { color: var(--danger); opacity: 0; transition: opacity .15s; }
-.qr-phone:hover .qr-del-i { opacity: 1; }
+/* 删除关闭键：常显 + 圆形按钮化（实例卡加高后原 hover 才显示太不显眼） */
+.qr-del-i {
+  color: var(--danger);
+  width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--danger); border-radius: 50%;
+  font-size: 15px; line-height: 1;
+  background: var(--danger-soft);
+  transition: background .15s, color .15s;
+}
+.qr-del-i:hover { background: var(--danger); color: #fff; }
 
 .qr-urlbar { display: flex; gap: 4px; flex-shrink: 0; align-items: center; }
+/* 独立刷新按钮（替代下拉菜单里的刷新项） */
+.qr-refresh-btn { font-size: 14px; padding: 3px 9px; }
+.qr-refresh-btn:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); background: var(--accent-cyan-soft); }
 /* 更多功能下拉 */
 .qr-more { position: relative; flex-shrink: 0; }
 .qr-more-btn { font-size: 13px; padding: 3px 8px; }
